@@ -3,14 +3,18 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local ContentProvider = game:GetService("ContentProvider")
 
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local roundState = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
 local phase = "waiting"
 local tracked = {}
+local requestedMeshes, loadingMeshes, readyMeshes = {}, {}, {}
+local REOPEN_SECONDS = 1.6
 
 local function participantCanSee()
     return phase == "round"
@@ -20,17 +24,39 @@ end
 
 local function update(gate, bundle)
     if not bundle or not bundle.sign.Parent then return end
-    if not gate.Parent or not participantCanSee() then
+    if not gate.Parent or gate:GetAttribute("BridgeShutter") ~= true
+        or not participantCanSee() then
         bundle.sign.Enabled = false
         return
     end
     local status = gate:GetAttribute("ShutterPhase")
-    if status ~= "Warning" and status ~= "Raising"
-        and status ~= "Raised" then
+    local locale = player.LocaleId
+    if status == "Idle" and not gate.CanCollide then
+        local stamp = gate:GetAttribute("ShutterReopenedAt")
+        local age = type(stamp) == "number" and workspace:GetServerTimeNow() - stamp
+        if type(age) == "number" and age >= -0.15 and age < REOPEN_SECONDS then
+            bundle.label.Text = CoreLocalization.text(locale, "TOWER_SHUTTER_OPEN")
+            bundle.label.TextColor3 = Color3.fromRGB(217, 255, 232)
+            bundle.outline.Color = Color3.fromRGB(87, 202, 151)
+            bundle.sign.MaxDistance = 40
+            bundle.sign.Enabled = true
+            if bundle.reopenStamp ~= stamp then
+                bundle.reopenStamp = stamp
+                task.delay(REOPEN_SECONDS - age, function()
+                    if tracked[gate] ~= bundle or bundle.reopenStamp ~= stamp then return end
+                    bundle.reopenStamp = nil
+                    update(gate, bundle)
+                end)
+            end
+            return
+        end
+    end
+    if status ~= "Warning" and status ~= "Raising" and status ~= "Raised" then
         bundle.sign.Enabled = false
         return
     end
-    local locale = player.LocaleId
+    bundle.outline.Color = Color3.fromRGB(235, 182, 95)
+    bundle.sign.MaxDistance = 55
     if status == "Raised" then
         bundle.label.Text = CoreLocalization.text(
             locale, "TOWER_SHUTTER_JUMP"
@@ -45,17 +71,54 @@ local function update(gate, bundle)
     bundle.sign.Enabled = true
 end
 
+local function refreshSkins()
+    if not next(tracked) then return end
+    local source = ForgedBridge.sweptProfile()
+    if not source then return end
+    local meshId = source.MeshId
+    if not readyMeshes[meshId]
+        and ContentProvider:GetAssetFetchStatus(meshId) ~= Enum.AssetFetchStatus.Success then
+        local attempts = requestedMeshes[meshId] or 0
+        if loadingMeshes[meshId] or attempts >= 2 then return end
+        loadingMeshes[meshId] = true
+        requestedMeshes[meshId] = attempts + 1
+        task.spawn(function()
+            local loaded = false
+            local ok = pcall(ContentProvider.PreloadAsync, ContentProvider, {meshId}, function(_, status)
+                loaded = status == Enum.AssetFetchStatus.Success
+            end)
+            if ok and loaded then
+                loadingMeshes[meshId] = nil
+                readyMeshes[meshId] = true
+                refreshSkins()
+            else
+                task.delay(3, function()
+                    loadingMeshes[meshId] = nil
+                    refreshSkins()
+                end)
+            end
+        end)
+        return
+    end
+
+    for gate, bundle in pairs(tracked) do
+        if gate:GetAttribute("BridgeShutter") ~= true
+            or (bundle.skin and bundle.skin.Parent == gate) then continue end
+        bundle.skin, bundle.releaseSkin = ForgedBridge.bindShutterSkin(gate, source)
+    end
+end
+
 local function remove(gate)
     local bundle = tracked[gate]
     if not bundle then return end
     tracked[gate] = nil
-    if bundle.connection then bundle.connection:Disconnect() end
+    for _, connection in ipairs(bundle.connections) do connection:Disconnect() end
+    if bundle.releaseSkin then bundle.releaseSkin() end
     bundle.sign:Destroy()
 end
 
 local function attach(gate)
-    if not gate:IsA("BasePart") or tracked[gate]
-        or gate:GetAttribute("BridgeShutter") ~= true then return end
+    if not gate:IsA("BasePart") or tracked[gate] then return end
     local sign = Instance.new("BillboardGui")
     sign.Name = "TowerTimedGateGuide"
     sign.Adornee = gate
@@ -90,11 +153,20 @@ local function attach(gate)
     outline.Transparency = 0.2
     outline.Parent = label
 
-    local bundle = {sign = sign, label = label}
+    local bundle = {sign = sign, label = label, outline = outline}
     tracked[gate] = bundle
-    bundle.connection = gate:GetAttributeChangedSignal("ShutterPhase")
-        :Connect(function() update(gate, bundle) end)
-    update(gate, bundle)
+    local function changed() update(gate, bundle) end
+    bundle.connections = {
+        gate:GetAttributeChangedSignal("BridgeShutter"):Connect(function()
+            changed()
+            refreshSkins()
+        end),
+        gate:GetAttributeChangedSignal("ShutterPhase"):Connect(changed),
+        gate:GetAttributeChangedSignal("ShutterReopenedAt"):Connect(changed),
+        gate:GetPropertyChangedSignal("CanCollide"):Connect(changed),
+    }
+    changed()
+    refreshSkins()
 end
 
 roundState.OnClientEvent:Connect(function(state)
@@ -114,6 +186,11 @@ CollectionService:GetInstanceAddedSignal("TowerSkybridgeShutter")
     :Connect(attach)
 CollectionService:GetInstanceRemovedSignal("TowerSkybridgeShutter")
     :Connect(remove)
+ReplicatedStorage.DescendantAdded:Connect(function(instance)
+    if instance.Name == "ForgedBridge" or instance.Name == "SweptCrossbeam" then
+        task.defer(refreshSkins)
+    end
+end)
 for _, gate in ipairs(CollectionService:GetTagged("TowerSkybridgeShutter")) do
     attach(gate)
 end

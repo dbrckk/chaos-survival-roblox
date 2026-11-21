@@ -9,6 +9,7 @@ local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local ResultPresentation = require(ReplicatedStorage.Shared.ResultPresentation)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -34,8 +35,8 @@ local function clear()
     folder:ClearAllChildren()
 end
 
-local function makePart(name, size, cframe, color, material, transparency)
-    local part = Instance.new("Part")
+local function makePart(name, size, cframe, color, material, transparency, instance)
+    local part = instance or Instance.new("Part")
     part.Name = name
     part.Size = size
     part.CFrame = cframe
@@ -251,26 +252,27 @@ local function addGroupLabel(centerAnchor, state, survivorCount, accentColor)
     end
 end
 
-local function addSurvivorPedestal(item, accentColor, secondaryColor, tier, reducedMotion)
+local function addSurvivorPedestal(item, accentColor, secondaryColor, tier, reducedMotion, source)
     local root = item.root
     if not root or not root.Parent then
         return
     end
 
     local radius = item.localPlayer and 6.4 or 5.2
+    local disc = CelebrationMeshes.disc(source, root.Position + Vector3.new(0, -2.65, 0), radius, 0.055)
     local ring = makePart(
         "ResultSurvivorPedestal_" .. item.key,
-        Vector3.new(0.055, radius, radius),
-        CFrame.new(root.Position + Vector3.new(0, -2.65, 0))
-            * CFrame.Angles(0, 0, math.rad(90)),
+        disc.Size,
+        disc.CFrame,
         item.localPlayer and secondaryColor or accentColor,
         Enum.Material.Neon,
-        reducedMotion and 0.64 or 0.42
+        reducedMotion and 0.64 or 0.42,
+        disc
     )
 
     if not reducedMotion then
         local target = ring.Size
-        ring.Size = Vector3.new(target.X, target.Y * 0.48, target.Z * 0.48)
+        ring.Size = CelebrationMeshes.size(ring, radius * 0.48, 0.055)
         TweenService:Create(
             ring,
             TweenInfo.new(0.36, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -296,13 +298,16 @@ local function addResultArchitecture(
     secondaryColor,
     tier,
     reducedMotion,
-    survivorCount
+    survivorCount,
+    pressure,
+    capSource
 )
     local profile = ResultPresentation.architectureProfile(tier.Name, survivorCount)
     if profile.Pylons <= 0 then
         return
     end
 
+    local bodySource = CelebrationMeshes.readyProfile("pylon", pressure)
     local structureRadius = radius * profile.RadiusScale
     for index = 1, profile.Pylons do
         local angle = ((index - 1) / profile.Pylons) * math.pi * 2
@@ -319,7 +324,8 @@ local function addResultArchitecture(
             bodyCFrame,
             VisualTheme.World.Metal,
             Enum.Material.Metal,
-            reducedMotion and 0.16 or 1
+            reducedMotion and 0.16 or 1,
+            CelebrationMeshes.cloneProfile(bodySource)
         )
 
         local glass = makePart(
@@ -328,7 +334,8 @@ local function addResultArchitecture(
             bodyCFrame * CFrame.new(0, 0.02, -0.64),
             VisualTheme.World.MetalLight:Lerp(pylonAccent, 0.18),
             Enum.Material.Glass,
-            reducedMotion and 0.48 or 1
+            reducedMotion and 0.48 or 1,
+            CelebrationMeshes.cloneProfile(bodySource)
         )
 
         local blade = makePart(
@@ -337,7 +344,8 @@ local function addResultArchitecture(
             bodyCFrame * CFrame.new(0, 0.02, -0.75),
             pylonAccent,
             Enum.Material.Neon,
-            reducedMotion and 0.42 or 1
+            reducedMotion and 0.42 or 1,
+            CelebrationMeshes.cloneProfile(bodySource)
         )
 
         local cap = makePart(
@@ -346,7 +354,8 @@ local function addResultArchitecture(
             bodyCFrame * CFrame.new(0, profile.Height * 0.5 + 0.18, 0),
             pylonAccent:Lerp(Color3.new(1, 1, 1), 0.10),
             Enum.Material.Glass,
-            reducedMotion and 0.46 or 1
+            reducedMotion and 0.46 or 1,
+            CelebrationMeshes.cloneProfile(capSource)
         )
 
         if not reducedMotion then
@@ -429,19 +438,24 @@ local function rebuild(state)
     local center = base.Position
         + Vector3.new(0, base.Size.Y * 0.5 + 0.15, 0)
     local radius = ResultPresentation.constellationRadius(tier.Name)
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local ringSource = CelebrationMeshes.readyProfile("ring", pressure)
+    local coreSource = CelebrationMeshes.readyProfile("core", pressure)
 
+    local haloDisc = CelebrationMeshes.disc(ringSource, center, radius * 2, 0.065)
     local halo = makePart(
         "ResultConstellationHalo",
-        Vector3.new(0.065, radius * 2, radius * 2),
-        CFrame.new(center) * CFrame.Angles(0, 0, math.rad(90)),
+        haloDisc.Size,
+        haloDisc.CFrame,
         accentColor,
         Enum.Material.Neon,
-        reducedMotion and 0.70 or 0.46
+        reducedMotion and 0.70 or 0.46,
+        haloDisc
     )
 
     if not reducedMotion then
         local target = halo.Size
-        halo.Size = Vector3.new(target.X, 2.4, 2.4)
+        halo.Size = CelebrationMeshes.size(halo, 2.4, 0.065)
         TweenService:Create(
             halo,
             TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -449,14 +463,15 @@ local function rebuild(state)
         ):Play()
     end
 
+    local coreDisc = CelebrationMeshes.disc(coreSource, center + Vector3.new(0, 0.05, 0), 2.8, 0.16)
     local core = makePart(
         "ResultConstellationCore",
-        Vector3.new(0.16, 2.8, 2.8),
-        CFrame.new(center + Vector3.new(0, 0.05, 0))
-            * CFrame.Angles(0, 0, math.rad(90)),
+        coreDisc.Size,
+        coreDisc.CFrame,
         secondaryColor,
         Enum.Material.Neon,
-        0.34
+        0.34,
+        coreDisc
     )
 
     if tier.Name ~= "Low" then
@@ -476,7 +491,9 @@ local function rebuild(state)
         secondaryColor,
         tier,
         reducedMotion,
-        #survivors
+        #survivors,
+        pressure,
+        coreSource
     )
 
     local centerAnchor = Instance.new("Part")
@@ -535,7 +552,8 @@ local function rebuild(state)
                 accentColor,
                 secondaryColor,
                 tier,
-                reducedMotion
+                reducedMotion,
+                ringSource
             )
         end
     end
@@ -544,6 +562,11 @@ end
 stateEvent.OnClientEvent:Connect(function(state)
     local phase = tostring(state.phase or "waiting")
     lastState = state
+
+    if phase ~= previousPhase and (phase == "ready" or phase == "round")
+        and VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name ~= "Low" then
+        CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
+    end
 
     if phase == "result" and previousPhase ~= "result" then
         task.delay(0.10, function()

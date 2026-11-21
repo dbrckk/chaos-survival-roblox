@@ -16,6 +16,7 @@ local CornerMonument = require("../../src/client/ApprovedCornerMonumentMeshKit")
 local SkylineDepth = require("../../src/client/ApprovedSkylineDepthMeshKit")
 local LobbyReturnFormation = require("../../src/server/LobbyReturnFormation")
 local ArenaVariants = require("../../src/server/ArenaVariants")
+local ArenaGroundArchitecture = require("../../src/server/ArenaGroundArchitecture")
 local JumpRouteCueRules = require("../../src/shared/JumpRouteCueRules")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local OrbitalRouteSignKit = require("../../src/client/OrbitalRouteSignKit")
@@ -572,6 +573,8 @@ describe("Chaos Survival engine", function()
             Harbor = {"ApprovedHarborSignatureGantryTemplates", "SculptedGantry", "OriginalHarborSignatureGantry3D",
                 124368710235343, Vector3.new(40.8,14.0425,9.141), "DryDockHighCrane", 3},
         }
+        local beamSource = sourceFixture("ApprovedPerimeterStructuresTemplates","Brace",
+            "OriginalPerimeterStructure3D",108452611210970,Vector3.new(8.94,.5675,1.12))
         local artFolder = workspace:FindFirstChild("ApprovedRemainingStructureMeshesLocal")
         for _, variant in ipairs(ArenaVariants.Order) do
             local row = variants[variant]
@@ -584,14 +587,19 @@ describe("Chaos Survival engine", function()
             local realArena = MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
             local realDecor = realArena:FindFirstChild("Decor")
             local center = nil
+            local gateways = 0
             for _, candidate in ipairs(realArena:FindFirstChild("Platforms"):GetChildren()) do
-                if candidate:GetAttribute("SkySpineStep")==5 then center=candidate; break end
+                if candidate:GetAttribute("SkySpineStep")==5 then center=candidate end
+                if SkySpineCrownMeshKit.isGatewayDeck(realArena,candidate) then gateways+=1 end
             end
+            expect(gateways).toBe(4)
             assert(center,variant.." has no real command deck")
             local id = center.Name:match("%d+")
             local prefix = "SkySpine"..id.."_"
             local primitive = realDecor:FindFirstChild(prefix..row[6])
             local pulse = realDecor:FindFirstChild(prefix.."OverheadPulse")
+            local beamNative = realDecor:FindFirstChild(prefix.."InterchangeCrown")
+            beamNative.LocalTransparencyModifier=.29
             primitive.LocalTransparencyModifier=.25
             local point = center.Position
             SkySpineCrownMeshKit.sync(realArena,point,"Low",true,nil,0,true)
@@ -627,7 +635,29 @@ describe("Chaos Survival engine", function()
             SkySpineCrownMeshKit.sync(nil,Vector3.zero,"Low",false)
             expect(Remaining.count("command")).toBe(0)
             expect(primitive.LocalTransparencyModifier).toBe(.25)
+            Remaining.sync(realArena,beamNative.Position,"Low",true,nil,0,true)
+            expect(Remaining.count("command","SpineSignalBeam")).toBe(1)
+            local beam=artFolder:FindFirstChild("ApprovedP4_SpineSignalBeam")
+            assert(beam and beam:GetAttribute("OriginalP4OwnerPlatform")==center.Name)
+            expect(beamNative.LocalTransparencyModifier).toBe(1)
+            expect(pulse.LocalTransparencyModifier).toBe(0)
+            local box, size=beam:GetBoundingBox()
+            local localCenter=center.CFrame:PointToObjectSpace(box.Position)
+            local relative=center.CFrame:ToObjectSpace(box)
+            local extentZ=(math.abs(relative.RightVector.Z)*size.X
+                +math.abs(relative.LookVector.Z)*size.Z)*.5
+            local pulseCenter=center.CFrame:PointToObjectSpace(pulse.Position)
+            assert(localCenter.Z-extentZ > pulseCenter.Z+pulse.Size.Z*.5)
+            beamSource:SetAttribute("OwnerVerified",false)
+            task.wait()
+            expect(Remaining.count("command","SpineSignalBeam")).toBe(0)
+            expect(beamNative.LocalTransparencyModifier).toBe(.29)
+            beamSource:SetAttribute("OwnerVerified",true)
+            task.wait()
+            expect(Remaining.count("command","SpineSignalBeam")).toBe(1)
             SkySpineCrownMeshKit.sync(realArena,point,"High",true,nil,0,false)
+            expect(Remaining.count("command","SpineSignalBeam")).toBe(0)
+            expect(beamNative.LocalTransparencyModifier).toBe(1)
             Remaining.sync(realArena,point,"High",true,nil,0,false)
             expect(Remaining.nativeCount("command")).toBe(row[7]*2)
             Remaining.sync(realArena,point,"High",true,nil,1,false)
@@ -639,6 +669,7 @@ describe("Chaos Survival engine", function()
             variantSource.Parent:Destroy()
             if cabin then cabin.Parent:Destroy() end
         end
+        beamSource:Destroy()
         holder:Destroy()
     end)
     it("fits original corner foundations and crowns in all five real arenas and restores each native on loss", function()
@@ -1225,27 +1256,18 @@ describe("Chaos Survival engine", function()
         local decor = Instance.new("Folder")
         decor.Name = "Decor"
         decor.Parent = arena
-        -- The real builder uses a 6x6 grid, not an unrelated 4x2 stand-in.
-        -- Choose eight genuine central bays so Low has two within 125 studs.
-        local cell = (320 - 18) / 6
+        ArenaGroundArchitecture.build(decor, base, "Classic", VisualTheme.arena("Classic"), nil, mesh, mesh)
+        -- Keep eight central bays so Low has two within 125 studs.
         local centerBays = {14, 15, 16, 17, 20, 21, 22, 23}
-        for _, index in ipairs(centerBays) do
-            local ix = math.floor((index - 1) / 6) + 1
-            local iz = (index - 1) % 6 + 1
-            local ground = Instance.new("Part")
-            ground.Name = "PremiumGroundModule" .. index
-            ground.Size = Vector3.new(cell - 1.2, 0.035, cell - 1.2)
-            ground.CFrame = base.CFrame * CFrame.new(
-                (ix - 3.5) * cell, base.Size.Y * .5 + .153,
-                (iz - 3.5) * cell)
-            ground.Anchored = true
-            ground.CastShadow = false
-            ground.CanCollide = false
-            ground.CanTouch = false
-            ground.CanQuery = false
-            ground:SetAttribute("OriginalGroundFinish", true)
-            ground:SetAttribute("PremiumArchitecturalSurface", true)
-            ground.Parent = decor
+        for _, child in ipairs(decor:GetChildren()) do
+            local index = tonumber(child.Name:match("^PremiumGroundModule(%d+)$"))
+            if index and not table.find(centerBays, index) then child:Destroy() end
+        end
+        local overlays = {decor.PremiumGroundServiceInlay15, decor.PremiumGroundGusset17}
+        for _, overlay in ipairs(overlays) do
+            expect(overlay:IsA("MeshPart")).toBe(true)
+            expect(not overlay.CanCollide and not overlay.CanTouch and not overlay.CanQuery).toBe(true)
+            overlay.LocalTransparencyModifier = .25
         end
         local camera = Vector3.new(0, 14, 0)
         -- The verified 2,976-triangle source now uses 2/8/24 resident
@@ -1256,6 +1278,9 @@ describe("Chaos Survival engine", function()
         expect(PremiumGroundMeshKit.count()).toBe(8)
         PremiumGroundMeshKit.sync(arena, camera, "High", true)
         expect(PremiumGroundMeshKit.count()).toBe(8)
+        for _, overlay in ipairs(overlays) do
+            expect(overlay.LocalTransparencyModifier).toBe(1)
+        end
         local cosmeticBucket = workspace:FindFirstChild("OriginalPremiumGroundMeshesLocal")
         expect(cosmeticBucket ~= nil).toBe(true)
         for _, clone in ipairs(cosmeticBucket:GetChildren()) do
@@ -1278,6 +1303,9 @@ describe("Chaos Survival engine", function()
         expect(PremiumGroundMeshKit.count()).toBe(0)
         expect(base.CanCollide).toBe(true)
         expect(base.Size).toBe(Vector3.new(231, 2, 231))
+        for _, overlay in ipairs(overlays) do
+            expect(overlay.LocalTransparencyModifier).toBe(.25)
+        end
         PremiumGroundMeshKit.sync(nil, Vector3.zero, "Low", false)
         generated:Destroy()
         holder:Destroy()

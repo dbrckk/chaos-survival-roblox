@@ -74,7 +74,7 @@ function AftermathSurfaceKit.count(tier)
     return 3
 end
 
-function AftermathSurfaceKit.build(parent, id, tier, surfaceFrame, profile, scale, tag, accentTheme)
+function AftermathSurfaceKit.build(parent, id, tier, surfaceFrame, profile, scale, tag, accentTheme, fitPiece)
     local recipe = MARKS[id]
     if not recipe or not parent or typeof(surfaceFrame) ~= "CFrame"
         or not profile or typeof(profile.Color) ~= "Color3"
@@ -86,13 +86,18 @@ function AftermathSurfaceKit.build(parent, id, tier, surfaceFrame, profile, scal
     local limit = AftermathSurfaceKit.count(tier)
     for index = 1, limit do
         local spec = recipe[index]
-        local p = Instance.new(spec[5] == "Wedge" and "WedgePart" or "Part")
-        p.Name = id .. "_" .. spec[1] .. "_" .. tostring(tag or "0")
-        p.Size = spec[2] * factor
-        p.CFrame = surfaceFrame
+        local shape = spec[5]
+        local size = spec[2] * factor
+        local frame = surfaceFrame
             * CFrame.new(spec[3] * factor)
             * CFrame.Angles(0, math.rad(spec[4]), 0)
-        if spec[5] == "Ball" then
+        local mesh
+        if fitPiece then mesh, size, frame = fitPiece(shape, size, frame) end
+        local p = mesh or Instance.new(shape == "Wedge" and "WedgePart" or "Part")
+        p.Name = id .. "_" .. spec[1] .. "_" .. tostring(tag or "0")
+        p.Size = size
+        p.CFrame = frame
+        if not mesh and shape == "Ball" then
             p.Shape = Enum.PartType.Ball
         end
         p.Anchored = true

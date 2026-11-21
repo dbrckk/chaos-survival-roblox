@@ -2,9 +2,12 @@
 -- identity Parts. No physics mutations, asset creation or update loop.
 -- The owner is the REAL server physical deck or original support post,
 -- obtained from the existing renderer's exact source-authored weld.
+local horizonModule = script and script.Parent:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("./HorizonMonumentGeometry")
 local Rules = {}
 local PROMENADE_HEIGHT = {[2] = 13.25, [4] = 14.5, [7] = 16.2}
-local PROMENADE_VARIANTS = {Classic = true, Towers = true, Crossroads = true, Orbital = true}
+local PROMENADE_VARIANTS = {Classic = true, Towers = true, Crossroads = true, Orbital = true, Harbor = true}
 
 local SWITCHBACK_WIDTHS = {12, 12, 11.6, 11.1, 10.6, 10.1, 9.6}
 local function routeIndex(value, maximum)
@@ -16,6 +19,117 @@ function Rules.isHarborLanding(deck)
     return deck:GetAttribute("HarborRoute") ~= nil
         or deck:GetAttribute("HarborSpokeRoute") ~= nil
         or deck:GetAttribute("HarborSkywayLane") ~= nil
+end
+
+function Rules.isHarborCargoTurn(deck)
+    local route = deck:GetAttribute("HarborRoute")
+    local step = deck:GetAttribute("HarborStep")
+    return routeIndex(route, 4) and routeIndex(step, 6) and step >= 2
+end
+
+function Rules.isHarborSkywayInterior(deck)
+    local lane = deck:GetAttribute("HarborSkywayLane")
+    local step = deck:GetAttribute("HarborSkywayStep")
+    return routeIndex(lane, 2) and routeIndex(step, 6) and step >= 2
+end
+
+function Rules.isHarborUpperPier(deck)
+    local route = deck:GetAttribute("HarborSpokeRoute")
+    local step = deck:GetAttribute("HarborSpokeStep")
+    return routeIndex(route, 4) and routeIndex(step, 4) and step >= 3
+end
+
+function Rules.platformSupportFootY(base, deck)
+    local ground = base.Position.Y + base.Size.Y * 0.5
+    if deck:GetAttribute("PromenadeStep") ~= nil
+        or deck:GetAttribute("SkySpineInterchange") == true
+        or Rules.isHarborCargoTurn(deck)
+        or Rules.isHarborSkywayInterior(deck)
+        or Rules.isHarborUpperPier(deck) then
+        -- Seat the forged shaft in the arena slab so it meets the floor.
+        return ground - 0.08
+    end
+    return ground + 0.15
+end
+
+function Rules.isAuthoredUnderFrameMesh(part)
+    return part:IsA("MeshPart")
+        and part.Name:match("^PlatformUnderFrame%d+$") ~= nil
+        and part:GetAttribute("OriginalPlatformUnderFrame3D") == true
+end
+
+function Rules.matchesDeckTrimPose(part, frame, size, sizeTolerance, positionTolerance, quarterTurn)
+    -- Approved profiles may import with their long axis on X or Z.
+    if quarterTurn and part.CFrame.LookVector:Dot(frame.LookVector) < .999 then
+        frame *= CFrame.Angles(0, math.pi * 0.5, 0)
+        size = Vector3.new(size.Z, size.Y, size.X)
+    end
+    return (part.Size - size).Magnitude <= sizeTolerance
+        and (part.Position - frame.Position).Magnitude <= positionTolerance
+        and part.CFrame.UpVector:Dot(frame.UpVector) >= .999
+        and part.CFrame.LookVector:Dot(frame.LookVector) >= .999
+end
+
+function Rules.isHarborLandingTrimReserve(part)
+    if not part:IsA("MeshPart") or part.MeshId == "" then return false end
+    local assetId = part:GetAttribute("Original3DAssetId")
+    return assetId == HorizonMonumentGeometry.harborCaissonAssetId()
+        or assetId == HorizonMonumentGeometry.assetId("beam")
+end
+
+function Rules.matchesUnderdeckFallback(part, frame, size, sizeTolerance, positionTolerance)
+    if not part then return false end
+    local quarterTurn = false
+    if Rules.isAuthoredUnderFrameMesh(part) then
+        if part:GetAttribute("OriginalHarborLandingTrimReserve3D") == true
+            and not Rules.isHarborLandingTrimReserve(part) then return false end
+        if part:GetAttribute("OriginalElevatedLatticeFrame3D") == true then
+            if part.MeshId == "" or part:GetAttribute("Original3DAssetId") ~= 106401955318567 then
+                return false
+            end
+            quarterTurn = true
+        end
+    elseif part:IsA("MeshPart") then
+        local name = part.Name
+        local assetId = part:GetAttribute("Original3DAssetId")
+        local arena = part.Parent and part.Parent.Parent
+        local casting = arena and HorizonMonumentGeometry.isFloorCasting(assetId, arena:GetAttribute("VariantId"))
+        local structuralProfile = assetId == 126298311664881 or assetId == 106401955318567 or casting
+        local spine = structuralProfile
+            and part:GetAttribute("OriginalSkySpineUnderdeck3D") == true
+            and (name:match("^SkySpine%d+_Undercarriage%-?1$")
+                or name:match("^SkySpine%d+_CrossStiffener$"))
+        local promenade = structuralProfile
+            and part:GetAttribute("OriginalPromenadeUnderdeck3D") == true
+            and name:match("^Promenade%d+_UnderdeckTruss$")
+        if part.MeshId == "" or not (spine or promenade) then return false end
+        quarterTurn = true
+    elseif not part:IsA("Part") or part.Shape ~= Enum.PartType.Block then
+        return false
+    end
+    return Rules.matchesDeckTrimPose(part, frame, size, sizeTolerance, positionTolerance, quarterTurn)
+end
+
+function Rules.promenadeUnderdeckGeometry(top, span, scale, sculpted)
+    if sculpted then
+        -- Seat the upper flange against the walking deck's underside.
+        return Vector3.new(5.6 * scale, .62, span * scale), CFrame.new(0, -top - .29, 0)
+    end
+    return Vector3.new(5.6 * scale, 1.7, span * scale), CFrame.new(0, top - 1.3, 0)
+end
+
+function Rules.promenadeSculptedStayPose(top, rise, side, scale)
+    -- At full contraction an 8-degree stay still clears the deck's edge.
+    -- Its raised center seats the upper end in the crosshead.
+    local angle = math.rad(8)
+    return CFrame.new(0, top + rise * .66 + .68, side * 8.3 * scale)
+        * CFrame.Angles(side * angle, 0, 0), angle
+end
+
+function Rules.isAuthoredPlatformBevel(part)
+    return part ~= nil and part:GetAttribute("OriginalStructuralBevel") == true
+        and (part:IsA("WedgePart") or (part:IsA("MeshPart")
+            and part:GetAttribute("OriginalPlatformBevel3D") == true))
 end
 
 function Rules.harborLandingWidth(deck)
@@ -40,7 +154,10 @@ function Rules.promenadePylonIndex(native)
         return nil
     end
     local index, side = native.Name:match("^Promenade(%d+)_LoadPylon(%-?1)$")
-    if not index or not native:IsA("Part") or native.Shape ~= Enum.PartType.Block
+    local block = native:IsA("Part") and native.Shape == Enum.PartType.Block
+    local shaft = native:IsA("MeshPart") and native.MeshId ~= ""
+        and native:GetAttribute("OriginalPromenadePylonShaft3D") == true
+    if not index or not (block or shaft)
         or not native.Anchored or native.CanCollide or native.CanTouch or native.CanQuery
         or native:GetAttribute("PerimeterPlatformIndex") ~= tonumber(index) then
         return nil
@@ -56,8 +173,14 @@ function Rules.matchesPromenadePylon(native, deck)
         or deck:GetAttribute("RouteTier") ~= 4 then return false end
     local arena = deck.Parent.Parent
     if not arena or deck.Parent ~= arena:FindFirstChild("Platforms")
-        or native.Parent ~= arena:FindFirstChild("Decor")
-        or not PROMENADE_VARIANTS[arena:GetAttribute("VariantId")] then return false end
+        or native.Parent ~= arena:FindFirstChild("Decor") then return false end
+    local variant = arena:GetAttribute("VariantId")
+    if not PROMENADE_VARIANTS[variant] then return false end
+    if native:IsA("MeshPart") then
+        local assetId = native:GetAttribute("Original3DAssetId")
+        if assetId ~= HorizonMonumentGeometry.assetId("shaft", variant)
+            and not HorizonMonumentGeometry.isFloorCasting(assetId, variant) then return false end
+    end
     local lane = deck:GetAttribute("PromenadeLane")
     local height = PROMENADE_HEIGHT[deck:GetAttribute("PromenadeStep")]
     if not height or (lane ~= 1 and lane ~= 2) then return false end

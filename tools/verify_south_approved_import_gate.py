@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Prove all eight South 3D loaders use the same exception-safe permit."""
+"""Audit South 3D imports and both horizons’ approved fallback coverage."""
+import json
 from pathlib import Path
 import re
 
@@ -54,4 +55,65 @@ for name in items:
     assert "if count~=7 then return false end" in src,name
 print("PASS all 8 Approved South owners use one exception-safe shared permit")
 print("PASS no direct South LoadAssetAsync or new per-frame loop")
+
+geometry = (ROOT/"src/shared/HorizonMonumentGeometry.lua").read_text()
+models = json.loads((ROOT/"assets/source/roblox-asset-registry.json").read_text())["models"]
+approved = {model["asset_id"] for model in models if model.get("moderation") == "Approved"}
+
+def read_asset_table(name):
+    section = geometry.split(f"local {name} = {{", 1)[1].split("\n}", 1)[0]
+    ids = dict(re.findall(r"(\w+) = (\d{9,})\b", section))
+    assert set(ids.values()) <= approved, set(ids.values()) - approved
+    return ids
+
+assets = read_asset_table("assets")
+shafts = read_asset_table("shafts")
+assert set(shafts) == {"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}
+
+builder = (SERVER/"MapBuilder.lua").read_text()
+piece_builder = builder.split("local function horizonPieceBuilder",1)[1].split("\nend",1)[0]
+assert 'template and template.MeshId ~= ""' in piece_builder
+assert "HorizonMonumentGeometry.assetId(profile, variant)" in piece_builder
+assert 'if shape and item:IsA("Part") then item.Shape = shape end' in piece_builder
+
+
+def targets(section, arc, count):
+    calls = re.findall(r'^\s*piece\(\s*(?:side < 0 and "(\w+)" or "(\w+)"|"(\w+)")', section, re.M)
+    names = {name for call in calls for name in call if name}
+    if arc in names:
+        names.remove(arc)
+        names.update(f"{arc}{i}" for i in range(1, count+1))
+    return names
+
+
+def audit_horizon(label, builder_name, boundary, arc, totals):
+    profile_name = label.lower() + "Profiles"
+    profile_section = geometry.split(f"local {profile_name} = {{",1)[1].split("local ",1)[0]
+    profiles = dict(re.findall(r'(\w+) = "(\w+)"', profile_section))
+    arc_count = int(re.search(r"for index = 1, (\d+) do", profile_section)[1])
+    arc_profile = re.search(rf'{profile_name}\["{arc}" \.\. index\] = "(\w+)"', profile_section)[1]
+    profiles.update({f"{arc}{i}": arc_profile for i in range(1, arc_count+1)})
+    monument = builder.split(f"local function {builder_name}",1)[1].split(boundary,1)[0]
+    foundation, *sections = re.split(
+        r'^    (?:(?:if|elseif) variant.Id == "\w+" then|else)$', monument, flags=re.M)
+    shared_targets = targets(foundation, arc, arc_count)
+    all_targets = set()
+    variants = ("Orbital", "Towers", "Crossroads", "Harbor", "Classic")
+    for name, section, total in zip(variants, sections, totals, strict=True):
+        names = shared_targets | targets(section, arc, arc_count)
+        assert len(names) == total and names <= profiles.keys(), (name, names-profiles.keys())
+        all_targets.update(names)
+    assert all_targets == profiles.keys(), all_targets ^ profiles.keys()
+    used_profiles = set(profiles.values())
+    assert used_profiles == {"bevel", "shaft", "roller", "lens", "beam", "cast"}
+    assert used_profiles - {"shaft"} <= assets.keys()
+    used_ids = {assets[profile] for profile in used_profiles - {"shaft"}} | set(shafts.values())
+    assert len(used_ids) == 10
+    print(f"PASS {sum(totals)} {label} fallback slots use profiles from {len(used_ids)} approved asset IDs")
+
+
+audit_horizon("South", "addSouthHorizonMonument", "-- The four corner groups", "ObservationArc",
+              (20, 13, 13, 14, 13))
+audit_horizon("North", "addArenaSignatureMegastructure", "-- Give the southern horizon", "ReactorArc",
+              (24, 13, 13, 16, 14))
 print("NOTE Roblox engine runtime/network behavior not measured in source CI")

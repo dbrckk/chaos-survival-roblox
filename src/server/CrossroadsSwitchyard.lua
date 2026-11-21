@@ -3,6 +3,7 @@
 -- Four noncolliding central junction pads; two opposing pads charge at
 -- once. Routes and collisions stay open whether or not the skill is active.
 local Players = game:GetService("Players")
+local RoundEquipmentArt = require("./RoundEquipmentArt")
 local movementModule = script and script.Parent:FindFirstChild("MovementSafety")
 local MovementSafety = if movementModule
     then require(movementModule) else require("./MovementSafety")
@@ -160,10 +161,10 @@ function CrossroadsSwitchyard.tryTrigger(ctx, pad, hit, ready, claimed, now)
             character:SetAttribute("FluxJunctionBoostReady", false)
         end
     end
-    pad:SetAttribute("JunctionTriggeredAt", workspace:GetServerTimeNow())
     pad:SetAttribute("JunctionTravelSign", direction:Dot(
         Vector3.new(-offset.Z, 0, offset.X)
     ) >= 0 and 1 or -1)
+    pad:SetAttribute("JunctionTriggeredAt", workspace:GetServerTimeNow())
     if player and ctx.OnArenaMechanicUsed then
         pcall(ctx.OnArenaMechanicUsed, player, "Crossroads",
             boostReady and "MASTER JUNCTION CUT" or "JUNCTION CUT", false)
@@ -171,21 +172,19 @@ function CrossroadsSwitchyard.tryTrigger(ctx, pad, hit, ready, claimed, now)
     return true
 end
 
-local function signal(parent, name, pad, size, localOffset, color)
-    local part = Instance.new("Part")
-    part.Name = name
-    part.Size = size
-    part.CFrame = pad.CFrame * CFrame.new(localOffset)
-    part.Anchored = true
-    part.CanCollide = false
-    part.CanTouch = false
-    part.CanQuery = false
-    part.CastShadow = false
-    part.Material = Enum.Material.Neon
-    part.Color = color
-    part.Transparency = 0.68
-    part.Parent = parent
-    return part
+local function addChevron(pieces, folder, pad, name, direction, color, profile)
+    local frame = CFrame.lookAt(pad.Position, pad.Position + direction)
+    -- Keep the arrow above the arena finish and the optional local housing
+    -- while staying well inside the original six-stud trigger footprint.
+    local tip = frame * Vector3.new(0, -1.81, -1.34)
+    for side = -1, 1, 2 do
+        local tail = frame * Vector3.new(side * 0.71, -1.81, -0.28)
+        local leg = CFrame.lookAt((tip + tail) * 0.5, tip)
+        pieces[#pieces + 1] = RoundEquipmentArt.create(folder,
+            name .. (side == 1 and "Outer" or ""),
+            Vector3.new(0.24, 0.075, (tip - tail).Magnitude + 0.05),
+            leg, color, Enum.Material.Neon, 0.68, profile)
+    end
 end
 
 function CrossroadsSwitchyard.start(ctx, mechanics, center)
@@ -203,6 +202,7 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
 
     local idle = Color3.fromRGB(122, 104, 174)
     local charged = Color3.fromRGB(255, 203, 99)
+    local profile = RoundEquipmentArt.profiles("Crossroads").beam
     for index, outward in ipairs(OFFSETS) do
         local pad = Instance.new("Part")
         pad.Name = "JunctionSwitch" .. tostring(index)
@@ -219,23 +219,12 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
         pad.Parent = folder
         pads[index] = pad
 
-        -- Two fixed transverse arrows, fitted entirely inside the marked
-        -- six-stud control surface. Server-painted for Low-end Android.
-        local alongX = math.abs(outward.X) > 0
-        local thin = alongX and Vector3.new(0.32, 0.065, 2.3)
-            or Vector3.new(2.3, 0.065, 0.32)
-        signalSets[index] = {
-            signal(folder, "JunctionChevron" .. index .. "A",
-                pad, thin, Vector3.new(
-                    alongX and -0.65 or 0, -2.04,
-                    alongX and 0 or -0.65
-                ), idle),
-            signal(folder, "JunctionChevron" .. index .. "B",
-                pad, thin, Vector3.new(
-                    alongX and 0.65 or 0, -2.04,
-                    alongX and 0 or 0.65
-                ), idle),
-        }
+        -- The arrows point along the two real directions of the cut.
+        local tangent = Vector3.new(-outward.Z, 0, outward.X)
+        local signals = {}
+        addChevron(signals, folder, pad, "JunctionChevron" .. index .. "A", tangent, idle, profile)
+        addChevron(signals, folder, pad, "JunctionChevron" .. index .. "B", -tangent, idle, profile)
+        signalSets[index] = signals
         -- A compact in-world label is visible without a new HUD or any
         -- quality-tier dependent particles. Only charged stations show it.
         local billboard = Instance.new("BillboardGui")
@@ -278,7 +267,7 @@ function CrossroadsSwitchyard.start(ctx, mechanics, center)
             pad:SetAttribute("JunctionActive", on)
             for _, piece in ipairs(signalSets[index]) do
                 piece.Color = on and charged or idle
-                piece.Transparency = on and 0.12 or 0.68
+                piece.Transparency = on and 0.07 or 0.68
             end
             signalSets[index].billboard.Enabled = on
         end

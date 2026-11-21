@@ -77,6 +77,26 @@ local function genuineTemplate(kind)
     return source
 end
 
+function Kit.platformCornerProfile()
+    local source = genuineTemplate("AnchorBolt")
+    if not source then return nil end
+    -- The upright forged head is the single 44-triangle BRUSHED region.
+    local headSize = Vector3.new(3.04, .85, 3.04)
+    local profile
+    for _, part in ipairs(source:GetChildren()) do
+        if part:IsA("MeshPart") and (part.Size - headSize).Magnitude < .08 then
+            if profile or not part.Archivable or part.MeshId == ""
+                or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
+                or part.Transparency >= 1 or math.abs(part.CFrame.UpVector.Y) < .999 then
+                return nil
+            end
+            profile = part
+        end
+    end
+    if profile then return {part = profile, assetId = PROFILES.AnchorBolt.id} end
+    return nil
+end
+
 local CORNER_GROUPS = {
     Vector2.new(5.08,5.08), -- cast wedge
     Vector2.new(4.12,3.904), -- seals and captive anchors
@@ -103,7 +123,7 @@ function Kit.harborCornerSource()
     end
     if not parts[1] or not parts[2] or not parts[3] then return nil end
     local frame,bounds = source:GetBoundingBox()
-    return {frame=frame,bounds=bounds,parts=parts}
+    return {frame=frame,bounds=bounds,parts=parts,assetId=PROFILES.CornerGuard.id}
 end
 
 local function nativePart(folder, name)

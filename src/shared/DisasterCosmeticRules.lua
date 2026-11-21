@@ -59,7 +59,11 @@ function DisasterCosmeticRules.reusableFreeze(state, warning)
         return false
     end
     for _, part in ipairs(state.segments) do
-        if not part:IsA("WedgePart") or part.Parent == nil then return false end
+        if part.Parent == nil
+            or (not part:IsA("WedgePart") and not (
+                state.segmentMeshId and part:IsA("MeshPart")
+                and part.MeshId == state.segmentMeshId
+            )) then return false end
     end
     return true
 end

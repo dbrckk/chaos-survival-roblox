@@ -1,8 +1,13 @@
 -- Forged district bases on the same camera pass as the facade and shell.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 
 local Kit = {}
 local ASSET_ID = 101457508594609
+Kit.AssetId = ASSET_ID
 local SOURCE_FOLDER = "ApprovedHarborDockCaissonTemplates"
 local SOURCE_TAG = "OriginalHarborDockCaisson3D"
 local FACADE = "LocalApprovedDistrictFacadeMounted"
@@ -19,10 +24,10 @@ local RIM = {name = "FoundationRim", size = Vector3.new(.22, 13.8, 13.8), y = .7
 local CYLINDER = CFrame.Angles(0, 0, math.pi * .5)
 local MESH_PROPERTIES = {"MeshId", "CFrame", "Size", "Anchored", "Massless",
     "CanCollide", "CanTouch", "CanQuery", "Transparency"}
-local NATIVE_PROPERTIES = {"Name", "CFrame", "Size", "Shape", "Anchored",
+local NATIVE_PROPERTIES = {"Name", "CFrame", "Size", "Anchored",
     "CanCollide", "CanTouch", "CanQuery", "LocalTransparencyModifier"}
 local OWNER_ATTRIBUTES = {"ArenaDistrictArchitecture", "SourceIsOriginal",
-    "CosmeticOnly", "DistrictIndex", FACADE, SIDEWALL}
+    "CosmeticOnly", "DistrictIndex", "FacadeVariantId", FACADE, SIDEWALL}
 
 local bucket = Instance.new("Folder")
 bucket.Name = "ApprovedDistrictFoundationsLocal"
@@ -87,6 +92,22 @@ local function approved()
     return source
 end
 
+function Kit.plinthProfile()
+    local source = approved()
+    if not source then return nil end
+    -- The ARMOR region contains the sealed upper cassette and its inset
+    -- lower bulkhead. Its square footprint survives horizontal axis swaps.
+    local expected = Vector3.new(12.82, 2.69, 12.82)
+    local plinth
+    for _, part in ipairs(source:GetChildren()) do
+        if (part.Size - expected).Magnitude < .12 then
+            if plinth or not part.Archivable or part.MeshId == "" then return nil end
+            plinth = part
+        end
+    end
+    return plinth
+end
+
 local function bindSource(source)
     sourceInUse = source
     local holder = source.Parent
@@ -113,7 +134,7 @@ local function sameFrame(actual, expected)
 end
 
 local function cosmeticPart(part, owner)
-    return part and part:IsA("Part") and part.Parent == owner and part.Anchored
+    return part and part:IsA("BasePart") and part.Parent == owner and part.Anchored
         and not part.CanCollide and not part.CanTouch and not part.CanQuery
         and part.LocalTransparencyModifier < .95
         and part:GetAttribute("SceneryLodHidden") ~= true
@@ -121,9 +142,21 @@ end
 
 local function nativeFor(building, origin, spec)
     local part = building:FindFirstChild(spec.name)
-    if cosmeticPart(part, building) and part.Shape == Enum.PartType.Cylinder
-        and (part.Size - spec.size).Magnitude < .08
-        and sameFrame(part.CFrame, origin * CFrame.new(0, spec.y, 0) * CYLINDER)
+    if not cosmeticPart(part, building) then return nil end
+    local size, frame = part.Size, part.CFrame
+    if part:IsA("MeshPart") then
+        local expectedAsset = if spec == FOOT
+            then HorizonMonumentGeometry.assetId("shaft", building:GetAttribute("FacadeVariantId"))
+            else 104654294187035
+        if not expectedAsset or part.MeshId == ""
+            or part:GetAttribute("Original3DAssetId") ~= expectedAsset then return nil end
+        size = Vector3.new(size.Y, size.X, size.Z)
+        frame *= CYLINDER
+    elseif not part:IsA("Part") or part.Shape ~= Enum.PartType.Cylinder then
+        return nil
+    end
+    if (size - spec.size).Magnitude < .08
+        and sameFrame(frame, origin * CFrame.new(0, spec.y, 0) * CYLINDER)
         and (part.Transparency < 1 or (mounted[building] and mounted[building].originals[part])) then
         return part
     end
@@ -141,7 +174,7 @@ local function eligible(building, district)
     local index = building:GetAttribute("DistrictIndex")
     if type(index) ~= "number" or index % 1 ~= 0 or index < 1 or index > 16 then return nil end
     local door = building:FindFirstChild("ServiceEntryDoor")
-    if not cosmeticPart(door, building) or door.Transparency >= .7 then return nil end
+    if not cosmeticPart(door, building) or not door:IsA("Part") or door.Transparency >= .7 then return nil end
     local origin = door.CFrame * CFrame.new(.35, -4, 4.36)
     local foot, rim = nativeFor(building, origin, FOOT), nativeFor(building, origin, RIM)
     if not foot or not rim then return nil end
@@ -224,6 +257,12 @@ local function mount(building, district, door, origin, foot, rim, source)
     end
     for _, part in ipairs({foot, rim}) do
         watch(entry.connections, part:GetAttributeChangedSignal("SceneryLodHidden"), reconcile)
+        if part:IsA("MeshPart") then
+            watch(entry.connections, part:GetPropertyChangedSignal("MeshId"), reconcile)
+            watch(entry.connections, part:GetAttributeChangedSignal("Original3DAssetId"), reconcile)
+        else
+            watch(entry.connections, part:GetPropertyChangedSignal("Shape"), reconcile)
+        end
         for _, property in ipairs(NATIVE_PROPERTIES) do
             watch(entry.connections, part:GetPropertyChangedSignal(property), reconcile)
         end

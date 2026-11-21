@@ -1,15 +1,30 @@
 -- Massive structural arches over ACTUAL collidable promenade decks.
 -- Six original steel/ceramic/cargo gate ensembles per arena, each attached
 -- to its exact platform index for ShrinkingArena size and CFrame updates.
--- Native decoration only: no blocking walls, lights, physics, loops or assets.
+-- Cosmetic arches and approved underdeck relief share the physical deck's index.
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local lodRulesModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if lodRulesModule then require(lodRulesModule)
+    else require("../shared/PlatformIdentityLodRules")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
+local RouteSignalGeometry = require("./RouteSignalGeometry")
 local PromenadeArchitecture = {}
+local PORTAL_HEIGHT = {[2] = 13.25, [4] = 14.5, [7] = 16.2}
+
+function PromenadeArchitecture.portalHeight(step)
+    return PORTAL_HEIGHT[step]
+end
 
 local function make(decor, platform, index, name, size, offset, color,
-    material, className)
-    local p = Instance.new(className or "Part")
+    material, className, mesh)
+    local p = mesh or Instance.new(className or "Part")
     p.Name = "Promenade" .. index .. "_" .. name
-    p.Size = size
-    p.CFrame = platform.CFrame * offset
+    if not mesh then
+        p.Size = size
+        p.CFrame = platform.CFrame * offset
+    end
     p.Color = color
     p.Material = material
     p.Transparency = 0.06
@@ -26,21 +41,66 @@ local function make(decor, platform, index, name, size, offset, color,
     return p
 end
 
-local function piece(decor, platform, index, name, size, offset, color,
-    material, className)
-    return make(decor, platform, index, name, size, offset,
-        color, material, className)
+-- The lookout and its end span share a level strip. Put the cue in
+-- that strip and seat two braces where the thin span leaves the solid pier.
+function PromenadeArchitecture.decorateLookoutJoint(decor, lookout, index, span, theme, beam, casting)
+    local localCenter = lookout.CFrame:PointToObjectSpace(span.Position)
+    local lookoutTop = lookout.Size.Y * 0.5
+    local spanTop = localCenter.Y + span.Size.Y * 0.5
+    if math.abs(localCenter.Z) > 0.05 or math.abs(lookoutTop - spanTop) > 0.05
+        or math.abs(lookout.CFrame.RightVector:Dot(span.CFrame.RightVector)) < 0.999 then
+        return nil
+    end
+    local edge = lookout.Size.X * 0.5
+    local near = math.abs(localCenter.X) - span.Size.X * 0.5
+    local far = math.abs(localCenter.X) + span.Size.X * 0.5
+    if near < 0 or edge - near < 2.5 or far - edge < 2.6 then return nil end
+
+    local direction = if localCenter.X < 0 then -1 else 1
+    local depth = math.min(lookout.Size.Z, span.Size.Z)
+    local inset = math.min(2.0, (edge - near) * 0.5)
+    local size = Vector3.new(inset + 2.6, 1.25, 1.40)
+    local x = direction * (edge + (2.6 - inset) * 0.5)
+    local y = spanTop - span.Size.Y - 0.46
+    local color = theme.Detail:Lerp(theme.Structure, 0.38)
+    for side = -1, 1, 2 do
+        local offset = CFrame.new(x, y, side * (depth * 0.5 - 1.35))
+        local mesh = RouteSignalGeometry.fitStructural(lookout.CFrame * offset, size, false, beam, casting)
+        if mesh then
+            mesh.Name = "LookoutJointBrace" .. index .. "_" .. side
+            mesh.Color = color
+            mesh.Material = lookout.Material
+            mesh.Transparency = 0
+            mesh:SetAttribute("PerimeterPlatformIndex", index)
+            mesh.Parent = decor
+        end
+    end
+
+    return lookout.CFrame.RightVector * (direction * (near + edge) * 0.5)
 end
 
-local function variantEquipment(decor, platform, index, variant, theme, top)
+local function variantEquipment(decor, platform, index, variant, theme, top, profiles)
     local metal = theme.Structure:Lerp(theme.Detail, 0.35)
     local accent = theme.Accent:Lerp(theme.Structure, 0.55)
     local secondary = theme.Secondary:Lerp(theme.Detail, 0.32)
     local equipment = 0
     local function add(name, size, offset, color, material, className)
-        piece(decor, platform, index, name, size,
-            CFrame.new(0, top, 0) * offset,
-            color, material, className)
+        local profile = HorizonMonumentGeometry.promenadeRoofProfile(name)
+        local source = profiles and profiles[profile]
+        local template = source and source.part
+        offset = CFrame.new(0, top, 0) * offset
+        local mesh
+        if template and template.MeshId ~= "" then
+            -- Beams run along the deck X. Retain the original axes of
+            -- housings, lenses and shafts for the local equipment mounts.
+            local alongX = profile == "beam" or template.Size.X > template.Size.Z
+            mesh = RouteSignalGeometry.fit(template, platform.CFrame * offset, size, nil, alongX)
+            if mesh then
+                mesh:SetAttribute("OriginalPromenadeEquipment3D", true)
+                mesh:SetAttribute("Original3DAssetId", source.assetId)
+            end
+        end
+        make(decor, platform, index, name, size, offset, color, material, className, mesh)
         equipment += 1
     end
 
@@ -93,7 +153,7 @@ local function variantEquipment(decor, platform, index, variant, theme, top)
 end
 
 function PromenadeArchitecture.decorate(decor, platform, index, definition,
-    variant, theme)
+    variant, theme, trussProfile, profiles)
     if not decor or not platform or not platform:IsA("BasePart")
         or type(definition) ~= "table" or type(theme) ~= "table" then
         return 0
@@ -102,8 +162,8 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local step = definition.PromenadeStep
     -- Monumental gateway rhythm: three obvious spans per lane, leaving
     -- unimpeded sightlines on the other five physical deck sections.
-    if (lane ~= 1 and lane ~= 2)
-        or (step ~= 2 and step ~= 4 and step ~= 7) then
+    local crownHeight = PromenadeArchitecture.portalHeight(step)
+    if (lane ~= 1 and lane ~= 2) or not crownHeight then
         return 0
     end
 
@@ -115,37 +175,67 @@ function PromenadeArchitecture.decorate(decor, platform, index, definition,
     local material = variant == "Harbor" and Enum.Material.CorrodedMetal
         or (variant == "Orbital" and Enum.Material.CeramicTiles
             or Enum.Material.Metal)
-    local function structure(name, size, offset, color, finish, className)
-        piece(decor, platform, index, name, size,
-            CFrame.new(0, height, 0) * offset,
-            color, finish or material, className)
-        count += 1
-    end
-
-    local crownHeight = step == 7 and 16.2 or (step == 4 and 14.5 or 13.25)
     local crownSpan = step == 7 and 21.2 or (step == 4 and 19.6 or 18.4)
+    local shaftProfile = profiles and profiles.shaft
+    local casting = profiles and profiles.bevel
+    local pylonSize = Vector3.new(1.6, crownHeight, 1.8)
+    local staySize = Vector3.new(0.65, crownHeight * 0.55, 1.1)
     -- Two side rails outside the ACTUAL 12-stud-wide crossing. Arch
     -- interiors have >11 studs head clearance and no solid decoration,
     -- so running/jumping R6/R15 players never hit invisible beams.
     for side = -1, 1, 2 do
-        structure("LoadPylon" .. side, Vector3.new(1.6, crownHeight, 1.8),
-            CFrame.new(0, crownHeight * 0.5, side * 7.6), steel)
-        structure("DiagonalStay" .. side, Vector3.new(0.65, crownHeight * 0.55, 1.1),
-            CFrame.new(0, crownHeight * 0.66, side * 8.3)
-                * CFrame.Angles(math.rad(side * 16), 0, 0),
-            alloy)
+        local pylonOffset = CFrame.new(0, height + crownHeight * 0.5, side * 7.6)
+        local pylon = RouteSignalGeometry.fitStructural(platform.CFrame * pylonOffset,
+            pylonSize, true, shaftProfile, casting)
+        if pylon then
+            pylon:SetAttribute("OriginalPromenadePylonShaft3D", true)
+        end
+        make(decor, platform, index, "LoadPylon" .. side, pylonSize, pylonOffset,
+            steel, material, nil, pylon)
+        count += 1
+        local offset = PlatformIdentityLodRules.promenadeSculptedStayPose(height, crownHeight, side, 1)
+        -- The shaft already has its long axis on Y. Keep the diagonal's
+        -- local axes so contraction only changes its cross section.
+        local stay = RouteSignalGeometry.fitStructural(platform.CFrame * offset,
+            staySize, true, shaftProfile, casting)
+        if stay then
+            stay:SetAttribute("OriginalPromenadeStay3D", true)
+        else
+            offset = CFrame.new(0, height + crownHeight * 0.66, side * 8.3)
+                * CFrame.Angles(math.rad(side * 16), 0, 0)
+        end
+        make(decor, platform, index, "DiagonalStay" .. side, staySize, offset, alloy, material, nil, stay)
+        count += 1
     end
-    structure("MonumentalCrosshead", Vector3.new(4.0, 1.2, crownSpan),
-        CFrame.new(0, crownHeight, 0), alloy)
-    -- The real walkway remains unchanged; larger late-stage underframes
-    -- create a stronger silhouette without extra parts or collisions.
+    local crossheadSize = Vector3.new(4.0, 1.2, crownSpan)
+    local crossheadOffset = CFrame.new(0, height + crownHeight, 0)
+    local beamProfile = profiles and profiles.beam
+    local crosshead = RouteSignalGeometry.fitStructural(platform.CFrame * crossheadOffset,
+        crossheadSize, false, beamProfile, casting)
+    if crosshead then
+        crosshead:SetAttribute("OriginalPromenadeCrosshead3D", true)
+    end
+    make(decor, platform, index, "MonumentalCrosshead", crossheadSize, crossheadOffset,
+        alloy, material, nil, crosshead)
+    count += 1
+    -- Keep the original owner slot and give the mesh a visible depth
+    -- below the deck. Native fallback retains its original fit.
     local trussSpan = step == 7 and 15.0 or (step == 4 and 13.0 or 11.0)
-    structure("UnderdeckTruss", Vector3.new(5.6, 1.7, trussSpan),
-        CFrame.new(0, -1.3, 0), steel, Enum.Material.Metal)
+    local trussSize, trussOffset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(height, trussSpan, 1, true)
+    local lattice = {part = trussProfile, assetId = 106401955318567}
+    local truss = RouteSignalGeometry.fitStructural(platform.CFrame * trussOffset,
+        trussSize, false, lattice, beamProfile, casting)
+    if truss then
+        truss:SetAttribute("OriginalPromenadeUnderdeck3D", true)
+    else
+        trussSize, trussOffset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(height, trussSpan, 1, false)
+    end
+    make(decor, platform, index, "UnderdeckTruss", trussSize, trussOffset, steel, Enum.Material.Metal, nil, truss)
+    count += 1
     -- The equipment is above the structural crosshead, or outside
     -- the deck edges. Nothing presents a fake playable upper surface.
     count += variantEquipment(decor, platform, index,
-        variant, theme, height + crownHeight)
+        variant, theme, height + crownHeight, profiles)
     assert(count <= 9, "Monumental promenade arch exceeded part budget")
     return count
 end

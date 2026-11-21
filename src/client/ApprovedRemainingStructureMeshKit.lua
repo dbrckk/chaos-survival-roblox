@@ -8,13 +8,25 @@ local Trim=if script and script.Parent
     and script.Parent:FindFirstChild("PlatformNativeTrimReplacementKit")
     then require(script.Parent.PlatformNativeTrimReplacementKit)
     else require("./PlatformNativeTrimReplacementKit")
+local LargeStructure=if script and script.Parent and script.Parent:FindFirstChild("PremiumLargeStructureMeshKit")
+    then require(script.Parent.PremiumLargeStructureMeshKit)
+    else require("./PremiumLargeStructureMeshKit")
 local Crown=if script and script.Parent and script.Parent:FindFirstChild("SkySpineCrownMeshKit")
     then require(script.Parent.SkySpineCrownMeshKit)
     else require("./SkySpineCrownMeshKit")
+local HarborHoist=if script and script.Parent and script.Parent:FindFirstChild("HarborPromenadeHoistArt")
+    then require(script.Parent.HarborPromenadeHoistArt)
+    else require("./HarborPromenadeHoistArt")
 local shared=ReplicatedStorage:FindFirstChild("Shared")
 local connectionModule=shared and shared:FindFirstChild("SkyRouteConnectionRules")
 local Connection=if connectionModule then require(connectionModule)
     else require("../shared/SkyRouteConnectionRules")
+local lodRulesModule=shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules=if lodRulesModule then require(lodRulesModule)
+    else require("../shared/PlatformIdentityLodRules")
+local horizonModule=shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry=if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 local Kit={}
 local SOURCE={
     Access={id=110243423264048,major=17.6,minor=3.9,height=17.53,centerY=6.855},
@@ -76,6 +88,17 @@ local EQUIPMENT={
             holder="ApprovedOrbitalReactorLandmarkTemplates",template="Node",tag="OriginalOrbitalReactorLandmark3D"},
         natives={{name="GyroCore",size=Vector3.new(4.2,4.2,4.2),x=0,y=3.3}},
         size=Vector3.new(4.12,4.12,4.12),y=3.3,
+    },
+    Harbor={
+        name="PromenadeHarbor",
+        source={id=75684193304551,major=44,minor=21.86,height=36.08949,centerY=0,
+            holder="ApprovedHarborKineticGantryTemplates",template="ContainerGantry",
+            tag="OriginalHarborKineticGantry3D"},
+        natives={
+            {name="FreightHoistArm",size=Vector3.new(16.8,1.6,2.3),x=1,y=1.9},
+            {name="SuspendedCrate",size=Vector3.new(4.2,3.8,4.2),x=8.1,y=-2.3,z=-4},
+            {name="CargoChain",size=Vector3.new(.3,3.2,.3),x=8.1,y=.8,z=-4},
+        },
     },
 }
 local FITTING_SOURCE={
@@ -156,7 +179,7 @@ local COMMAND_ART={
         }}},
 }
 local COMMAND_DISTANCE={Low=112,Medium=165,High=240}
-local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true}
+local PROMENADE_VARIANTS={Classic=true,Towers=true,Crossroads=true,Orbital=true,Harbor=true}
 local CROSSHEAD_SPAN={[2]=18.4,[4]=19.6,[7]=21.2}
 local CROSSHEAD_RISE={[2]=13.25,[4]=14.5,[7]=16.2}
 -- Source Z becomes the height along the tilted native stay. The open
@@ -329,6 +352,10 @@ local function archDeck(arena,deck,scale)
     return key,step,route,tonumber(deck.Name:match("%d+"))
 end
 
+local function isArchFloorCasting(arena,assetId)
+    return HorizonMonumentGeometry.isFloorCasting(assetId,arena:GetAttribute("VariantId"))
+end
+
 local function collectArch(arena,deck,decor,scale)
     local key,step,route,index=archDeck(arena,deck,scale)
     if not key then return nil end
@@ -347,9 +374,22 @@ local function collectArch(arena,deck,decor,scale)
     -- The SOURCE overpass must have reached the current genuine resized
     -- deck; otherwise we are in the server Base-before-Decor replication gap.
     local overpass=originals[5]
+    local span=overpass.Size.Z
+    if overpass:IsA("MeshPart") then
+        local assetId=overpass:GetAttribute("Original3DAssetId")
+        if overpass.MeshId=="" or overpass:GetAttribute("OriginalSkyRouteCanopy3D")~=true
+            or (assetId~=HorizonMonumentGeometry.assetId("beam") and not isArchFloorCasting(arena,assetId)) then
+            return nil
+        end
+        -- The imported bridge can store its long axis along mesh-local X.
+        local alongX=overpass.Size.X>overpass.Size.Z
+        local axis=alongX and overpass.CFrame.RightVector or overpass.CFrame.LookVector
+        if math.abs(axis:Dot(deck.CFrame.LookVector))<.999 then return nil end
+        span=alongX and overpass.Size.X or overpass.Size.Z
+    end
     local extra=step==8 and 9 or 6.6
     local expected=(size.Z/scale+extra)*scale
-    if math.abs(overpass.Size.Z-expected)>.36 then return nil end
+    if math.abs(span-expected)>.36 then return nil end
     local rise=step==8 and 14 or (step==4 and 12.9 or 12.1)
     local expectedPos=(deck.CFrame*CFrame.new(0,size.Y*.5+rise,0)).Position
     if (overpass.Position-expectedPos).Magnitude>.45 then return nil end
@@ -359,7 +399,7 @@ local function collectArch(arena,deck,decor,scale)
         -- collidable platform; its source upper crosshead is +1 above
         -- the native overpass offset. The plinth has its own footprint.
         orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0),
-        scaleZ=overpass.Size.Z/17.6,
+        scaleZ=span/17.6,
         stage=step,route=route,index=index,expectedParent=decor}
 end
 
@@ -373,19 +413,34 @@ local function collectArchBase(arena,deck,decor,scale)
     local natives={}
     for slot,partSpec in ipairs(ARCH_BASE_NATIVE) do
         local part=decor:FindFirstChild("SkyRouteMonument"..index.."_"..partSpec.name)
-        if not visualNative(part,decor) or not part:IsA("Part")
-            or part.Shape~=Enum.PartType.Block
+        if not visualNative(part,decor)
             or part:GetAttribute("SkyRouteMonument")~=true
             or part:GetAttribute("PerimeterPlatformIndex")~=index
             or part:GetAttribute("SkyRouteStage")~=stage:upper() then return nil end
+        local partSize,partFrame=part.Size,part.CFrame
+        if part:IsA("MeshPart") then
+            local assetId=part:GetAttribute("Original3DAssetId")
+            local dedicatedId=partSpec.side and SOURCE.ArchAbutment.id or SOURCE.AccessChassis.id
+            local approved=assetId==dedicatedId
+                or (not partSpec.side and assetId==HorizonMonumentGeometry.assetId("beam"))
+                or isArchFloorCasting(arena,assetId)
+            local swapped=part:GetAttribute("SkyRouteBaseAxisSwap")
+            if part.MeshId=="" or type(swapped)~="boolean" or not approved then return nil end
+            if swapped then
+                partSize=Vector3.new(partSize.Z,partSize.Y,partSize.X)
+                partFrame*=CFrame.Angles(0,-math.pi*.5,0)
+            end
+        elseif not part:IsA("Part") or part.Shape~=Enum.PartType.Block then
+            return nil
+        end
         local src=partSpec.size
         local width=partSpec.trim and size.X-partSpec.trim*scale or src.X*scale
         local z=partSpec.side and partSpec.side*(halfZ+scale) or 0
         local expected=deck.CFrame*CFrame.new(0,bottom+partSpec.y,z)
-        if (part.Size-Vector3.new(width,src.Y,src.Z*scale)).Magnitude>.14
-            or (part.Position-expected.Position).Magnitude>.16
-            or part.CFrame.UpVector:Dot(expected.UpVector)<.999
-            or part.CFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
+        if (partSize-Vector3.new(width,src.Y,src.Z*scale)).Magnitude>.14
+            or (partFrame.Position-expected.Position).Magnitude>.16
+            or partFrame.UpVector:Dot(expected.UpVector)<.999
+            or partFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
         natives[slot]=part
     end
     -- The original blocks are under the floor plane. Put the castings
@@ -419,8 +474,9 @@ local function collectArchBase(arena,deck,decor,scale)
 end
 
 local function porticoStep(arena,deck,scale)
-    if not PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]
-        or not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
+    local variant=arena:GetAttribute("VariantId")
+    if not PROMENADE_VARIANTS[variant] then return nil end
+    if not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("ChaosPermanentRoute")~=true
         or deck:GetAttribute("RouteTier")~=4
         or not deck.Anchored or not deck.CanCollide or deck.Transparency>=.75
@@ -441,14 +497,20 @@ local function porticoStep(arena,deck,scale)
     return step
 end
 
-local function promenadeNative(decor,index,suffix,wedge)
+local function promenadeNative(decor,index,suffix,wedge,meshTag,assetId,castingVariant)
     local native=decor:FindFirstChild("Promenade"..index..suffix)
     if not visualNative(native,decor)
         or native:GetAttribute("PromenadeVisualOnly")~=true
         or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then
         return nil
     end
-    if wedge then
+    if native:IsA("MeshPart") then
+        local nativeId=native:GetAttribute("Original3DAssetId")
+        if not meshTag or not assetId or native.MeshId==""
+            or native:GetAttribute(meshTag)~=true
+            or (nativeId~=assetId and (not castingVariant
+                or not HorizonMonumentGeometry.isFloorCasting(nativeId,castingVariant))) then return nil end
+    elseif wedge then
         if not native:IsA("WedgePart") then return nil end
     elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
         return nil
@@ -461,14 +523,25 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
     if not step then return nil end
     local index=deck.Name:match("^Platform(%d+)$")
     local suffix=side and "_DiagonalStay"..side or "_MonumentalCrosshead"
-    local native=promenadeNative(decor,index,suffix)
-    if not native then return nil end
+    local tag=side and "OriginalPromenadeStay3D" or "OriginalPromenadeCrosshead3D"
+    local variant=arena:GetAttribute("VariantId")
+    local assetId=HorizonMonumentGeometry.assetId(side and "shaft" or "beam",variant)
+    local native=promenadeNative(decor,index,suffix,nil,tag,assetId,variant)
+    if not native or Trim.hasPrimaryStructure(native) then return nil end
     local size=native.Size
     local rise=CROSSHEAD_RISE[step]
     local span=CROSSHEAD_SPAN[step]
     if side then
-        local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise*.66,
-            side*8.3*scale)*CFrame.Angles(side*STAY_ANGLE,0,0)
+        local angle=STAY_ANGLE
+        local expected
+        if native:IsA("MeshPart") then
+            local offset
+            offset,angle=PlatformIdentityLodRules.promenadeSculptedStayPose(deck.Size.Y*.5,rise,side,scale)
+            expected=deck.CFrame*offset
+        else
+            expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise*.66,
+                side*8.3*scale)*CFrame.Angles(side*STAY_ANGLE,0,0)
+        end
         if math.abs(size.X-.65*scale)>.045 or math.abs(size.Y-rise*.55)>.06
             or math.abs(size.Z-1.1*scale)>.055
             or (expected.Position-native.Position).Magnitude>.16
@@ -478,8 +551,8 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
         -- Shrink narrows the route but preserves native vertical length.
         -- Shorten the tilted girder just enough to keep its inside corner
         -- outboard of the walkable edge. Preserve native art if too short.
-        local maxHalfSpan=((8.3-6)*scale-depth*.5*math.cos(STAY_ANGLE)-.025)
-            /math.sin(STAY_ANGLE)
+        local maxHalfSpan=((8.3-6)*scale-depth*.5*math.cos(angle)-.025)
+            /math.sin(angle)
         local length=math.min(size.Y*.985,maxHalfSpan*2)
         if length<size.Y*.70 then return nil end
         return {category="stay",name="Stay",owner=deck,key=native,side=side,arena=arena,
@@ -487,20 +560,85 @@ local function collectPorticoPart(arena,deck,decor,scale,side)
             fitSize=Vector3.new(size.X*.94,depth,length),expectedParent=decor}
     end
     local expected=deck.CFrame*CFrame.new(0,deck.Size.Y*.5+rise,0)
+    local orientation=native.CFrame
+    if native:IsA("MeshPart") and size.X>size.Z then
+        -- Imported bridge art can store its span on X. Roof fittings
+        -- and the complete lattice still use the authored deck axes.
+        size=Vector3.new(size.Z,size.Y,size.X)
+        orientation*=CFrame.Angles(0,-math.pi*.5,0)
+    end
     if math.abs(size.X-4*scale)>.10 or math.abs(size.Y-1.2)>.06
         or math.abs(size.Z-span*scale)>.18
         or (expected.Position-native.Position).Magnitude>.16
-        or expected.LookVector:Dot(native.CFrame.LookVector)<.999
-        or expected.UpVector:Dot(native.CFrame.UpVector)<.999 then return nil end
+        or expected.LookVector:Dot(orientation.LookVector)<.999
+        or expected.UpVector:Dot(orientation.UpVector)<.999 then return nil end
     return {category="promenade",name="Crosshead",owner=deck,arena=arena,
-        originals={native},center=native.Position,orientation=native.CFrame,
+        originals={native},center=native.Position,orientation=orientation,
         fitSize=Vector3.new(size.X*.85,size.Y*.975,size.Z*.98),expectedParent=decor}
 end
 
--- Two real central trusses already exist in the five maps. Cover each
--- with a forged coupler only while its own Sky Spine endpoint overlaps.
--- The full promenade cradle/Harbor gantry has priority over this inset.
-local function collectJunctionTruss(arena,deck,spine,decor,scale)
+local function promenadeUnderdeck(deck,decor,scale,span)
+    local index=deck.Name:match("^Platform(%d+)$")
+    if not index then return nil end
+    local native=decor:FindFirstChild("Promenade"..index.."_UnderdeckTruss")
+    if not visualNative(native,decor) or Trim.hasPrimaryStructure(native)
+        or native:GetAttribute("PromenadeVisualOnly")~=true
+        or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
+    local size,offset=PlatformIdentityLodRules.promenadeUnderdeckGeometry(
+        deck.Size.Y*.5,span,scale,native:IsA("MeshPart"))
+    if not PlatformIdentityLodRules.matchesUnderdeckFallback(native,deck.CFrame*offset,size,.13,.14) then
+        return nil
+    end
+    return native
+end
+
+local function promenadeChassis(arena,deck,decor,frame,truss,name,spine)
+    local size=deck.Size
+    local depth=.56
+    local orientation=deck.CFrame*CFrame.new(0,-size.Y*.5-.04-depth*.5,0)
+        *CFrame.Angles(0,math.pi*.5,0)
+    return {category="junction",name=name,spec=SOURCE.AccessChassis,
+        key=frame,owner=deck,arena=arena,originals=truss and {frame,truss} or {frame},
+        otherDeck=spine,center=deck.Position,orientation=orientation,
+        fitSize=Vector3.new(size.Z*.985,depth,size.X*.985),expectedParent=decor}
+end
+
+local function collectPromenadeUnderframe(arena,deck,decor)
+    if deck.Parent~=arena:FindFirstChild("Platforms") then return nil end
+    local step=deck:GetAttribute("PromenadeStep")
+    -- Step four uses the dedicated two-deck junction fit.
+    if step==4 then return nil end
+    local frame,_,scale=LargeStructure.promenadeNativeFrame(decor,deck)
+    if not frame or Trim.hasPrimaryStructure(frame) then return nil end
+
+    if step==2 or step==7 then
+        local truss=promenadeUnderdeck(deck,decor,scale,step==2 and 11 or 15)
+        if not truss then return nil end
+        return promenadeChassis(arena,deck,decor,frame,truss,"PromenadeTruss")
+    end
+    return promenadeChassis(arena,deck,decor,frame,nil,"PromenadeUnderframe")
+end
+
+local function collectSpineUnderframe(arena,deck,decor)
+    if not deck:IsA("BasePart") or deck.Parent~=arena:FindFirstChild("Platforms") then return nil end
+    local native=LargeStructure.spineNativeParts(decor,deck)
+    if not native then return nil end
+    for _,part in ipairs(native) do
+        if Trim.hasPrimaryStructure(part) then return nil end
+    end
+    local size=deck.Size
+    local depth=.60
+    -- Fit the whole underside within the solid deck's perimeter. Keep
+    -- just below the collision face and above the original cross brace bottom.
+    local orientation=deck.CFrame*CFrame.new(0,-size.Y*.5-.04-depth*.5,0)
+    return {category="junction",name="SpineUnderframe",spec=SOURCE.AccessChassis,
+        key=native[1],owner=deck,arena=arena,originals=native,
+        center=deck.Position,orientation=orientation,
+        fitSize=Vector3.new(size.X*.985,depth,size.Z*.985),expectedParent=decor}
+end
+
+-- The central fittings depend on their own traversable Sky Spine endpoint.
+local function collectJunctionTruss(arena,deck,spine,decor,scale,useChassis)
     if not spine or deck.Parent~=arena:FindFirstChild("Platforms")
         or deck:GetAttribute("PromenadeStep")~=4
         or deck:GetAttribute("RouteTier")~=4 or spine:GetAttribute("RouteTier")~=4
@@ -508,20 +646,20 @@ local function collectJunctionTruss(arena,deck,spine,decor,scale)
         or math.abs(spine.Size.X-12*scale)>.12
         or math.abs(deck.Size.Y-2)>.08 or math.abs(spine.Size.Y-2)>.08
         or not Connection.spineJunction(spine,deck) then return nil end
-    local index=deck.Name:match("^Platform(%d+)$")
-    local native=promenadeNative(decor,index,"_UnderdeckTruss")
-    if not native or Trim.hasPrimaryJunctionTruss(native) then return nil end
-    local expected=deck.CFrame*CFrame.new(0,-.3,0)
-    if (native.Position-expected.Position).Magnitude>.14
-        or (native.Size-Vector3.new(5.6*scale,1.7,13*scale)).Magnitude>.13
-        or expected.UpVector:Dot(native.CFrame.UpVector)<.999
-        or expected.LookVector:Dot(native.CFrame.LookVector)<.999 then return nil end
+    local native=promenadeUnderdeck(deck,decor,scale,13)
+    if not native then return nil end
+    if useChassis then
+        local frame=LargeStructure.promenadeNativeFrame(decor,deck)
+        if not frame or Trim.hasPrimaryStructure(frame) then return nil end
+        return promenadeChassis(arena,deck,decor,frame,native,"JunctionUnderframe",spine)
+    end
     -- The shoulder remains underneath the real two-stud collision deck,
-    -- with a flange at its underside and visible structural depth below.
+    -- using the deck's axes and the same deep fit for either fallback.
+    local size,offset=PlatformIdentityLodRules.promenadeUnderdeckGeometry(deck.Size.Y*.5,13,scale,false)
     return {category="junction",name="JunctionTruss",key=native,owner=deck,
         otherDeck=spine,arena=arena,originals={native},center=deck.Position,
-        orientation=native.CFrame*CFrame.new(0,-1.02,0),
-        fitSize=Vector3.new(native.Size.X*.97,1.7,native.Size.Z*.98),expectedParent=decor}
+        orientation=deck.CFrame*offset*CFrame.new(0,-1.02,0),
+        fitSize=Vector3.new(size.X*.97,size.Y,size.Z*.98),expectedParent=decor}
 end
 
 local function collectStayPair(arena,deck,decor,scale)
@@ -539,17 +677,24 @@ local function collectStayPair(arena,deck,decor,scale)
     return pair
 end
 
-local function collectRoofNative(decor,index,orientation,scale,spec)
-    local native=promenadeNative(decor,index,"_"..spec.name,spec.wedge)
+local function collectRoofNative(decor,index,orientation,scale,spec,variant)
+    local profile=HorizonMonumentGeometry.promenadeRoofProfile(spec.name)
+    local assetId=HorizonMonumentGeometry.assetId(profile,variant)
+    local native=promenadeNative(decor,index,"_"..spec.name,spec.wedge,"OriginalPromenadeEquipment3D",assetId)
     if not native then return nil end
-    local expected=orientation*CFrame.new(spec.x*scale,spec.y,0)
+    local expected=orientation*CFrame.new(spec.x*scale,spec.y,(spec.z or 0)*scale)
         *CFrame.Angles(0,0,math.rad(spec.roll or 0))
     local size=spec.size
-    if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.10
+    local nativeSize,nativeFrame=native.Size,native.CFrame
+    if native:IsA("MeshPart") and profile=="beam" and nativeSize.Z>nativeSize.X then
+        nativeSize=Vector3.new(nativeSize.Z,nativeSize.Y,nativeSize.X)
+        nativeFrame*=CFrame.Angles(0,-math.pi*.5,0)
+    end
+    if (nativeSize-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.10
         or (native.Position-expected.Position).Magnitude>.15
-        or native.CFrame.UpVector:Dot(expected.UpVector)<.999
-        or native.CFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
-    return native
+        or nativeFrame.UpVector:Dot(expected.UpVector)<.999
+        or nativeFrame.LookVector:Dot(expected.LookVector)<.999 then return nil end
+    return native,nativeFrame,nativeSize
 end
 
 local function collectEquipment(arena,deck,decor,scale,equipment)
@@ -559,10 +704,22 @@ local function collectEquipment(arena,deck,decor,scale,equipment)
     if not crosshead then return nil end
     local index=deck.Name:match("^Platform(%d+)$")
     local natives={}
-    for _,spec in ipairs(equipment.natives) do
-        local native=collectRoofNative(decor,index,crosshead.orientation,scale,spec)
-        if not native then return nil end
+    local variant=arena:GetAttribute("VariantId")
+    local armFrame,armSize
+    for slot,spec in ipairs(equipment.natives) do
+        local native,frame,size=collectRoofNative(decor,index,crosshead.orientation,scale,spec,variant)
+        if not native or (equipment.name=="PromenadeHarbor" and Trim.hasPrimaryStructure(native)) then
+            return nil
+        end
         natives[#natives+1]=native
+        if slot==1 then armFrame,armSize=frame,size end
+    end
+    if equipment.name=="PromenadeHarbor" then
+        local targets=HarborHoist.targets(armFrame,armSize,natives[2],natives[3],scale)
+        if not targets then return nil end
+        return {category="equipment",name=equipment.name,spec=equipment.source,
+            owner=deck,key=natives[1],arena=arena,originals=natives,anchor=crosshead.originals[1],
+            center=natives[1].Position,hoistTargets=targets,expectedParent=decor}
     end
     -- The long dimension of each roof source runs along the real deck X
     -- axis. The common importer correction handles source X/Z swaps.
@@ -581,7 +738,7 @@ local function collectFittingPair(arena,deck,decor,scale,fittings)
     local index=deck.Name:match("^Platform(%d+)$")
     local pair={}
     for slot,fitting in ipairs(fittings) do
-        local native=collectRoofNative(decor,index,crosshead.orientation,scale,fitting)
+        local native=collectRoofNative(decor,index,crosshead.orientation,scale,fitting,arena:GetAttribute("VariantId"))
         if not native then return nil end
         local size=fitting.fitSize
         local vertical=fitting.vertical
@@ -597,6 +754,75 @@ local function collectFittingPair(arena,deck,decor,scale,fittings)
     pair[1].other=pair[2].key
     pair[2].other=pair[1].key
     return pair
+end
+
+local function skySpineRoofPart(decor,index,top,scale,spec,variant)
+    local native=decor:FindFirstChild("SkySpine"..index.."_"..spec.name)
+    if not visualNative(native,decor) or native:GetAttribute("SkySpineDecor")~=true
+        or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
+    local profile
+    if native:IsA("MeshPart") then
+        local marker="OriginalSkySpineCommandFallback3D"
+        local crown=spec.name=="InterchangeCrown"
+        if crown then
+            profile,marker="beam","OriginalSkySpineCrosshead3D"
+        else
+            profile=variant and HorizonMonumentGeometry.skySpineCommandProfile(spec.name)
+        end
+        local assetId=native:GetAttribute("Original3DAssetId")
+        if not profile or native.MeshId==""
+            or native:GetAttribute(marker)~=true
+            or (assetId~=HorizonMonumentGeometry.assetId(profile,variant)
+                and not (crown and HorizonMonumentGeometry.isFloorCasting(assetId,variant))) then
+            return nil
+        end
+    elseif spec.wedge then
+        if not native:IsA("WedgePart") then return nil end
+    elseif not native:IsA("Part") or native.Shape~=(spec.shape or Enum.PartType.Block) then
+        return nil
+    end
+    local size=Vector3.new(spec.size.X*scale,spec.size.Y,spec.size.Z*scale)
+    local aim=top*CFrame.new((spec.x or 0)*scale,spec.y,(spec.z or 0)*scale)
+        *CFrame.Angles(0,0,math.rad(spec.roll or 0))
+    if profile=="rotor" then
+        -- The source annulus is Y-axial; the primitive cylinder is X-axial.
+        local heightAxis=native:GetAttribute("RouteSignalHeightAxis")
+        if heightAxis~="X" and heightAxis~="Z" then return nil end
+        aim*=CFrame.Angles(0,0,math.pi*.5)
+        size=Vector3.new(size.Y,size.X,size.Z)
+        if heightAxis=="Z" then
+            aim*=CFrame.Angles(0,math.pi*.5,0)
+            size=Vector3.new(size.Z,size.Y,size.X)
+        end
+    elseif profile=="beam" and native.Size.Z>native.Size.X then
+        aim*=CFrame.Angles(0,math.pi*.5,0)
+        size=Vector3.new(size.Z,size.Y,size.X)
+    end
+    if (native.Size-size).Magnitude>.11
+        or (native.Position-aim.Position).Magnitude>.15
+        or native.CFrame.UpVector:Dot(aim.UpVector)<.999
+        or native.CFrame.LookVector:Dot(aim.LookVector)<.999 then return nil end
+    return native
+end
+
+local SPINE_CROWN={name="InterchangeCrown",size=Vector3.new(17.2,1.4,2.5),y=13}
+
+local function collectSpineSignalBeam(arena,deck,decor,scale)
+    if not Crown.isGatewayDeck(arena,deck) or deck:GetAttribute("RouteTier")~=4
+        or deck:GetAttribute("LocalSkySpineCrownVisible")==true then return nil end
+    local index=deck.Name:match("^Platform(%d+)$")
+    local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
+    local beam=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN,arena:GetAttribute("VariantId"))
+    if not beam then return nil end
+    local size=Vector3.new(SPINE_CROWN.size.X*scale,SPINE_CROWN.size.Y,SPINE_CROWN.size.Z*scale)
+    -- Set the trellis behind the native OverheadPulse strip. The bottom
+    -- chord meets the pylons without hiding the light on the front face.
+    local frame=CFrame.new(beam.Position)*top.Rotation
+        *CFrame.new(0,-.11,size.Z*.224)*CFrame.Angles(0,math.pi*.5,0)
+    return {category="command",name="SpineSignalBeam",spec=SOURCE.Crosshead,
+        owner=deck,key=beam,arena=arena,originals={beam},center=beam.Position,
+        orientation=frame,fitSize=Vector3.new(size.Z*.54,size.Y*.985,size.X*.98),
+        expectedParent=decor}
 end
 
 local function collectCommandArt(arena,deck,decor,scale,profiles)
@@ -615,32 +841,14 @@ local function collectCommandArt(arena,deck,decor,scale,profiles)
         or (shutter and shutter~="Idle") then return nil end
 
     local top=deck.CFrame*CFrame.new(0,deck.Size.Y*.5,0)
-    local prefix="SkySpine"..index.."_"
-    local function nativePart(spec)
-        local native=decor:FindFirstChild(prefix..spec.name)
-        if not visualNative(native,decor) or native:GetAttribute("SkySpineDecor")~=true
-            or native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index) then return nil end
-        if spec.wedge then
-            if not native:IsA("WedgePart") then return nil end
-        elseif not native:IsA("Part") or native.Shape~=(spec.shape or Enum.PartType.Block) then
-            return nil
-        end
-        local size=spec.size
-        local aim=top*CFrame.new((spec.x or 0)*scale,spec.y,(spec.z or 0)*scale)
-            *CFrame.Angles(0,0,math.rad(spec.roll or 0))
-        if (native.Size-Vector3.new(size.X*scale,size.Y,size.Z*scale)).Magnitude>.11
-            or (native.Position-aim.Position).Magnitude>.15
-            or native.CFrame.UpVector:Dot(aim.UpVector)<.999
-            or native.CFrame.LookVector:Dot(aim.LookVector)<.999 then return nil end
-        return native
-    end
-    local crown=nativePart({name="InterchangeCrown",size=Vector3.new(17.2,1.4,2.5),y=13})
+    local crown=skySpineRoofPart(decor,index,top,scale,SPINE_CROWN,arena:GetAttribute("VariantId"))
     if not crown then return nil end
+    local variant=arena:GetAttribute("VariantId")
     local group={}
     for i,profile in ipairs(profiles) do
         local natives={}
         for _,spec in ipairs(profile.natives) do
-            local native=nativePart(spec)
+            local native=skySpineRoofPart(decor,index,top,scale,spec,variant)
             if not native then return nil end
             natives[#natives+1]=native
         end
@@ -656,6 +864,18 @@ local function collectCommandArt(arena,deck,decor,scale,profiles)
         group[1].other,group[2].other=group[2].key,group[1].key
     end
     return group
+end
+
+local function casingSlotSize(part,forward)
+    local alignment=part.CFrame.LookVector:Dot(forward)
+    local size=part.Size
+    if part:IsA("MeshPart") then
+        if math.abs(alignment)>.999 then return size end
+        if math.abs(alignment)<.001 then return Vector3.new(size.Z,size.Y,size.X) end
+    elseif part:IsA("Part") and part.Shape==Enum.PartType.Block and alignment>.999 then
+        return size
+    end
+    return nil
 end
 
 local function collectCasing(arena,casing,group)
@@ -676,16 +896,20 @@ local function collectCasing(arena,casing,group)
         natives[#natives+1]=part
     end
     local foot,front=natives[1],natives[2]
-    if not foot:IsA("Part") or foot.Shape~=Enum.PartType.Block
-        or (foot.Size-Vector3.new(5.5,1,5.5)).Magnitude>.13
-        or not front:IsA("Part") or front.Shape~=Enum.PartType.Block
-        or (front.Size-Vector3.new(3.35,6.4,.65)).Magnitude>.13
-        or foot.CFrame.LookVector:Dot(front.CFrame.LookVector)<.999
-        or foot.CFrame.UpVector:Dot(front.CFrame.UpVector)<.999 then return nil end
-    local origin=front.CFrame*CFrame.new(0,0,1.7)
-    local localFoot=origin:PointToObjectSpace(foot.Position)
-    if math.abs(localFoot.X)>.08 or math.abs(localFoot.Z)>.08
-        or localFoot.Y< -3.65 or localFoot.Y> -2.55 then return nil end
+    if foot~=casing.PrimaryPart then return nil end
+    -- The authored fascia faces away from its foot along a 1.7-stud offset.
+    -- Imported mesh axes and the outward-facing casting can rotate independently.
+    local up=foot.CFrame.UpVector
+    local offset=front.Position-foot.Position
+    local rise=offset:Dot(up)
+    local drift=offset-up*rise
+    if math.abs(drift.Magnitude-1.7)>.08 or rise<2.55 or rise>3.65
+        or up:Dot(front.CFrame.UpVector)<.999 then return nil end
+    local forward=drift.Unit
+    local footSize,frontSize=casingSlotSize(foot,forward),casingSlotSize(front,forward)
+    if not footSize or (footSize-Vector3.new(5.5,1,5.5)).Magnitude>.13
+        or not frontSize or (frontSize-Vector3.new(3.35,6.4,.65)).Magnitude>.13 then return nil end
+    local origin=CFrame.lookAt(front.Position,front.Position+forward,up)*CFrame.new(0,0,1.7)
 
     -- Fit bottom to the actual slab without raising the crown into the
     -- separate navigation head. Yaw the detailed front toward the center
@@ -727,6 +951,24 @@ local function availableOrbitalRamp(arena,ramp,circuit)
         and phase~="Warning" and phase~="Gone" and (not shutter or shutter=="Idle")
 end
 
+local function orbitalStructureFootprint(native)
+    local nativeSize,nativeFrame=native.Size,native.CFrame
+    if native:IsA("MeshPart") then
+        local swapped=native:GetAttribute("OrbitalStructureAxisSwap")
+        if swapped==nil then swapped=native:GetAttribute("OrbitalAccessChassisAxisSwap") end
+        local assetId=native:GetAttribute("Original3DAssetId")
+        if native.MeshId=="" or (assetId~=SOURCE.AccessChassis.id and assetId~=126298311664881)
+            or type(swapped)~="boolean" then return nil end
+        if swapped then
+            nativeSize=Vector3.new(nativeSize.Z,nativeSize.Y,nativeSize.X)
+            nativeFrame*=CFrame.Angles(0,-math.pi*.5,0)
+        end
+    elseif not native:IsA("Part") or native.Shape~=Enum.PartType.Block then
+        return nil
+    end
+    return nativeSize,nativeFrame
+end
+
 local function collectHelix(arena,ramp,circuit)
     if not availableOrbitalRamp(arena,ramp,circuit) then return nil end
     local index=ramp:GetAttribute("HelixLane")
@@ -745,11 +987,12 @@ local function collectHelix(arena,ramp,circuit)
     local lateralScale=size.X/fullWidth
     local function take(name,specSize,position)
         local part=circuit:FindFirstChild(name)
-        if not visualNative(part,circuit) or not part:IsA("Part")
-            or part.Shape~=Enum.PartType.Block or part:GetAttribute("HelixLane")~=index
+        if not visualNative(part,circuit) or part:GetAttribute("HelixLane")~=index
             or part:GetAttribute("OrbitRouteGroup")~=group then return false end
-        local relative=ramp.CFrame:ToObjectSpace(part.CFrame)
-        if (part.Size-specSize).Magnitude>.09 or (relative.Position-position).Magnitude>.09
+        local size,frame=orbitalStructureFootprint(part)
+        if not size then return false end
+        local relative=ramp.CFrame:ToObjectSpace(frame)
+        if (size-specSize).Magnitude>.09 or (relative.Position-position).Magnitude>.09
             or relative.LookVector:Dot(-Vector3.zAxis)<.998
             or relative.UpVector:Dot(Vector3.yAxis)<.998 then return false end
         originals[#originals+1]=part
@@ -795,13 +1038,14 @@ local function collectAccessChassis(arena,ramp,circuit)
     if size.X<2.38 or size.X>fullWidth+.025 or math.abs(size.Y-.92)>.04
         or size.Z<2.6 or size.Z>55 then return nil end
     local native=circuit:FindFirstChild(kind.."Chassis"..number)
-    if not visualNative(native,circuit) or not native:IsA("Part")
-        or native.Shape~=Enum.PartType.Block or native:GetAttribute("OrbitRouteGroup")~=group then
+    if not visualNative(native,circuit) or native:GetAttribute("OrbitRouteGroup")~=group then
         return nil
     end
+    local nativeSize,nativeFrame=orbitalStructureFootprint(native)
+    if not nativeSize then return nil end
     local expected=Vector3.new(size.X*(1-.38/fullWidth),.22,size.Z-.45)
-    local relative=ramp.CFrame:ToObjectSpace(native.CFrame)
-    if (native.Size-expected).Magnitude>.08
+    local relative=ramp.CFrame:ToObjectSpace(nativeFrame)
+    if (nativeSize-expected).Magnitude>.08
         or (relative.Position-Vector3.new(0,-.58,0)).Magnitude>.07
         or relative.LookVector:Dot(-Vector3.zAxis)<.998
         or relative.UpVector:Dot(Vector3.yAxis)<.998 then
@@ -811,7 +1055,7 @@ local function collectAccessChassis(arena,ramp,circuit)
     return {category="helix",name="AccessChassis",owner=ramp,arena=arena,
         originals={native},center=ramp.Position,expectedParent=circuit,
         orientation=ramp.CFrame*CFrame.new(0,-size.Y*.5-.012-depth*.5,0),
-        fitSize=Vector3.new(native.Size.X*.985,depth,native.Size.Z*.985)}
+        fitSize=Vector3.new(nativeSize.X*.985,depth,nativeSize.Z*.985)}
 end
 
 local function isPortico(category)
@@ -820,12 +1064,18 @@ local function isPortico(category)
         or category=="junction"
 end
 
+local function usesStructureMask(entry)
+    local category=entry.category
+    return category=="junction" or category=="stay" or category=="promenade"
+        or entry.name=="PromenadeHarbor"
+end
+
 local function reveal(entry)
     for _,n in ipairs(entry.native) do
         if entry.category=="command" then
             Trim.setSkySpineRoofMask(n.part,true,false)
-        elseif entry.category=="junction" then
-            Trim.setJunctionTrussMask(n.part,false,false)
+        elseif usesStructureMask(entry) then
+            Trim.setPromenadeStructureMask(n.part,false,false)
         elseif (n.part.Parent==entry.expectedParent
             or ((isPortico(entry.category) or entry.category=="archBase" or entry.category=="casing"
                 or entry.category=="helix")
@@ -844,6 +1094,7 @@ end
 
 local function sourceIntact(entry)
     local spec=entry.spec
+    local partCount=entry.hoistBeam and HarborHoist.PartCount or 7
     if entry.disposing or entry.corrupt or not entry.model
         or entry.model.Parent~=folder
         or not entry.source or entry.source.Parent~=entry.sourceFolder
@@ -854,7 +1105,7 @@ local function sourceIntact(entry)
         or entry.source:GetAttribute("CosmeticOnly")~=true
         or entry.source:GetAttribute("Original3DAssetId")
             ~= spec.id
-        or not entry.pieces or #entry.pieces~=7 then return false end
+        or not entry.pieces or #entry.pieces~=partCount then return false end
     -- A streamed-in eighth mesh, stray Part or injected script must NEVER
     -- survive hidden inside a supposedly approved seven-piece sculpture.
     local actual=0
@@ -866,7 +1117,7 @@ local function sourceIntact(entry)
             return false
         end
     end
-    if actual~=7 then return false end
+    if actual~=partCount then return false end
     -- Check the *source* as well as its resident clone. A streamed-out
     -- material region, new unapproved part or Lua code invalidates the
     -- imported original without waiting for the next camera sample.
@@ -882,6 +1133,13 @@ local function sourceIntact(entry)
         end
     end
     if sourceCount~=7 then return false end
+    if entry.hoistBeam then
+        local beam=HarborHoist.beamSource()
+        if not beam or beam.model~=entry.hoistBeam.model or not HarborHoist.roles(entry.source) then return false end
+        for i,part in ipairs(beam.parts) do
+            if entry.hoistBeam.parts[i]~=part then return false end
+        end
+    end
     for _,p in ipairs(entry.pieces) do
         if not p.part:IsA("MeshPart")
             or not p.part:IsDescendantOf(entry.model)
@@ -925,12 +1183,21 @@ local function refresh(entry)
                 if entry.category=="arch" then
                     data=collectArch(entry.arena,entry.owner,decor,scale)
                 elseif entry.category=="junction" then
-                    data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale)
+                    if entry.name=="PromenadeTruss" or entry.name=="PromenadeUnderframe" then
+                        data=collectPromenadeUnderframe(entry.arena,entry.owner,decor)
+                    elseif entry.name=="SpineUnderframe" then
+                        data=collectSpineUnderframe(entry.arena,entry.owner,decor)
+                    else
+                        data=collectJunctionTruss(entry.arena,entry.owner,entry.otherDeck,decor,scale,
+                            entry.name=="JunctionUnderframe")
+                    end
                 elseif entry.category=="equipment" then
                     local equipment=EQUIPMENT[entry.arena:GetAttribute("VariantId")]
                     if equipment then
                         data=collectEquipment(entry.arena,entry.owner,decor,scale,equipment)
                     end
+                elseif entry.name=="SpineSignalBeam" then
+                    data=collectSpineSignalBeam(entry.arena,entry.owner,decor,scale)
                 elseif entry.category=="command" or entry.side then
                     local pair
                     if entry.category=="command" then
@@ -980,44 +1247,51 @@ local function refresh(entry)
         reveal(entry)
         return false
     end
-    local rule=entry.spec
-    local sx,sy,sz=data.scaleX or 1,1,data.scaleZ or 1
-    if data.fitSize then
-        local size,bounds=data.fitSize,entry.bounds
-        local major,minor=math.max(bounds.X,bounds.Z),math.min(bounds.X,bounds.Z)
-        sx=size.X/(entry.category=="casing" and major or minor)
-        sy=size.Y/bounds.Y
-        sz=size.Z/(entry.category=="casing" and minor or major)
-    elseif sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
-        reveal(entry)
-        return false
-    end
-    local ax,az=sx,sz
-    if entry.longX then ax,az=sz,sx end
-    local aim=data.orientation*CFrame.new(0,rule.centerY,0)
-        * CFrame.Angles(0,entry.longX and math.pi*.5 or 0,0)
-    local fitChanged=data.fitSize~=entry.lastFitSize or aim~=entry.lastFitFrame
-    for _,piece in ipairs(entry.pieces) do
-        if not data.fitSize or fitChanged then
-            local p=piece.frame.Position
-            local rotation=piece.frame-p
-            piece.part.Size=Vector3.new(
-                math.max(.025,piece.size.X*ax),math.max(.025,piece.size.Y*sy),
-                math.max(.025,piece.size.Z*az))
-            piece.part.CFrame=aim*CFrame.new(p.X*ax,p.Y*sy,p.Z*az)*rotation
+    if data.hoistTargets then
+        for _,piece in ipairs(entry.pieces) do
+            HarborHoist.refit(piece,data.hoistTargets[piece.role])
+            piece.part.LocalTransparencyModifier=0
         end
-        piece.part.LocalTransparencyModifier=0
-    end
-    if data.fitSize then
-        entry.lastFitSize=data.fitSize
-        entry.lastFitFrame=aim
+    else
+        local rule=entry.spec
+        local sx,sy,sz=data.scaleX or 1,1,data.scaleZ or 1
+        if data.fitSize then
+            local size,bounds=data.fitSize,entry.bounds
+            local major,minor=math.max(bounds.X,bounds.Z),math.min(bounds.X,bounds.Z)
+            sx=size.X/(entry.category=="casing" and major or minor)
+            sy=size.Y/bounds.Y
+            sz=size.Z/(entry.category=="casing" and minor or major)
+        elseif sx<.35 or sx>1.45 or sz<.35 or sz>2.4 then
+            reveal(entry)
+            return false
+        end
+        local ax,az=sx,sz
+        if entry.longX then ax,az=sz,sx end
+        local aim=data.orientation*CFrame.new(0,rule.centerY,0)
+            * CFrame.Angles(0,entry.longX and math.pi*.5 or 0,0)
+        local fitChanged=data.fitSize~=entry.lastFitSize or aim~=entry.lastFitFrame
+        for _,piece in ipairs(entry.pieces) do
+            if not data.fitSize or fitChanged then
+                local p=piece.frame.Position
+                local rotation=piece.frame-p
+                piece.part.Size=Vector3.new(
+                    math.max(.025,piece.size.X*ax),math.max(.025,piece.size.Y*sy),
+                    math.max(.025,piece.size.Z*az))
+                piece.part.CFrame=aim*CFrame.new(p.X*ax,p.Y*sy,p.Z*az)*rotation
+            end
+            piece.part.LocalTransparencyModifier=0
+        end
+        if data.fitSize then
+            entry.lastFitSize=data.fitSize
+            entry.lastFitFrame=aim
+        end
     end
     for _,n in ipairs(entry.native) do
         if n.part.Parent==entry.expectedParent then
             if entry.category=="command" then
                 Trim.setSkySpineRoofMask(n.part,true,true)
-            elseif entry.category=="junction" then
-                Trim.setJunctionTrussMask(n.part,false,true)
+            elseif usesStructureMask(entry) then
+                Trim.setPromenadeStructureMask(n.part,false,true)
             else
                 n.part.LocalTransparencyModifier=1
             end
@@ -1030,7 +1304,7 @@ end
 local function dispose(entry)
     if entry.disposing then return end
     entry.disposing=true
-    if entry.disconnectTruss then entry.disconnectTruss() end
+    if entry.disconnectStructureObserver then entry.disconnectStructureObserver() end
     reveal(entry)
     for _,c in ipairs(entry.connections) do c:Disconnect() end
     if entry.model then entry.model:Destroy() end
@@ -1062,13 +1336,18 @@ folder.ChildRemoved:Connect(function(child)
 end)
 
 local function mount(data,source)
-    local clone=source:Clone()
+    local clone,hoistPieces
+    if data.hoistTargets then
+        clone,hoistPieces=HarborHoist.build(source,data.hoistBeam)
+    else
+        clone=source:Clone()
+    end
     if not clone then return nil end
     local cf,b=clone:GetBoundingBox()
     local entry={category=data.category,name=data.name,spec=data.spec or SOURCE[data.name],
         owner=data.owner,side=data.side,other=data.other,arena=data.arena,
         component=data.component,
-        otherDeck=data.otherDeck,
+        otherDeck=data.otherDeck,hoistBeam=data.hoistBeam,
         source=source,sourceFolder=source.Parent,
         expectedParent=data.expectedParent,anchor=data.anchor,
         native={},model=clone,pieces={},connections={},bounds=b,
@@ -1090,8 +1369,9 @@ local function mount(data,source)
     for _,piece in ipairs(clone:GetDescendants()) do
         if piece:IsA("BasePart") then
             if not piece:IsA("MeshPart") then clone:Destroy();return nil end
-            entry.pieces[#entry.pieces+1]={
-                part=piece,frame=cf:ToObjectSpace(piece.CFrame),size=piece.Size}
+            local fit=hoistPieces and hoistPieces[piece] or {frame=cf:ToObjectSpace(piece.CFrame)}
+            fit.part,fit.size=piece,piece.Size
+            entry.pieces[#entry.pieces+1]=fit
             piece.Anchored=true
             piece.Massless=true
             piece.CanCollide=false
@@ -1101,7 +1381,8 @@ local function mount(data,source)
             piece.LocalTransparencyModifier=1
         end
     end
-    if #entry.pieces~=7 then clone:Destroy();return nil end
+    local partCount=hoistPieces and HarborHoist.PartCount or 7
+    if #entry.pieces~=partCount then clone:Destroy();return nil end
     clone.Name="ApprovedP4_"..data.name
     -- Observability only: identical approved Access models may serve four
     -- distinct routes. Bind diagnostics and stream-loss proof to the
@@ -1147,7 +1428,8 @@ local function mount(data,source)
             data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)
     end
     if isPortico(data.category) then
-        local routeAttributes=data.category=="command"
+        entry.connections[#entry.connections+1]=data.arena:GetAttributeChangedSignal("VariantId"):Connect(changed)
+        local routeAttributes=(data.category=="command" or data.name=="SpineUnderframe")
             and {"SkySpineInterchange","SkySpineStep","ChaosPermanentRoute","RouteTier","LocalSkySpineCrownVisible"}
             or {"PromenadeLane","PromenadeStep","ChaosPermanentRoute","RouteTier"}
         for _,attribute in ipairs(routeAttributes) do
@@ -1162,7 +1444,17 @@ local function mount(data,source)
             entry.connections[#entry.connections+1]=
                 data.otherDeck:GetAttributeChangedSignal(name):Connect(changed)
         end
-        entry.disconnectTruss=Trim.observePrimaryJunctionTruss(data.originals[1],changed)
+    end
+    if usesStructureMask(data) then
+        local disconnects={}
+        for _,part in ipairs(data.originals) do
+            disconnects[#disconnects+1]=Trim.observePrimaryStructure(part,changed)
+        end
+        entry.disconnectStructureObserver=function()
+            for _,disconnect in ipairs(disconnects) do disconnect() end
+        end
+    end
+    if usesStructureMask(data) or data.name=="SpineSignalBeam" then
         for _,tag in ipairs({"OwnerVerified","Original3DAssetId","CosmeticOnly",
             entry.spec.tag or "P4OriginalRemainingStructure3D"}) do
             entry.connections[#entry.connections+1]=source:GetAttributeChangedSignal(tag):Connect(changed)
@@ -1176,29 +1468,69 @@ local function mount(data,source)
         if native:IsA("Part") then
             entry.connections[#entry.connections+1]=
                 native:GetPropertyChangedSignal("Shape"):Connect(changed)
+        elseif native:IsA("MeshPart") and native.Name:match("^PlatformUnderFrame%d+$") then
+            entry.connections[#entry.connections+1]=
+                native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"):Connect(changed)
+        elseif native:IsA("MeshPart") then
+            local meshTag=if native.Name:match("_MonumentalCrosshead$") then "OriginalPromenadeCrosshead3D"
+                elseif native.Name:match("_InterchangeCrown$") then "OriginalSkySpineCrosshead3D"
+                elseif data.category=="stay" then "OriginalPromenadeStay3D"
+                elseif data.name=="SpineUnderframe" then "OriginalSkySpineUnderdeck3D"
+                elseif data.category=="junction" then "OriginalPromenadeUnderdeck3D"
+                elseif data.category=="equipment" or data.category=="fitting" then "OriginalPromenadeEquipment3D"
+                elseif data.category=="command" then "OriginalSkySpineCommandFallback3D"
+                else nil
+            if meshTag then
+                entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("MeshId"):Connect(changed)
+                for _,attribute in ipairs({meshTag,"Original3DAssetId"}) do
+                    entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(attribute):Connect(changed)
+                end
+                if data.category=="command" then
+                    entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal("RouteSignalHeightAxis"):Connect(changed)
+                end
+            end
         end
         local marker=data.category=="command" and "SkySpineDecor" or "PromenadeVisualOnly"
+        if data.name=="SpineUnderframe" then
+            marker=native==data.originals[1] and "PremiumArchitecturalSurface" or "SkySpineDecor"
+        elseif data.category=="junction" and native.Name:match("^PlatformUnderFrame%d+$") then
+            marker="PremiumArchitecturalSurface"
+        end
         for _,attribute in ipairs({marker,"PerimeterPlatformIndex"}) do
             entry.connections[#entry.connections+1]=
                 native:GetAttributeChangedSignal(attribute):Connect(changed)
         end
     end
     for _,native in ipairs(data.originals) do
-        if data.category=="casing" or data.category=="archBase" then
+        if data.category=="casing" or data.category=="archBase" or data.category=="arch" then
             watch(native,{"CFrame","Size","Transparency","Anchored",
                 "CanCollide","CanTouch","CanQuery","Name"})
             if native:IsA("Part") then
                 entry.connections[#entry.connections+1]=native:GetPropertyChangedSignal("Shape"):Connect(changed)
             end
             if data.category=="archBase" then
-                for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex"}) do
+                if native:IsA("MeshPart") then watch(native,{"MeshId"}) end
+                for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex",
+                    "Original3DAssetId","SkyRouteBaseAxisSwap"}) do
+                    entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
+                end
+            elseif data.category=="arch" then
+                if native:IsA("MeshPart") then watch(native,{"MeshId"}) end
+                for _,tag in ipairs({"SkyRouteMonument","SkyRouteStage","PerimeterPlatformIndex",
+                    "Original3DAssetId","OriginalSkyRouteCanopy3D"}) do
                     entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
                 end
             end
         elseif data.category=="helix" then
             watch(native,{"CFrame","Size","Transparency","Anchored","CanCollide",
-                "CanTouch","CanQuery","Name","Shape"})
-            for _,tag in ipairs({"OrbitRouteGroup","HelixLane"}) do
+                "CanTouch","CanQuery","Name"})
+            if native:IsA("MeshPart") then
+                watch(native,{"MeshId"})
+            else
+                watch(native,{"Shape"})
+            end
+            for _,tag in ipairs({"OrbitRouteGroup","HelixLane","Original3DAssetId",
+                "OrbitalStructureAxisSwap","OrbitalAccessChassisAxisSwap"}) do
                 entry.connections[#entry.connections+1]=native:GetAttributeChangedSignal(tag):Connect(changed)
             end
         elseif isPortico(data.category) then
@@ -1208,6 +1540,16 @@ local function mount(data,source)
         end
     end
     if data.anchor then watchPorticoNative(data.anchor) end
+    if data.hoistBeam then
+        local beam=data.hoistBeam.model
+        for _,tag in ipairs({"OwnerVerified","Original3DAssetId","OriginalStructuralSide3D","CosmeticOnly"}) do
+            entry.connections[#entry.connections+1]=beam:GetAttributeChangedSignal(tag):Connect(changed)
+        end
+        entry.connections[#entry.connections+1]=beam.Parent:GetAttributeChangedSignal("OwnerVerified"):Connect(changed)
+        entry.connections[#entry.connections+1]=beam.AncestryChanged:Connect(changed)
+        entry.connections[#entry.connections+1]=beam.ChildAdded:Connect(changed)
+        entry.connections[#entry.connections+1]=beam.ChildRemoved:Connect(changed)
+    end
     if data.category=="helix" then
         local routeTag=data.name=="AccessChassis" and "OrbitalAccessRamp" or "OrbitalHelixRamp"
         for _,tag in ipairs({routeTag,"OrbitalCoreRamp","OrbitRouteGroup","HelixLane","HelixStart","HelixFinish"}) do
@@ -1215,7 +1557,10 @@ local function mount(data,source)
         end
         entry.connections[#entry.connections+1]=data.owner:GetPropertyChangedSignal("Name"):Connect(changed)
     end
-    if data.category=="archBase" or data.category=="casing" then
+    if data.category=="arch" or data.category=="archBase" then
+        entry.connections[#entry.connections+1]=data.arena:GetAttributeChangedSignal("VariantId"):Connect(changed)
+    end
+    if data.category=="arch" or data.category=="archBase" or data.category=="casing" then
         local tags=data.category=="casing"
             and {"FrameColumnIndex","OriginalFrameCladding","SourceIsOriginal","CosmeticOnly"}
             or {"PerimeterRoute","PerimeterStep","RouteTier"}
@@ -1359,20 +1704,37 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     local variant=arena:GetAttribute("VariantId")
     local promenadeVariant=PROMENADE_VARIANTS[variant]
     local archBaseCap=caps(tier,touch,pressure,"archBase")
+    local trussCap=caps(tier,touch,pressure,"junction")
     for name in pairs(SOURCE) do
         local kind=name=="Crosshead" and "promenade" or (name=="Stay" and "stay")
             or (name=="JunctionTruss" and "junction")
         if name=="ArchAbutment" or name=="ArchGirder" then
             if archBaseCap>0 then src[name]=sourceFor(name) end
         elseif name=="AccessChassis" then
-            if variant=="Orbital" then src[name]=sourceFor(name) end
+            local routeUnderframes=trussCap>0 and promenadeVariant
+            if variant=="Orbital" or routeUnderframes then
+                local source=sourceFor(name)
+                if variant=="Orbital" then src[name]=source end
+                if routeUnderframes then
+                    src.JunctionUnderframe=source
+                    src.PromenadeUnderframe=source
+                    src.PromenadeTruss=source
+                    src.SpineUnderframe=source
+                end
+            end
         elseif not kind or ((promenadeVariant or kind=="junction") and caps(tier,touch,pressure,kind)>0) then
             src[name]=sourceFor(name)
         end
     end
     local equipment=EQUIPMENT[variant]
+    local hoistBeam
     if equipment and caps(tier,touch,pressure,"equipment")>0 then
-        src[equipment.name]=sourceFor(equipment.name,equipment.source)
+        local source=sourceFor(equipment.name,equipment.source)
+        if source and equipment.name=="PromenadeHarbor" then
+            hoistBeam=HarborHoist.beamSource()
+            if not hoistBeam or not HarborHoist.roles(source) then source=nil end
+        end
+        src[equipment.name]=source
     end
     local fittings=ROOF_FITTINGS[variant]
     local fittingSourcesReady=false
@@ -1382,8 +1744,12 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         if second~=first then src[second]=sourceFor(second,FITTING_SOURCE[second]) end
         fittingSourcesReady=src[first]~=nil and src[second]~=nil
     end
+    local commandCap=caps(tier,touch,pressure,"command")
+    if commandCap>0 then
+        src.SpineSignalBeam=src.Crosshead or sourceFor("Crosshead")
+    end
     local commandProfiles=COMMAND_ART[variant]
-    local commandReady=commandProfiles~=nil and caps(tier,touch,pressure,"command")>0
+    local commandReady=commandProfiles~=nil and commandCap>0
     if commandReady then
         for _,profile in ipairs(commandProfiles) do
             src[profile.name]=sourceFor(profile.name,profile.source)
@@ -1412,7 +1778,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         and platforms and platforms:IsA("Folder") then
         local decks=platforms:GetChildren()
         local spineEnds={}
-        if src.JunctionTruss then
+        if src.JunctionTruss or src.JunctionUnderframe then
             for _,deck in ipairs(decks) do
                 local step=deck:GetAttribute("SkySpineStep")
                 if step==1 or step==10 then
@@ -1423,9 +1789,26 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
         end
         for _,deck in ipairs(decks) do
             local lane=deck:GetAttribute("PromenadeLane")
-            if src.JunctionTruss and lane then
-                local truss=collectJunctionTruss(arena,deck,spineEnds[lane],decor,scale)
-                queuePair(truss and {truss},(DISTANCE[tier] or DISTANCE.Low).promenade,candidates.junction)
+            if lane and (src.JunctionTruss or src.PromenadeUnderframe) then
+                local underframe
+                if deck:GetAttribute("PromenadeStep")==4 then
+                    local spine=spineEnds[lane]
+                    if src.JunctionUnderframe then
+                        underframe=collectJunctionTruss(arena,deck,spine,decor,scale,true)
+                    end
+                    if not underframe and src.JunctionTruss then
+                        underframe=collectJunctionTruss(arena,deck,spine,decor,scale,false)
+                    end
+                elseif src.PromenadeUnderframe then
+                    underframe=collectPromenadeUnderframe(arena,deck,decor)
+                end
+                queuePair(underframe and {underframe},(DISTANCE[tier] or DISTANCE.Low).promenade,
+                    candidates.junction)
+            end
+            if src.SpineUnderframe and deck:GetAttribute("SkySpineStep") then
+                local underframe=collectSpineUnderframe(arena,deck,decor)
+                queuePair(underframe and {underframe},(DISTANCE[tier] or DISTANCE.Low).promenade,
+                    candidates.junction)
             end
             local data=collectArch(arena,deck,decor,scale)
             if src.ArchAbutment and src.ArchGirder and deck:GetAttribute("PerimeterStep") then
@@ -1435,9 +1818,16 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             if not data and src.Crosshead and deck:GetAttribute("PromenadeStep") then
                 data=collectPorticoPart(arena,deck,decor,scale)
             end
-            if commandReady and deck:GetAttribute("SkySpineStep") then
-                queuePair(collectCommandArt(arena,deck,decor,scale,commandProfiles),
-                    COMMAND_DISTANCE[tier] or COMMAND_DISTANCE.Low,candidates.command)
+            if deck:GetAttribute("SkySpineStep") then
+                local range=COMMAND_DISTANCE[tier] or COMMAND_DISTANCE.Low
+                if commandReady then
+                    queuePair(collectCommandArt(arena,deck,decor,scale,commandProfiles),
+                        range,candidates.command)
+                end
+                if src.SpineSignalBeam then
+                    local beam=collectSpineSignalBeam(arena,deck,decor,scale)
+                    queuePair(beam and {beam},range,candidates.command)
+                end
             end
             if src.Stay and deck:GetAttribute("PromenadeStep") then
                 queuePair(collectStayPair(arena,deck,decor,scale),
@@ -1450,6 +1840,7 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
             if equipment and src[equipment.name] and deck:GetAttribute("PromenadeStep") then
                 local gear=collectEquipment(arena,deck,decor,scale,equipment)
                 if gear then
+                    gear.hoistBeam=hoistBeam
                     local resident=mounted[gear.key]~=nil
                     local priority,distance=score(gear,cameraPoint,cameraLook,resident)
                     if distance<=EQUIPMENT_DISTANCE[tier]+(resident and 18 or 0) then
@@ -1511,6 +1902,10 @@ function Kit.sync(arena,cameraPoint,tier,cameraReady,cameraLook,pressure,touch)
     borrowCasing=borrowCasing and #candidates.helix>0
     for _,kind in ipairs({"arch","archBase","casing","helix","promenade","stay","equipment","fitting","command","junction"}) do
         table.sort(candidates[kind],function(a,b)
+            if kind=="command" then
+                local beamA,beamB=a.name=="SpineSignalBeam",b.name=="SpineSignalBeam"
+                if beamA~=beamB then return beamB end
+            end
             if a.priority~=b.priority then return a.priority<b.priority end
             return a.owner.Name<b.owner.Name
         end)

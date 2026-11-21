@@ -2,6 +2,7 @@
 -- anything fails. The pre-existing seven-part main twin-dish kit remains
 -- independently mounted/validated and is NEVER modified by this script.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These outboard landmarks are fixed to the BUILDER's initial perimeter.
@@ -68,7 +69,7 @@ local function restore()
     -- The server's authentic native is still authoritative and must
     -- always be restored before optional 3D art is removed.
     for native,alpha in pairs(state.originals) do
-        if native.Parent==state.owner and native:IsA("Part")
+        if native.Parent==state.owner and native:IsA("BasePart")
             and native.Anchored and not native.CanCollide
             and not native.CanTouch and not native.CanQuery
             and native.Transparency==1 then
@@ -150,14 +151,11 @@ local function nativeContext(arena)
     for index,name in ipairs(NAMES) do
         local native=owner:FindFirstChild(name)
         local expected=origin*FRAMES[index]
-        if not native or not native:IsA("Part")
-            or native.Parent~=owner or native.Shape~=Enum.PartType.Block
-            or not native.Anchored or native.CanCollide or native.CanTouch
-            or native.CanQuery
-            or (native.Size-SIZES[index]).Magnitude>.10
-            or (native.Position-expected.Position).Magnitude>.16
-            or native.CFrame.LookVector:Dot(expected.LookVector)<.999
-            or native.CFrame.UpVector:Dot(expected.UpVector)<.999 then
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(native,owner,"Part")
+        if not size or (size-SIZES[index]).Magnitude>.10
+            or (pose.Position-expected.Position).Magnitude>.16
+            or pose.LookVector:Dot(expected.LookVector)<.999
+            or pose.UpVector:Dot(expected.UpVector)<.999 then
             return nil
         end
         natives[#natives+1]=native

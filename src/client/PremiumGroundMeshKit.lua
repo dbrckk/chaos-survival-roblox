@@ -15,6 +15,10 @@ local groundRulesModule = ReplicatedStorage:FindFirstChild("Shared")
 local LavaGroundContrastRules = if groundRulesModule
     then require(groundRulesModule)
     else require("../shared/LavaGroundContrastRules")
+local presentationModule = ReplicatedStorage:FindFirstChild("Shared")
+    and ReplicatedStorage.Shared:FindFirstChild("ArenaPresentation")
+local ArenaPresentation = if presentationModule then require(presentationModule)
+    else require("../shared/ArenaPresentation")
 local PremiumGroundMeshKit = {}
 
 -- Approved original Roblox MODEL package, not an invented MeshPart.MeshId.
@@ -205,13 +209,13 @@ local function originalSurface(ground, decor, base)
     local scale, sx, sz = signedFloorScale(base)
     if not scale or not ground or not decor
         or ground.Parent ~= decor or decor.Parent ~= base.Parent
-        or not ground:IsA("Part") or ground.Shape ~= Enum.PartType.Block
+        or not ArenaPresentation.isGroundBayGeometry(ground)
         or not ground.Anchored or ground.CastShadow
         or ground:GetAttribute("OriginalGroundFinish") ~= true
         or ground:GetAttribute("PremiumArchitecturalSurface") ~= true
         or ground.CanCollide or ground.CanTouch or ground.CanQuery
         or ground.Transparency >= 0.5
-        or math.abs(ground.Size.Y - .035) > .012 then
+        or math.abs(ground.Size.Y - ArenaPresentation.GroundBayThickness) > .012 then
         return false
     end
     local index = tonumber(ground.Name:match("^PremiumGroundModule(%d+)$"))
@@ -227,7 +231,7 @@ local function originalSurface(ground, decor, base)
         (index - 1) % 6 + 1
     local expected = base.CFrame:PointToWorldSpace(Vector3.new(
         (ix - 3.5) * cellX * scale,
-        base.Size.Y * .5 + .153,
+        base.Size.Y * .5 + ArenaPresentation.GroundBayCenter,
         (iz - 3.5) * cellZ * scale))
     return (ground.Position - expected).Magnitude < .36
         and ground.CFrame.LookVector:Dot(base.CFrame.LookVector) > .999
@@ -437,6 +441,12 @@ local function mount(ground, decor, base, template)
     for _, prop in ipairs({"Size", "CFrame", "Transparency"}) do
         entry.connections[#entry.connections + 1] =
             ground:GetPropertyChangedSignal(prop):Connect(onGroundChanged)
+    end
+    if ground:IsA("MeshPart") then
+        entry.connections[#entry.connections + 1] =
+            ground:GetPropertyChangedSignal("MeshId"):Connect(onGroundChanged)
+        entry.connections[#entry.connections + 1] =
+            ground:GetAttributeChangedSignal("Original3DAssetId"):Connect(onGroundChanged)
     end
     entry.connections[#entry.connections + 1] =
         ground.AncestryChanged:Connect(onGroundChanged)

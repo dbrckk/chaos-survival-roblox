@@ -3,6 +3,7 @@
 -- Lower/UpperExchange + CantileverWest/East primitives atomically.
 -- Real switchyard paths, collisions, AI and warning signage are unchanged.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These outboard landmarks are fixed to the BUILDER's initial perimeter.
@@ -118,18 +119,13 @@ local function nativeContext(arena)
         or owner:GetAttribute("SignatureVariant")~="Crossroads" then
         return nil
     end
-    local natives={}
+    local natives,poses={},{}
     for i,name in ipairs(NAMES) do
         local part=owner:FindFirstChild(name)
-        local wedge=i>=3
-        if not part or part.Parent~=owner
-            or (wedge and not part:IsA("WedgePart"))
-            or (not wedge and (not part:IsA("Part")
-                              or part.Shape~=Enum.PartType.Block))
-            or not part.Anchored or part.CanCollide or part.CanTouch
-            or part.CanQuery or (part.Size-SIZES[i]).Magnitude>.10 then
-            return nil
-        end
+        local kind=if i>=3 then "WedgePart" else "Part"
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,kind)
+        if not size or (size-SIZES[i]).Magnitude>.10 then return nil end
+        poses[i]=pose
         natives[i]=part
     end
     -- Require the authentic original signal devices and towers so
@@ -137,35 +133,32 @@ local function nativeContext(arena)
     local signal=owner:FindFirstChild("Switchboard")
     local pylon=owner:FindFirstChild("SignalPylon")
     local crown=owner:FindFirstChild("SignalCrown")
-    if not signal or not signal:IsA("Part") or signal.Parent~=owner
-        or (signal.Size-Vector3.new(7.5,4.4,.55)).Magnitude>.10
-        or not pylon or not pylon:IsA("Part") or pylon.Parent~=owner
-        or (pylon.Size-Vector3.new(1.4,16,1.5)).Magnitude>.10
-        or not crown or not crown:IsA("WedgePart") or crown.Parent~=owner
-        or (crown.Size-Vector3.new(5.6,3.4,2.8)).Magnitude>.10 then
+    local signalSize=ExteriorDetailGeometry.monumentFootprint(signal,owner,"Part")
+    local pylonSize=ExteriorDetailGeometry.monumentFootprint(pylon,owner,"Part")
+    local crownSize=ExteriorDetailGeometry.monumentFootprint(crown,owner,"WedgePart")
+    if not signalSize or (signalSize-Vector3.new(7.5,4.4,.55)).Magnitude>.10
+        or not pylonSize or (pylonSize-Vector3.new(1.4,16,1.5)).Magnitude>.10
+        or not crownSize or (crownSize-Vector3.new(5.6,3.4,2.8)).Magnitude>.10 then
         return nil
     end
     for _,name in ipairs({"ExchangeLegWest","ExchangeLegEast"}) do
         local leg=owner:FindFirstChild(name)
-        if not leg or not leg:IsA("Part") or leg.Parent~=owner
-            or not leg.Anchored or leg.CanCollide or leg.CanTouch
-            or leg.CanQuery
-            or (leg.Size-Vector3.new(5.2,34,6)).Magnitude>.10 then
+        local size=ExteriorDetailGeometry.monumentFootprint(leg,owner,"Part")
+        if not size or (size-Vector3.new(5.2,34,6)).Magnitude>.10 then
             return nil
         end
     end
-    local lower=natives[1]
+    local lowerPose=poses[1]
     local expected=base.Position+Vector3.new(
         originalX*.24,base.Size.Y*.5+29,-(originalZ*.5+66))
-    if (lower.Position-expected).Magnitude>.20 then return nil end
+    if (lowerPose.Position-expected).Magnitude>.20 then return nil end
     local relative={
         CFrame.new(0,7.5,0),
         CFrame.new(-18.3,9,0)*CFrame.Angles(0,math.pi,0),
         CFrame.new(18.3,9,0),
     }
     for i=2,4 do
-        local part=natives[i]
-        local observed=lower.CFrame:ToObjectSpace(part.CFrame)
+        local observed=lowerPose:ToObjectSpace(poses[i])
         local intended=relative[i-1]
         if (observed.Position-intended.Position).Magnitude>.12
             or observed.LookVector:Dot(intended.LookVector)<.999
@@ -173,10 +166,10 @@ local function nativeContext(arena)
             return nil
         end
     end
-    return base,owner,natives
+    return base,owner,natives,lowerPose
 end
 
-local function fittedModel(source,lower)
+local function fittedModel(source,lowerPose)
     local clone=source:Clone()
     local original=Vector3.new(48,12,7)
     local _,dims=clone:GetBoundingBox()
@@ -205,7 +198,7 @@ local function fittedModel(source,lower)
     end
     -- The union of four original parts spans y=28..40 relative to
     -- signature origin. LowerExchange center is y=29 => union center +5.
-    local target=lower.CFrame*CFrame.new(0,5,0)
+    local target=lowerPose*CFrame.new(0,5,0)
         *CFrame.Angles(0,yaw,0)
     local parts={}
     for _,part in ipairs(clone:GetDescendants()) do
@@ -232,9 +225,9 @@ end
 
 local function mount(arena,source)
     if mounted then return end
-    local base,owner,natives=nativeContext(arena)
+    local base,owner,natives,lowerPose=nativeContext(arena)
     if not base then return end
-    local clone,parts=fittedModel(source,natives[1])
+    local clone,parts=fittedModel(source,lowerPose)
     if not clone then return end
     local stillBase,stillOwner,stillNatives=nativeContext(arena)
     if stillBase~=base or stillOwner~=owner

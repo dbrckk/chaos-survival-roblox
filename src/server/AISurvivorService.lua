@@ -49,6 +49,17 @@ local AnimationCatalog = if script
     then require(ReplicatedStorage.Shared.AnimationCatalog)
     else require("../shared/AnimationCatalog")
 
+local JumpRouteCueRules = if script
+    then require(ReplicatedStorage.Shared.JumpRouteCueRules)
+    else require("../shared/JumpRouteCueRules")
+local JumpRouteClearance = if script
+    then require(ReplicatedStorage.Shared.JumpRouteClearance)
+    else require("../shared/JumpRouteClearance")
+
+local SkybridgeShutterRules = if script
+    then require(ReplicatedStorage.Shared.SkybridgeShutterRules)
+    else require("../shared/SkybridgeShutterRules")
+
 local AISurvivorService = {}
 
 -- Server-only diagnostics, not replicated to clients and not used for
@@ -844,6 +855,7 @@ local function createRig(record)
     record.collapsePlanSweepExposures = 0
     record.escapeWarning = nil
     record.escapeTarget = nil
+    record.escapeDeck, record.escapeFrom = nil, nil
     record.escapeUntil = 0
     record.escapeWarningVersion = nil
     record.escapeKnownWarnings = nil
@@ -1494,6 +1506,51 @@ local function emergencyFloorProbeParams(record)
     return params
 end
 
+local clearanceArena, outerClearance
+local function fitsDeckInterior(deck, waypoint)
+    local point = deck.CFrame:PointToObjectSpace(waypoint)
+    return math.abs(point.X) <= deck.Size.X * .5 - 1
+        and math.abs(point.Z) <= deck.Size.Z * .5 - 1
+end
+
+local function outerImpactRefuge(source, root, activeWarnings, liveSweeps, warning)
+    local platforms = source.Parent
+    if not platforms or platforms.Name ~= "Platforms" then return nil end
+    local arena = platforms.Parent
+    if not arena then return nil end
+    if clearanceArena ~= arena then
+        clearanceArena = arena
+        outerClearance = JumpRouteClearance.forArena(arena)
+    end
+    local lava = workspace:FindFirstChild("RoundLava")
+    local otherWarnings = {}
+    for _, threat in ipairs(activeWarnings) do
+        if threat ~= warning then otherWarnings[#otherWarnings + 1] = threat end
+    end
+    local best, bestDeck, closest = nil, nil, 24
+    for _, deck in ipairs(platforms:GetChildren()) do
+        if JumpRouteCueRules.outerRouteLink(source, deck) then
+            local near = Vector3.new(root.Position.X, deck.Position.Y + deck.Size.Y * .5 + 2.5, root.Position.Z)
+            local point = AISurvivorRules.clampWaypointToDeck(deck.CFrame, deck.Size, near)
+            local distance = (point - root.Position).Magnitude
+            if distance >= closest or JumpRouteCueRules.lavaAtRoot(point, lava)
+                or not JumpRouteCueRules.safeGuidedPath(point, point, activeWarnings)
+                or not JumpRouteCueRules.safeGuidedPath(root.Position, point, otherWarnings) then continue end
+            local sweepBlocked = false
+            for _, band in ipairs(liveSweeps) do
+                if AISurvivorRules.floorSweepRoutePenalty(root.Position, point, band.CFrame, band.Size) > 0 then
+                    sweepBlocked = true
+                    break
+                end
+            end
+            if not sweepBlocked and outerClearance(source, deck) then
+                best, bestDeck, closest = point, deck, distance
+            end
+        end
+    end
+    return best, bestDeck
+end
+
 -- Sample several WALKABLE escape headings rather than committing to one
 -- random tangent. This matters at arena edges, on narrow platforms, and
 -- when two growing meteor/bomb warnings overlap. Bounded to six headings,
@@ -1529,7 +1586,7 @@ local function saferThreatEscape(record, root, predictedPosition, warning, now)
     local base = arenaBase()
     local groundTopY = base and (base.Position.Y + base.Size.Y * 0.5)
         or config.ArenaCenter.Y
-    local standingDeck = nil
+    local standingDeck, shutter = nil, nil
     if root.Position.Y > groundTopY + 8 then
         local originHit = workspace:Raycast(
             root.Position + Vector3.new(0, 1, 0),
@@ -1543,10 +1600,10 @@ local function saferThreatEscape(record, root, predictedPosition, warning, now)
                 or part.Parent.Name == "HelixCircuit")
             and AISurvivorRules.platformAvailable(
                 part.CanCollide, part.Transparency,
-                part:GetAttribute("CollapsePhase"),
-                part:GetAttribute("BridgeShutterPhase")
+                part:GetAttribute("CollapsePhase")
             ) then
             standingDeck = part
+            shutter = SkybridgeShutterRules.forBridge(part)
         else
             -- An airborne/falling bot cannot invent a supported escape.
             return root.Position
@@ -1638,6 +1695,7 @@ local function saferThreatEscape(record, root, predictedPosition, warning, now)
         -- Accept only a physically supported route at both existing
         -- checkpoints, including real solid/available ground and a
         -- walkable surface normal. No additional physics queries.
+        if SkybridgeShutterRules.blocksPath(shutter, root.Position, destination) then continue end
         local supported = walked >= 1
         for _, fraction in ipairs({0.55, 1.0}) do
             local sample = root.Position:Lerp(destination, fraction)
@@ -1654,7 +1712,7 @@ local function saferThreatEscape(record, root, predictedPosition, warning, now)
                     or AISurvivorRules.platformAvailable(
                         part.CanCollide, part.Transparency,
                         part:GetAttribute("CollapsePhase"),
-                        part:GetAttribute("BridgeShutterPhase")
+                        part ~= standingDeck and part:GetAttribute("BridgeShutterPhase") or nil
                     ))
                 and (not standingDeck or part == standingDeck)
             if not walkable then
@@ -1744,10 +1802,82 @@ local function saferThreatEscape(record, root, predictedPosition, warning, now)
             best = destination
         end
     end
+    -- Consider a neighboring authored deck only when the current roof
+    -- offers no clear landing. Keep the usual on-deck dodge when it works.
+    if standingDeck and bestLandingExposures > 0 and JumpRouteCueRules.isOuterRoute(standingDeck) then
+        local refuge, deck = outerImpactRefuge(standingDeck, root, activeWarnings, liveSweeps, warning)
+        if refuge then return refuge, deck, standingDeck end
+    end
     -- Never walk into unverified air just because every visible option
     -- is poor. Stand on the current support until a real hazard or floor
     -- change permits a safe, physically grounded escape direction.
     return best or root.Position
+end
+
+local function botDeckLink(from, target)
+    if JumpRouteCueRules.isOuterRoute(from) or JumpRouteCueRules.isOuterRoute(target) then
+        return JumpRouteCueRules.outerRouteLink(from, target)
+    end
+    return AISurvivorRules.neighboringPhysicalDeck(from.CFrame, from.Size, target.CFrame, target.Size)
+end
+
+local function elevatedCollapseLink(from, target, available)
+    if not available then return false end
+    if JumpRouteCueRules.isOuterRoute(from) or JumpRouteCueRules.isOuterRoute(target) then
+        return math.min(target.Size.X, target.Size.Z) >= 3.6
+            and JumpRouteCueRules.outerRouteLink(from, target)
+    end
+    return AISurvivorRules.safeCollapseNeighbor(from.CFrame, from.Size, target.CFrame, target.Size, available)
+end
+
+-- Let an already-exposed contestant leave its current warning footprint,
+-- while keeping the retreat out of other impacts and active lanes.
+local function bridgeRetreatClear(origin, target, warnings, sweeps, lava)
+    if JumpRouteCueRules.lavaAtRoot(target, lava)
+        or not JumpRouteCueRules.safeGuidedPath(target, target, warnings) then return false end
+    for _, warning in ipairs(warnings) do
+        local single = {warning}
+        if JumpRouteCueRules.safeGuidedPath(origin, origin, single)
+            and not JumpRouteCueRules.safeGuidedPath(origin, target, single) then return false end
+    end
+    for _, band in ipairs(sweeps) do
+        if AISurvivorRules.floorSweepRoutePenalty(origin, target, band.CFrame, band.Size)
+            > AISurvivorRules.floorSweepRoutePenalty(origin, origin, band.CFrame, band.Size) then
+            return false
+        end
+    end
+    return true
+end
+
+local function bridgeOutageRetreat(record, root, bridge, rayParams)
+    local preferred = AISurvivorRules.skybridgeEscapeTarget(
+        root.Position, bridge.CFrame, bridge.Size, root.AssemblyLinearVelocity)
+    if not preferred then return nil end
+    local mirrored = bridge.Position * 2 - preferred
+    local other = Vector3.new(mirrored.X, preferred.Y, mirrored.Z)
+    local warnings, sweeps, lava = warningParts(), activeFloorSweepBands(), workspace:FindFirstChild("RoundLava")
+    local gate = SkybridgeShutterRules.forBridge(bridge)
+    for _, point in ipairs({preferred, other}) do
+        local hit = workspace:Raycast(point + Vector3.yAxis * 2, -Vector3.yAxis * 10, rayParams)
+        local deck = hit and hit.Instance
+        if deck and deck:IsA("BasePart") and deck ~= bridge and deck.Parent == bridge.Parent
+            and hit.Normal.Y >= .78 and deck.Anchored
+            and AISurvivorRules.neighboringPhysicalDeck(bridge.CFrame, bridge.Size, deck.CFrame, deck.Size)
+            and math.abs(hit.Position.Y - bridge.Position.Y - bridge.Size.Y * .5) <= JumpRouteCueRules.MaxRise
+            and AISurvivorRules.platformAvailable(
+                deck.CanCollide, deck.Transparency, deck:GetAttribute("CollapsePhase"),
+                deck:GetAttribute("BridgeShutterPhase")) then
+            local target = hit.Position + Vector3.yAxis * 2.4
+            if fitsDeckInterior(deck, target)
+                and not SkybridgeShutterRules.blocksPath(gate, root.Position, target)
+                and bridgeRetreatClear(root.Position, target, warnings, sweeps, lava) then
+                record.collapseEscapeDeck = deck
+                return target
+            end
+        end
+    end
+    record.collapseEscapeHolding = true
+    return nil
 end
 
 local function disappearingPlatformEscape(record, root, now)
@@ -1820,9 +1950,7 @@ local function disappearingPlatformEscape(record, root, now)
         -- Tower links are narrow elevated spans. Dodging toward the arena
         -- centre crosses open air; run along the bridge to the nearest
         -- supported corner tower instead, without a teleport or speed buff.
-        return AISurvivorRules.skybridgeEscapeTarget(
-            root.Position, part.CFrame, part.Size, root.AssemblyLinearVelocity
-        )
+        return bridgeOutageRetreat(record, root, part, rayParams)
     end
 
     -- A real concurrent grid/cargo sweep can make an otherwise safe
@@ -1846,10 +1974,12 @@ local function disappearingPlatformEscape(record, root, now)
     -- invalidates it immediately via the warning event version; the
     -- supporting platform must also remain solid and available.
     local previousDeck = record.collapsePlanDeck
+    local lava = workspace:FindFirstChild("RoundLava")
     if record.collapsePlanThreat == part
         and typeof(record.collapsePlanTarget) == "Vector3"
         and now < (record.collapsePlanUntil or 0)
         and record.collapsePlanWarningVersion == warningVersion
+        and not JumpRouteCueRules.lavaAtRoot(record.collapsePlanTarget, lava)
         -- A newly activated floor sweep isn't a Meteor/Bomb marker, so
         -- the warning version alone cannot validate the cached path.
         and sweepExposures(record.collapsePlanTarget)
@@ -1868,11 +1998,12 @@ local function disappearingPlatformEscape(record, root, now)
         local basePart = arenaBase()
         local elevated = basePart and root.Position.Y >
             basePart.Position.Y + basePart.Size.Y * 0.5 + 8
-        if not elevated or (previousDeck.Parent == part.Parent
-            and AISurvivorRules.safeCollapseNeighbor(
-                part.CFrame, part.Size,
-                previousDeck.CFrame, previousDeck.Size, true
-            )) then
+        local validLanding = not elevated
+        if elevated and previousDeck.Parent == part.Parent and previousDeck:IsA("BasePart")
+            and elevatedCollapseLink(part, previousDeck, true) then
+            validLanding = fitsDeckInterior(previousDeck, record.collapsePlanTarget)
+        end
+        if validLanding then
             record.collapseEscapeDeck = elevated and previousDeck or nil
             return record.collapsePlanTarget
         end
@@ -1973,10 +2104,7 @@ local function disappearingPlatformEscape(record, root, now)
                     deck:GetAttribute("CollapsePhase"),
                     deck:GetAttribute("BridgeShutterPhase")
                 )
-                if AISurvivorRules.safeCollapseNeighbor(
-                    part.CFrame, part.Size,
-                    deck.CFrame, deck.Size, available
-                ) then
+                if elevatedCollapseLink(part, deck, available) then
                     -- A full deck centre can be 20+ studs farther than
                     -- its genuinely reachable near edge. Aim at the
                     -- nearest R15-safe point ON the selected solid deck,
@@ -1996,7 +2124,8 @@ local function disappearingPlatformEscape(record, root, now)
                     ).Magnitude
                     -- No world-spanning diagonals across disconnected
                     -- sky sectors even if broad bounding boxes overlap.
-                    if flatDistance < 34 then
+                    if flatDistance < 34
+                        and not JumpRouteCueRules.lavaAtRoot(waypoint, lava) then
                         local landingImpacts = 0
                         local corridorImpacts = 0
                         for _, impact in ipairs(impacts) do
@@ -2325,60 +2454,50 @@ end
 -- current arena's four replicated gates (8 direct children including
 -- warning stripes), not the full world. The response follows the same
 -- human-readable warning phase with an individual reaction delay.
-local function skybridgeShutterEscape(record, root, now)
+local function skybridgeShutterEscape(record, root, now, currentGoal, urgent)
     if arenaVariantId() ~= "Towers" then
-        record.shutterThreat = nil
-        record.shutterSeenAt = nil
+        record.shutterThreat, record.shutterSeenAt = nil, nil
         return nil
     end
     local _, arena = arenaParts()
     local mechanics = arena and arena:FindFirstChild("Mechanics")
     local folder = mechanics and mechanics:FindFirstChild("SkybridgeShutters")
     local platforms = arena and arena:FindFirstChild("Platforms")
-    if not folder or not platforms then
-        record.shutterThreat = nil
-        record.shutterSeenAt = nil
-        return nil
-    end
-    local threatened, escape = nil, nil
-    for _, gate in ipairs(folder:GetChildren()) do
-        if gate:IsA("BasePart")
-            and gate:GetAttribute("BridgeShutter") == true then
-            local phase = gate:GetAttribute("ShutterPhase")
-            if phase == "Warning" or phase == "Raising"
-                or phase == "Raised" then
-                local bridgeName = gate:GetAttribute("BridgeName")
-                local bridge = type(bridgeName) == "string"
-                    and platforms:FindFirstChild(bridgeName) or nil
-                if bridge and bridge:IsA("BasePart")
-                    and bridge:GetAttribute("ChaosSkybridge") == true
-                    and bridge.CanCollide then
-                    local target = AISurvivorRules.skybridgeShutterEscapeTarget(
-                        root.Position, bridge.CFrame, bridge.Size, phase
-                    )
-                    if target then
-                        threatened = gate
-                        escape = target
-                        break
-                    end
+    if folder and platforms then
+        for _, gate in ipairs(folder:GetChildren()) do
+            if not gate:IsA("BasePart") or gate:GetAttribute("BridgeShutter") ~= true
+                or not SkybridgeShutterRules.active(gate:GetAttribute("ShutterPhase")) then continue end
+            local name = gate:GetAttribute("BridgeName")
+            local bridge = type(name) == "string" and platforms:FindFirstChild(name) or nil
+            if not bridge or not bridge:IsA("BasePart") or not bridge.CanCollide
+                or bridge:GetAttribute("ChaosSkybridge") ~= true
+                or not SkybridgeShutterRules.onBridge(bridge, root.Position) then continue end
+
+            local origin = root.Position
+            local atGate = SkybridgeShutterRules.blocksPath(gate, origin, origin, 2.5)
+            local crossesGate = currentGoal and SkybridgeShutterRules.blocksPath(gate, origin, currentGoal)
+            if not atGate and not crossesGate then break end
+            if record.shutterThreat ~= gate then
+                record.shutterThreat, record.shutterSeenAt = gate, now
+            end
+            -- An already valid urgent dodge can lead the bot out of the gate.
+            if urgent and not crossesGate and (currentGoal - origin).Magnitude > .5 then return nil end
+            if not AISurvivorRules.reactionReady(record.shutterSeenAt, now, record.profile.ReactionSeconds) then
+                return origin
+            end
+            local first, farther, alternate = SkybridgeShutterRules.refugeOptions(
+                bridge, gate, origin, root.AssemblyLinearVelocity)
+            local warnings, sweeps, lava = warningParts(), activeFloorSweepBands(), workspace:FindFirstChild("RoundLava")
+            for _, refuge in ipairs({first, farther, alternate}) do
+                if not SkybridgeShutterRules.blocksPath(gate, origin, refuge)
+                    and bridgeRetreatClear(origin, refuge, warnings, sweeps, lava) then
+                    return refuge
                 end
             end
+            return origin
         end
     end
-    if not threatened then
-        record.shutterThreat = nil
-        record.shutterSeenAt = nil
-        return nil
-    end
-    if record.shutterThreat ~= threatened then
-        record.shutterThreat = threatened
-        record.shutterSeenAt = now
-    end
-    if AISurvivorRules.reactionReady(
-        record.shutterSeenAt, now, record.profile.ReactionSeconds
-    ) then
-        return escape
-    end
+    record.shutterThreat, record.shutterSeenAt = nil, nil
     return nil
 end
 
@@ -2725,6 +2844,7 @@ local function immediateThreat(record, root, now)
         record.threatSeenAt = nearest
             and (impactHandoff and previousSeenAt or now) or nil
         record.escapeTarget = nil
+        record.escapeDeck, record.escapeFrom = nil, nil
         record.escapeWarning = nil
         record.escapeUntil = 0
         record.escapeWarningVersion = nil
@@ -2822,7 +2942,12 @@ local function immediateThreat(record, root, now)
         end
     end
 
-    if record.escapeWarning == nearest
+    local escapeDeck = record.escapeDeck
+    local escapeLinkIntact = not escapeDeck or (record.escapeFrom and record.escapeFrom.Parent
+        and record.escapeTarget and JumpRouteCueRules.outerRouteLink(record.escapeFrom, escapeDeck)
+        and fitsDeckInterior(escapeDeck, record.escapeTarget)
+        and not JumpRouteCueRules.lavaAtRoot(record.escapeTarget, workspace:FindFirstChild("RoundLava")))
+    if record.escapeWarning == nearest and escapeLinkIntact
         and AISurvivorRules.keepEscapeRoute(
             record.escapeTarget, root.Position, now,
             record.escapeUntil, record.escapeWarningVersion, warningVersion
@@ -2832,7 +2957,7 @@ local function immediateThreat(record, root, now)
     end
 
     record.escapeWarning = nearest
-    record.escapeTarget = saferThreatEscape(
+    record.escapeTarget, record.escapeDeck, record.escapeFrom = saferThreatEscape(
         record, root, predictedPosition, nearest, now)
     record.escapeUntil = now + 0.54
     record.escapeWarningVersion = warningVersion
@@ -2930,15 +3055,12 @@ local function arenaCandidates(root)
             root and root.Position.Y or position.Y,
             groundTopY, standingDeck ~= nil
         ) and (not standingDeck or part == standingDeck
-            or AISurvivorRules.neighboringPhysicalDeck(
-                standingDeck.CFrame, standingDeck.Size,
-                part.CFrame, part.Size
-            )
-        ) and AISurvivorRules.outerStepReachable(
-            part:GetAttribute("PerimeterStep"),
-            root and root.Position, position,
-            hasDisaster("ShrinkingArena")
-        ) then
+            or botDeckLink(standingDeck, part))
+        and ((standingDeck and JumpRouteCueRules.canDescend(standingDeck, part))
+            or AISurvivorRules.outerStepReachable(
+                part:GetAttribute("PerimeterStep"), root and root.Position,
+                position, hasDisaster("ShrinkingArena")
+            )) then
             table.insert(result, {
                 part = part,
                 position = position,
@@ -5416,10 +5538,10 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
     -- so standing spectators cannot hide a valid landing or gap.
     local params = emergencyFloorProbeParams(record)
     local forward = travel.Unit
-    local function floorAt(distance, allowThreatenedOrigin)
+    local function floorAt(distance, allowThreatenedOrigin, extraDrop)
         local result = workspace:Raycast(
             root.Position + forward * distance + Vector3.new(0, 1.5, 0),
-            Vector3.new(0, -7, 0),
+            Vector3.new(0, -7 - (extraDrop or 0), 0),
             params
         )
         if result and result.Normal.Y >= 0.78
@@ -5445,20 +5567,19 @@ local function tryPhysicalSkyGapJump(record, humanoid, root, now, target,
     local origin = floorAt(0, emergencyDeck ~= nil)
     if not origin or not origin.Instance.Parent
         or origin.Instance.Parent.Name ~= "Platforms" then return false end
+    local descending = JumpRouteCueRules.canDescend(origin.Instance, deck)
     local gap = floorAt(3.4)
     if gap then return false end
-    local landing = floorAt(7.2)
+    local landing = floorAt(7.2, false, descending and 2.5 or 0)
     -- A nearby unrelated deck does not prove that the SELECTED next
     -- waypoint is reachable. Jump only toward its exact solid floor,
     -- with a verified centerline gap within normal Humanoid reach.
     if not landing or landing.Instance ~= deck
-        or not AISurvivorRules.neighboringPhysicalDeck(
-            origin.Instance.CFrame, origin.Instance.Size,
-            deck.CFrame, deck.Size
-        ) then return false end
+        or not botDeckLink(origin.Instance, deck) then return false end
     if AISurvivorRules.skyGapJumpReady(
         true, root.Position.Y - (base.Position.Y + base.Size.Y * 0.5),
-        travel.Magnitude, origin.Position.Y, false, landing.Position.Y
+        travel.Magnitude, origin.Position.Y, false, landing.Position.Y,
+        descending and JumpRouteCueRules.MaxRise or nil
     ) then
         humanoid.Jump = true
         record.nextRouteJumpAt = now + 0.80
@@ -5891,8 +6012,11 @@ local function stepRecord(record, now)
         if not urgentTarget then
             urgentTarget = floorSweepEscape(record, root, now)
         end
-        if not urgentTarget then
-            urgentTarget = skybridgeShutterEscape(record, root, now)
+        -- The moving gate still constrains another hazard's requested
+        -- route. Check after priority selection, before issuing movement.
+        if not record.collapseEscapeDeck then
+            urgentTarget = skybridgeShutterEscape(
+                record, root, now, urgentTarget or record.target, urgentTarget ~= nil) or urgentTarget
         end
         -- An impossible elevated retreat must not hide a genuine
         -- meteor, bomb, sweep or shutter escape found above.
@@ -6655,8 +6779,8 @@ local function stepRecord(record, now)
             -- The old generic height check fired on every brain tick,
             -- even while airborne, overriding the bounded parkour jump
             -- cooldown and creating unnatural pogo-stick movement.
-            local emergencyDeck =
-                urgentTarget and record.collapseEscapeDeck or nil
+            local emergencyDeck = urgentTarget and (record.collapseEscapeDeck
+                or (urgentTarget == record.escapeTarget and record.escapeDeck)) or nil
             if not urgentTarget or emergencyDeck then
                 tryPhysicalSkyGapJump(record, humanoid, root, now,
                     record.target, emergencyDeck)

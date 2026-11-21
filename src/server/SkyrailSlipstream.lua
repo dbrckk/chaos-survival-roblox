@@ -160,8 +160,9 @@ function SkyrailSlipstream.tryTrigger(ctx, sensor, bridge, hit, ready, now)
     if not direction then return false end
     local relative = bridge.CFrame:PointToObjectSpace(root.Position)
     local span = math.max(bridge.Size.X, bridge.Size.Z)
+    -- Match the same axis as the travel sign: LookVector faces -Z.
     local along = bridge.Size.X > bridge.Size.Z
-        and relative.X or relative.Z
+        and relative.X or -relative.Z
     local axis = bridge.Size.X > bridge.Size.Z
         and bridge.CFrame.RightVector or bridge.CFrame.LookVector
     local travelSign = direction:Dot(axis) >= 0 and 1 or -1

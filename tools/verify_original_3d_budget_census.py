@@ -320,7 +320,7 @@ for required in (
     'local FOUNDATION_CAP = {Low = 1, Medium = 2, High = 4}',
     'local TOUCH_FOUNDATION_CAP = {Low = 1, Medium = 1, High = 2}',
     'tag = "PremiumGround3D"',
-    'local function nativeDetailPart(part, parent, class, size)',
+    'local function nativeDetailPart(part, parent, class, size, assetId)',
     'local function releaseDetail(entry, key)',
     'and 0 or (caps[tier] or caps.Low)',
     'clone.Parent = entry.model',
@@ -785,7 +785,11 @@ for fragment in (
     'entry.panel ~= nil and entry.ownsPanel(entry.panel)',
     'and entry.panel.Material == entry.insetMaterial',
     'if entry.inset or model == entry.underdeckModel then',
-    'entry.insetPiece.Color = entry.panel.Color',
+    'piece.Color = entry.panel.Color',
+    'local bridgeInset = VisualTheme.Arenas[variant] and routeInset(bridgeTemplate,true)',
+    'count = tower and math.min(3,budget.segments) or 2, inset = bridgeInset',
+    'item.connector and isAirborneConnector(platform,floorScale)',
+    'and entry.inset.Parent == getTemplate(insetTemplateName)',
     'or not originalFit or not originalFit.panelCovered',
 ):
     assert fragment in ROUTE, ("Fitted approved route inset",fragment)
@@ -1192,7 +1196,9 @@ for name in ('LoadPylon-1','LoadPylon1','DiagonalStay-1','DiagonalStay1',
     'MonumentalCrosshead','UnderdeckTruss','FreightHoistArm',
     'SuspendedCrate','CargoChain'):
     assert name in HARBOR,name
-assert 'native.part.LocalTransparencyModifier =' in HARBOR
+assert 'part.LocalTransparencyModifier = visible and 1 or native.original' in HARBOR
+assert 'Trim.setPrimaryPylonMask(part,visible)' in HARBOR
+assert 'decor.ChildRemoved:Connect(function(part)' in HARBOR
 assert 'visible and 1 or native.original' in HARBOR
 assert 'decor.ChildAdded:Connect(watchNative)' in HARBOR
 assert 'PremiumRoutePbrKit.entryBudget(' in HARBOR
@@ -1595,6 +1601,11 @@ assert 'ApprovedPerimeterStationDeckInlayMeshKit.sync(arena, cameraPoint,' in LO
 assert 'LocalApprovedStationDeckInlay3DCount' in LOD
 assert 'LocalPerimeterPrimitiveBasesReplaced' in LOD
 assert 'InlaidStationBase' in MAP and 'WayfindingInset' in INLAY
+assert 'local baseSize = stationDetailSize(base, station, 88962643359267, harbor)' in INLAY
+assert 'local markerSize = stationDetailSize(marker, station, 126298311664881, harbor)' in INLAY
+assert 'HorizonMonumentGeometry.isFloorCasting(nativeId, "Harbor")' in INLAY
+assert 'item:SetAttribute("OriginalPerimeterStationDetail3D", true)' in MAP
+assert 'stationFrame *= CFrame.Angles(0, -math.pi * .5, 0)' in INLAY
 for label in ('LeftLightNotch','RightLightNotch','CoreLens',
               'WayfindingInset','PodDataRailL','PodDataRailR'):
     assert label in MAP
@@ -1611,12 +1622,13 @@ print("PASS authentic original station deck 3D and six protected cues")
 FINISH=(CLIENT/"PlatformFinishKit.lua").read_text(encoding="utf8")
 OWNER=(CLIENT/"arena-platform-identity.client.lua").read_text(encoding="utf8")
 assert 'local lowReady = tier == "Low" and (tonumber(pressure) or 0) == 0' in FINISH
-assert 'if not source or (lowReady and sourceParts ~= 7) then return chosen end' in FINISH
+assert 'local FULL_SERVICE_HATCH_PARTS = 7' in FINISH
+assert 'if not source or sourceParts ~= FULL_SERVICE_HATCH_PARTS then return chosen end' in FINISH
 assert 'if lowReady and not hasCamera then return chosen end' in FINISH
 assert '(platform.Position-cameraPoint).Magnitude' in FINISH
 assert '<= 100' in FINISH
 assert 'quota = 1' in FINISH
-assert 'or (tier == "Low" and expectedPieces ~= 7)' in FINISH
+assert 'if not source or expectedPieces ~= FULL_SERVICE_HATCH_PARTS then' in FINISH
 assert 'or (tier == "Low" and selected ~= true)' in FINISH
 assert 'if tier == "Low" or landing then return {} end' in FINISH
 assert 'part.CanCollide = false' in FINISH
@@ -1743,13 +1755,13 @@ print("PASS Harbor recessed rails trade existing support slots and yield to moun
 # fallback on unsculpted decks (and on edge-only rims); Harbor cargo
 # markings, physical decks, collapse warnings and wayfinding persist.
 for marker in (
-    'local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)',
+    'local function decorateTowers(platform, index, theme, tier, genuineUnderdeck, profiles)',
     'if genuineUnderdeck then return end',
-    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, profiles)',
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
-    'authenticUnderdeck)',
+    'authenticUnderdeck, platformArtProfiles)',
     '"HarborCargoLashing" .. index',
 ):
     assert marker in OWNER, ("no native block overlay on approved hull",marker)
@@ -1769,7 +1781,8 @@ assert 'function PlatformFinishKit.build(parent, platform, variant, tier, theme,
 assert '"OriginalHarborLoadBrace3D"' in PLATFORM_SIDE
 assert 'piece:SetAttribute("ChaosLoadBrace",true)' in PLATFORM_SIDE
 assert 'descendant:GetAttribute("ChaosLoadBrace") == true' in SIDE_LOD
-assert 'loadBraceFrame(deck.Size,data.braceCorner,true)' in FINISH
+assert 'loadBraceFrame(deck.Size, data.braceCorner, data.harborBrace)' in FINISH
+assert 'entry.harborBrace = harborCorner ~= nil' in FINISH
 assert 'or platform:GetAttribute("LocalOriginalHarborDockCaissonMounted")' in FINISH
 assert 'HarborOutpostKit.bindWeldedReplacement(platform,braceMeshes,braceFallback,scheduleRebuild)' in OWNER
 print("PASS Harbor diagonals refit the anchor geometry and share the column budget and caisson priority")
@@ -1802,13 +1815,15 @@ print("PASS source-verified platform hull eliminates duplicate local underdeck"
 # underside paint and load braces are chosen, not layered underneath.
 start=OWNER.index('local authenticCarapace = carapacePieces[1] ~= nil')
 cradle=OWNER.index('PremiumLargeStructureMeshKit.longCradle(',start)
+carapace_fallback=OWNER.index('carapacePieces = PlatformFinishKit.buildCarapace(',cradle)
 finish=OWNER.index('for _, piece in ipairs(PlatformFinishKit.build(',start)
 braces=OWNER.index('local pieces,meshes,braceFallback = PlatformFinishKit.buildLoadBraces(',start)
-assert start < cradle < finish < braces
+assert start < cradle < carapace_fallback < finish < braces
 assert 'local authenticLongCradle = false' in OWNER[start:finish]
 assert 'if cradle and #cradle == 7 then' in OWNER[start:finish]
 assert 'and (not authenticRim or elevatedRim) and nearCradles[platform] == true' in OWNER[start:finish]
 assert 'authenticLongCradle = true' in OWNER[start:finish]
+assert 'if not authenticCarapace and not authenticRim and not authenticLongCradle then' in OWNER[cradle:carapace_fallback]
 assert 'local authenticUnderdeck = authenticCarapace' in OWNER[start:finish]
 assert 'and not authenticRim and not authenticLongCradle then' in OWNER
 print("PASS genuine long-cradle mounted before native underside trims, "
@@ -1836,6 +1851,10 @@ print("PASS 6/12 genuine desktop rim slots, touch 1/2 and pressure-safe"
       " 2/4 desktop fallback, seven-piece verified source/owner")
 assert 'LargeStructure.routeDeckSize(deck)' in RIM
 assert 'local longScale,shortScale = long*.97/srcLong,short*.97/srcShort' in RIM
+assert 'local ELEVATED_RIM_OVERHANG = .94' in RIM
+assert 'local outerLong = (long+ELEVATED_RIM_OVERHANG)*shrink/srcLong' in RIM
+assert 'local outerShort = (short+ELEVATED_RIM_OVERHANG)*shrink/srcShort' in RIM
+assert 'deck.Size.Y*.5-((ascension or elevated) and .09 or .17)' in RIM
 assert 'OriginalElevatedPlatformRim' in RIM
 assert 'local function bindRouteRim(' in (CLIENT/"PlatformNativeTrimReplacementKit.lua").read_text()
 assert 'LocalElevatedRimBevelsReplaced = family.elevatedRim' in OWNER
@@ -1856,7 +1875,7 @@ assert 'player:GetAttributeChangedSignal("OptionalVfxPressure")' in OWNER
 assert '.RenderStepped:Connect(' not in FINISH
 assert 'AssetService' not in FINISH
 print("PASS atomic Low source mount, four-step retry, shared 7+7 budget and zero native hatch fallback")
-assert 'local lashing = sourceParts == 7 and nominal' in FINISH
+assert 'local lashing = nominal' in FINISH
 assert 'elseif legacy and id % legacyStep == 1 then' in FINISH
 assert 'platform.Size.Y*.5+.174-height*.5' in FINISH
 assert 'selected, lashing)' in FINISH
@@ -1869,8 +1888,13 @@ print("PASS cargo tie-downs share the original service quota and preserve the re
 CUE_RULES=(ROOT/"src/shared/JumpRouteCueRules.lua").read_text(encoding="utf8")
 assert 'JumpRouteCueRules.takeoffChevron(' in OWNER
 assert 'piece:SetAttribute("SkipRouteFootprint",true)' in OWNER
+assert 'piece:SetAttribute("ParkourTakeoffCue", true)' in OWNER
+assert 'and item:GetAttribute("ParkourTakeoffCue") ~= true' in FINISH
+assert 'profiles and profiles.hatch, pose, size, false,' in OWNER
+assert 'profiles and (profiles.hatchAssetId or profiles.assetId)' in OWNER
 assert 'if target then left,right,size = takeoffGeometry(platform,target) end' in OWNER
-assert 'joint.C1 = platform.CFrame:ToObjectSpace(frame)' in OWNER
+assert 'frame, size, stroke:GetAttribute("PlatformTrimAxisSwap") == true)' in OWNER
+assert 'joint.C1 = platform.CFrame:ToObjectSpace(pose)' in OWNER
 assert 'Size = true, CFrame = true, Parent = true, Anchored = true' in OWNER
 assert 'local target = JumpRouteCueRules.retarget(platform,previous,ordered,base.Position,variant,isClear)' in OWNER
 assert 'if generation ~= routeGeneration then return end' in OWNER
@@ -1881,13 +1905,17 @@ assert 'and (not isClear or isClear(from,target)) then' in CUE_RULES
 assert 'variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in OWNER
 assert 'if checked == 8 then break end' in OWNER
 assert 'LocalJumpRouteEpoch' in SIDE_LOD and 'LocalJumpRouteEpoch' in OWNER
-assert 'variant ~= "Orbital" then warnings, lava = JumpRouteHazards.read(arena) end' in OWNER
+assert 'local warnings, lava = JumpRouteHazards.read(arena)' in OWNER
+assert 'crossingProfile, pose, size, false, 126298311664881' in OWNER
+assert 'targetTier=crossing and 3 or routeTier+1' in OWNER
+assert 'return JumpRouteCueRules.nextPhysical(from, orderedPlatforms, arenaCenter, variantId, nil, isClear)' in CUE_RULES
 CLEARANCE=(ROOT/"src/shared/JumpRouteClearance.lua").read_text(encoding="utf8")
 assert 'cast.IncludeInstances = {arena}' in CLEARANCE
 assert 'cast.RespectCanCollide = true' in CLEARANCE
 assert 'workspace:Blockcast(frame,BODY,point-previous,cast)' in CLEARANCE
 ROOKIE=(CLIENT/"rookie-parkour-cue.client.lua").read_text(encoding="utf8")
-assert 'routeClearance = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil' in ROOKIE
+assert 'jumpClear, groundExitClear = JumpRouteClearance.forArena(arena)' in ROOKIE
+assert 'routeClearance = variant == "Harbor" and jumpClear or nil' in ROOKIE
 assert 'routeClearance(base, deck, hit.Position)' in ROOKIE
 assert 'routeClearance(source, destination, nil, hit.Position)' in ROOKIE
 assert 'checked[destination] = clear' in ROOKIE
@@ -1896,8 +1924,11 @@ assert 'clear = isSafe(destination)' in ROOKIE
 assert 'if destination and isSafe(destination) then' in ROOKIE
 assert 'safeTargets[destination] = safe' in ROOKIE
 assert 'crossing and isClear(from, crossing)' in ROOKIE
-assert 'flank and isClear(from, flank)' in ROOKIE
-assert 'detour and isClear(from, detour)' in ROOKIE
+assert 'local forward, detour = options(from, pieces, isClear)' in ROOKIE
+assert 'currentTarget, currentAlternate, currentAnchor = target, alternate, anchor' in ROOKIE
+assert 'watchTarget(alternate, true)' in ROOKIE
+assert 'and (not isClear or isClear(from, candidate)) then' in CUE_RULES
+assert 'variant == "Orbital" and not outerRoute' in ROOKIE
 assert 'pieces, hit.Position, 42, canApproach' in ROOKIE
 assert 'skyRouteDirection(from), isClear' in ROOKIE
 MASTERY=(CLIENT/"high-ground-route-cue.client.lua").read_text(encoding="utf8")
@@ -2019,25 +2050,25 @@ assert 'result.pylon += 1' in TRIM
 assert 'verifiedSupports[part] = true' in TRIM
 assert 'LocalSkySpinePylonNativePartsReplaced = family.pylon' in OWNER
 assert 'LocalOriginalSkySpinePylon3DCount = family.pylon' in OWNER
-assert 'function Kit.setCrownPylonMask(part, masked)' in TRIM
+assert 'function Kit.setPrimaryPylonMask(part, masked)' in TRIM
 support_visibility = TRIM[TRIM.index("local function refreshPylon("):
                           TRIM.index("function Kit.isSkySpinePylon(")]
 for guard in (
     'saved[part] == true',
     'verifiedSupports[part] == true',
     'part.Parent == activeDecor',
-    'not crownPylons[part]',
+    'not primaryPylons[part]',
 ):
     assert guard in support_visibility, guard
 mask = TRIM[TRIM.index("local function setNativeMask("):
             TRIM.index("local function refreshPylon(")]
-assert 'if saved[part] or crownPylons[part] or routeUnderdecks[part]' in mask
+assert 'if saved[part] or primaryPylons[part] or routeUnderdecks[part]' in mask
 assert 'nativeBaselines[part] = part.LocalTransparencyModifier' in mask
 assert 'function Kit.setPylonLodVisible(part, visible)' in TRIM
 assert 'PlatformNativeTrimReplacementKit.setPylonLodVisible(native, visible)' in SIDE_LOD
 assert 'elseif original ~= nil then' in mask
 assert 'part.LocalTransparencyModifier = original' in mask
-assert 'PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)' in (
+assert 'PlatformNativeTrimReplacementKit.setPrimaryPylonMask(saved.part, visible)' in (
     CLIENT/"SkySpineCrownMeshKit.lua").read_text(encoding="utf8")
 assert 'PremiumLargeStructureMeshKit.validNativeSkyPylon(part)' in OWNER
 assert 'local supportBudget = tier.Name == "High" and 16' in OWNER
@@ -2322,7 +2353,8 @@ for contract in (
     'collectPorticoPart(entry.arena,entry.owner,decor,scale)',
     'collectCasing(entry.arena,entry.owner,group)',
     'collectHelix(entry.arena,entry.owner,circuit)',
-    'if #entry.pieces~=7 then clone:Destroy();return nil end',
+    'local partCount=hoistPieces and HarborHoist.PartCount or 7',
+    'if #entry.pieces~=partCount then clone:Destroy();return nil end',
     'data.owner:GetAttributeChangedSignal("CollapsePhase"):Connect(changed)',
     'data.owner:GetAttributeChangedSignal("BridgeShutterPhase"):Connect(changed)',
     'source.DescendantRemoving:Connect(function(child)',
@@ -2387,7 +2419,11 @@ for required in (
     'local sourceWidth=step==1 and 12 or (step==4 and 11.6 or 10)',
     'local overpass=originals[5]',
     'orientation=deck.CFrame*CFrame.new(0,size.Y*.5-1,0)',
-    'scaleZ=overpass.Size.Z/17.6',
+    'scaleZ=span/17.6',
+    'span=alongX and overpass.Size.X or overpass.Size.Z',
+    'math.abs(axis:Dot(deck.CFrame.LookVector))<.999',
+    'local assetId=overpass:GetAttribute("Original3DAssetId")',
+    'assetId~=HorizonMonumentGeometry.assetId("beam") and not isArchFloorCasting(arena,assetId)',
     '"VerticalBridgePylon-1","VerticalBridgePylon1"',
     '"TaperedFin-1","TaperedFin1","MonumentalOverpass"',
 ):
@@ -2400,6 +2436,8 @@ for required in (
     'name="ExteriorAbutment-1"', 'name="ExteriorAbutment1"',
     'name="LoadBearingKeel"', 'name="RecessedCentralGirder"',
     'local stage,_,_,index=archDeck(arena,deck,scale)',
+    '(not partSpec.side and assetId==HorizonMonumentGeometry.assetId("beam"))',
+    'or isArchFloorCasting(arena,assetId)',
     'originals={natives[3],natives[4]}',
     'local height=math.min(3.4,size.Y-.38)',
     'or (peer~=entry and not sourceIntact(peer))',
@@ -2408,19 +2446,20 @@ for required in (
     assert required in P4_CLIENT, required
 assert 'ApprovedRemainingStructureMeshKit.nativeCount("archBase")' in SIDE_LOD
 print("PASS P4 arches retain the genuine 3/13.8/28.2-stud collider and"
-      " four native blocks are replaced only by a complete fitted lower assembly")
+      " four native pieces are replaced only by a complete fitted lower assembly")
 print("PASS P4 five original moderated structures, genuine source masks,"
       " collapse/shutter/stream fallback, 1/2/3 touch arches and shared GPU census")
 
 
 promenade_collector = P4_CLIENT.split("local function porticoStep", 1)[1].split(
-    "local function collectCasing", 1)[0]
+    "local function promenadeUnderdeck", 1)[0]
 brace = P4_MODELS["perimeter_crossbrace"]
 assert brace["asset_id"]=="108452611210970" and brace["moderation"]=="Approved"
 assert brace["workflow_run_id"]==42696898936
 assert 'holder="ApprovedPerimeterStructuresTemplates"' in P4_CLIENT
 for contract in (
-    'PROMENADE_VARIANTS[arena:GetAttribute("VariantId")]',
+    'local variant=arena:GetAttribute("VariantId")',
+    'if not PROMENADE_VARIANTS[variant]',
     '"_MonumentalCrosshead"',
     'native:GetAttribute("PromenadeVisualOnly")~=true',
     'native:GetAttribute("PerimeterPlatformIndex")~=tonumber(index)',
@@ -2429,17 +2468,20 @@ for contract in (
     'originals={native}',
 ):
     assert contract in promenade_collector,contract
-crosshead_collector=promenade_collector.split("local function collectJunctionTruss",1)[0]
-assert 'UnderdeckTruss' not in crosshead_collector
+assert 'UnderdeckTruss' not in promenade_collector
 assert 'LoadPylon' not in promenade_collector
 assert 'Low={arch=0,casing=0,helix=0,promenade=0}' in P4_CLIENT
-print("PASS four promenade variants use the approved truss with exact native footprint and Low backoff")
+assert 'part.Name:match("_MonumentalCrosshead$") ~= nil' in HARBOR
+assert 'not native or Trim.hasPrimaryStructure(native)' in promenade_collector
+assert 'return category=="junction" or category=="stay" or category=="promenade"' in P4_CLIENT
+print("PASS 30 promenade crossheads use the approved truss with gantry precedence and Low backoff")
 
 # The four themed columns are existing creator-approved sources. An
 # unusually tall 16.2-stud promenade pylon still costs one source module.
 for variant,asset_id in (
     ("classic","91626128452597"), ("towers","107521411452905"),
     ("crossroads","93993697329658"), ("orbital","119010829781313"),
+    ("harbor","76194593490199"),
 ):
     model=P4_MODELS["column_"+variant]
     assert model["asset_id"]==asset_id and model["moderation"]=="Approved"
@@ -2460,7 +2502,10 @@ assert 'part:SetAttribute("OriginalPromenadePylon3D",true)' in LARGE
 assert 'reconcilePylon(part)' in TRIM
 assert 'LocalOriginalPromenadePylon3DCount = family.promenadePylon' in OWNER
 assert 'descendant:GetAttribute("OriginalSupportColumn3D") == true' in SIDE_LOD
-print("PASS 48 genuine promenade pylons eligible inside the existing column budget")
+assert 'Orbital = true, Harbor = true' in pylon_rules
+assert 'variant~="Harbor" and platform' not in LARGE
+assert 'if not primaryPylons[part] then result.promenadePylon += 1 end' in TRIM
+print("PASS 60 genuine promenade pylons eligible inside the existing column budget")
 
 
 girder=P4_MODELS["bridge_side_girder"]
@@ -2478,7 +2523,10 @@ for clause in (
 ):
     assert clause in P4_CLIENT,clause
 assert 'LocalOriginalPromenadeDiagonalStay3DCount' in SIDE_LOD
-print("PASS 48 native diagonal stays use fitted girder pairs with zero Low or GPU-pressure residency")
+assert 'Crossroads=true,Orbital=true,Harbor=true}' in P4_CLIENT
+assert 'part.Name:match("_DiagonalStay%-?1$") ~= nil' in HARBOR
+assert 'Trim.setPromenadeStructureMask(part,true,visible)' in HARBOR
+print("PASS 60 native diagonal stays use fitted girder pairs with gantry precedence and GPU backoff")
 
 # Mount roof equipment only on a fully streamed, authenticated portico.
 for name,asset_id in (
@@ -2486,6 +2534,7 @@ for name,asset_id in (
     ("service_maintenance","106083832432833"),
     ("variant_crossroads_forged_gantry","90844491148907"),
     ("variant_orbital_sculpted_node","104654294187035"),
+    ("harbor_gantry_kinetic_container","75684193304551"),
 ):
     equipment = P4_MODELS[name]
     assert equipment["asset_id"] == asset_id and equipment["moderation"] == "Approved"
@@ -2494,8 +2543,8 @@ equipment_collector = P4_CLIENT.split("local function collectRoofNative", 1)[1].
     "local function collectFittingPair", 1)[0]
 for clause in (
     'collectPorticoPart(arena,deck,decor,scale)',
-    'promenadeNative(decor,index,"_"..spec.name,spec.wedge)',
-    'native.CFrame.UpVector:Dot(expected.UpVector)<.999',
+    'promenadeNative(decor,index,"_"..spec.name,spec.wedge,"OriginalPromenadeEquipment3D",assetId)',
+    'nativeFrame.UpVector:Dot(expected.UpVector)<.999',
     'anchor=crosshead.originals[1]',
 ):
     assert clause in equipment_collector,clause
@@ -2505,7 +2554,13 @@ assert 'or ((isPortico(entry.category) or entry.category=="archBase" or entry.ca
 assert 'and not sameOriginals(entry,data))' in P4_CLIENT
 assert 'LocalOriginalPromenadeEquipment3DCount' in SIDE_LOD
 assert 'LocalPromenadeEquipmentNativePartsReplaced' in SIDE_LOD
-print("PASS four approved promenade equipment sources, exact native owners and shared touch budget")
+hoist_art=(CLIENT/"HarborPromenadeHoistArt.lua").read_text(encoding="utf8")
+assert 'Art.PartCount = 6' in hoist_art
+assert 'PlatformSide.harborGirderSource()' in hoist_art
+for native in ("FreightHoistArm","SuspendedCrate","CargoChain"):
+    assert native in equipment_collector or native in P4_CLIENT
+    assert f'part.Name:match("_{native}$") ~= nil' in HARBOR
+print("PASS five approved promenade equipment profiles, exact native owners and shared touch budget")
 
 # New roof pairs reuse already moderated original art with no extra import.
 for name,asset_id in (
@@ -2520,7 +2575,7 @@ fitting_collector = P4_CLIENT.split("local function collectFittingPair", 1)[1].s
     "local function collectCasing", 1)[0]
 for clause in (
     'collectPorticoPart(arena,deck,decor,scale)',
-    'collectRoofNative(decor,index,crosshead.orientation,scale,fitting)',
+    'collectRoofNative(decor,index,crosshead.orientation,scale,fitting,',
     'anchor=crosshead.originals[1]',
     'orientation=native.CFrame*fitting.axes',
     'pair[1].other=pair[2].key',
@@ -2575,7 +2630,10 @@ for clause in (
     assert clause in P4_CLIENT, clause
 assert "or crownTrim[part] or commandTrim[part] or cradleClaims[part]" in mask
 assert "LocalSkySpineCommandNativePartsReplaced" in SIDE_LOD
-print("PASS five distinct Sky Spine command silhouettes share the verified crown and native rollback")
+assert 'category="command",name="SpineSignalBeam",spec=SOURCE.Crosshead' in P4_CLIENT
+assert 'Crown.isGatewayDeck(arena,deck)' in P4_CLIENT
+assert 'LocalOriginalSkySpineSignalBeam3DCount' in SIDE_LOD
+print("PASS Sky Spine command silhouettes and 20 signal beams share the existing budget and native rollback")
 
 # The complete north signature uses approved structural/fitting sources,
 # independently of the six existing landmark sculptures. Preserve its
@@ -2633,9 +2691,24 @@ assert '(step == 1 and lane == 1) or (step == 10 and lane == 2)' in connections
 assert 'half-math.abs(delta:Dot(axis)) < .20' in connections
 assert 'SkyRouteConnectionRules.spineJunction(first,second)' in ROUTE
 assert 'not Connection.spineJunction(spine,deck)' in P4_CLIENT
-assert 'Trim.hasPrimaryJunctionTruss(native)' in P4_CLIENT
-assert 'observePrimaryJunctionTruss(data.originals[1],changed)' in P4_CLIENT
+assert 'Trim.hasPrimaryStructure(native)' in P4_CLIENT
+assert 'Trim.observePrimaryStructure(part,changed)' in P4_CLIENT
+assert 'local native=LargeStructure.spineNativeParts(decor,deck)' in P4_CLIENT
+assert 'key=native[1],owner=deck,arena=arena,originals=native' in P4_CLIENT
+assert 'marker=native==data.originals[1] and "PremiumArchitecturalSurface" or "SkySpineDecor"' in P4_CLIENT
+assert 'count("junction", "SpineUnderframe")' in SIDE_LOD
 assert 'LocalSkySpineJunctionTrussesReplaced' in SIDE_LOD
+assert 'LocalOriginalPromenadeTrussesReplaced' in SIDE_LOD
+assert 'LocalOriginalPromenadeFramesReplaced' in SIDE_LOD
+assert 'step==2 or step==7' in P4_CLIENT
+assert 'LargeStructure.promenadeNativeFrame(decor,deck)' in P4_CLIENT
+assert 'key=frame,owner=deck,arena=arena,originals=truss and {frame,truss} or {frame}' in P4_CLIENT
+assert 'return promenadeChassis(arena,deck,decor,frame,native,"JunctionUnderframe",spine)' in P4_CLIENT
+assert 'count("junction", "JunctionUnderframe")' in SIDE_LOD
+assert 'count("junction", "PromenadeUnderframe")' in SIDE_LOD
+assert 'spec=SOURCE.AccessChassis' in P4_CLIENT
+assert 'local routeUnderframes=trussCap>0' in P4_CLIENT
+assert 'count("junction", "PromenadeTruss")' in SIDE_LOD
 print("PASS ten authored junction trusses use one approved source, proved deck overlap and shared rollback")
 junction_integration=(ROOT/"tests/engine/long-cradle-streaming-fallback.spec.luau").read_text(encoding="utf8")
 assert 'expect(count).toBe(10)' in junction_integration

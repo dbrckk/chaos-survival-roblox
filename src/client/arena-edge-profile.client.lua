@@ -8,6 +8,8 @@ local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local ArenaEdgeFinishKit = require(script.Parent.ArenaEdgeFinishKit)
 local ArenaFloorFollowerKit = require(script.Parent.ArenaFloorFollowerKit)
 
+local HarborCoastalGeometry = require(script.Parent.HarborCoastalGeometry)
+
 local player = Players.LocalPlayer
 local folder = Instance.new("Folder")
 folder.Name = "ArenaEdgeProfileLocal"
@@ -23,11 +25,13 @@ local function clear()
     folder:ClearAllChildren()
 end
 
-local function makePart(name, size, cframe, color, material, transparency)
-    local p = Instance.new("Part")
+local function makePart(name, size, cframe, color, material, transparency, mesh)
+    local p = mesh or Instance.new("Part")
     p.Name = name
-    p.Size = size
-    p.CFrame = cframe
+    if not mesh then
+        p.Size = size
+        p.CFrame = cframe
+    end
     p.Anchored = true
     p.CanCollide = false
     p.CanTouch = false
@@ -179,6 +183,7 @@ local function rebuild()
     end
 
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local harbor = variant == "Harbor" and HarborCoastalGeometry.sources()
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
     local halfX = base.Size.X * 0.5
@@ -220,14 +225,10 @@ local function rebuild()
     }
 
     for i, side in ipairs(sides) do
-        makePart(
-            "ArenaEdgeLip" .. side.name,
-            side.lipSize,
-            base.CFrame * CFrame.new(side.lipPos),
-            dark,
-            Enum.Material.Metal,
-            tier.Name == "Low" and 0.22 or 0.10
-        )
+        local pose = base.CFrame * CFrame.new(side.lipPos)
+        makePart("ArenaEdgeLip" .. side.name, side.lipSize, pose, dark, Enum.Material.Metal,
+            tier.Name == "Low" and 0.22 or 0.10,
+            harbor and HarborCoastalGeometry.fit(harbor.plate, side.lipSize, pose))
 
         if tier.Name ~= "Low" then
             local keyEdge = i == 1 or i == 4
@@ -247,7 +248,14 @@ local function rebuild()
 
     addVariantEdgeLanguage(base, theme, tier, variant)
     -- Outboard architectural fascia, separate from danger warnings.
-    ArenaEdgeFinishKit.build(folder, base, variant, tier.Name, theme)
+    local fitHarbor
+    if harbor then
+        local profiles = {harbor.beam, harbor.plate, harbor.roller}
+        fitHarbor = function(index, size, pose)
+            return HarborCoastalGeometry.fit(profiles[index], size, pose, index ~= 2 and true or nil)
+        end
+    end
+    ArenaEdgeFinishKit.build(folder, base, variant, tier.Name, theme, fitHarbor)
 
     if tier.Name == "High" then
         local cornerOffsets = {
@@ -256,14 +264,17 @@ local function rebuild()
             Vector3.new(-halfX - 0.55, topY - 0.45, halfZ + 0.55),
             Vector3.new(halfX + 0.55, topY - 0.45, halfZ + 0.55),
         }
+        local cornerSize = Vector3.new(1.7, 2.4, 1.7)
         for i, pos in ipairs(cornerOffsets) do
+            local pose = base.CFrame * CFrame.new(pos)
             makePart(
                 "ArenaEdgeCorner" .. i,
-                Vector3.new(1.7, 2.4, 1.7),
-                base.CFrame * CFrame.new(pos),
+                cornerSize,
+                pose,
                 theme.Detail,
                 Enum.Material.Metal,
-                0.16
+                0.16,
+                harbor and HarborCoastalGeometry.fit(harbor.plate, cornerSize, pose)
             )
         end
     end
@@ -310,6 +321,12 @@ workspace.ChildRemoved:Connect(function(child)
         bindGeneratedMap(nil)
         clear()
     end
+end)
+
+HarborCoastalGeometry.watch(function()
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if arena and arena:GetAttribute("VariantId") == "Harbor" then scheduleRefresh() end
 end)
 
 bindGeneratedMap(workspace:FindFirstChild("GeneratedMap"))

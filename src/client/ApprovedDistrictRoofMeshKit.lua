@@ -1,5 +1,9 @@
 -- Variant-specific rooftop equipment on the existing district scenery pass.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 
 local Kit = {}
 local V = Vector3.new
@@ -142,8 +146,33 @@ local function bindSource(model, profile)
     end
 end
 
-local function visibleCosmetic(part)
-    return part and (part:IsA("Part") or part:IsA("WedgePart")) and part.Anchored
+local SHAFTS = {
+    ObservatoryColumn = true, LightningTip = true, HarborHoistTower = true, HarborCargoCable = true,
+}
+local ROOF_ASSETS = {
+    StormSensor = 104654294187035, WeatherRadarShell = 104654294187035,
+    HaloReceiver = 104654294187035, ReactorSphere = 104654294187035,
+    GantryArch = 106401955318567, TransferRailHousing = 106401955318567,
+    SwitchArm = 106401955318567, ReactorCollectorHousing = 106401955318567,
+    HarborLoadCrossarm = 106401955318567,
+    RadarFeedHousing = 88962643359267, TransitCab = 88962643359267, TransitGlazing = 88962643359267,
+    ["HoistDriveHousing-1"] = 88962643359267, HoistDriveHousing1 = 88962643359267,
+    ["SwitchPod-1"] = 88962643359267, SwitchPod1 = 88962643359267,
+    ["RouteRelayHousing-1"] = 88962643359267, RouteRelayHousing1 = 88962643359267,
+    SwitchboardPanel = 88962643359267, ReactorCap = 88962643359267,
+    ["ContainmentShield-1"] = 88962643359267, ContainmentShield1 = 88962643359267,
+    HarborHoistCabin = 88962643359267, HarborCargoHousing = 88962643359267,
+}
+
+local function visibleCosmetic(part, variant)
+    if not part then return false end
+    local native = part:IsA("Part") or part:IsA("WedgePart")
+    local assetId = if SHAFTS[part.Name] then HorizonMonumentGeometry.assetId("shaft", variant)
+        else ROOF_ASSETS[part.Name]
+    local fitted = part:IsA("MeshPart") and assetId ~= nil and part.MeshId ~= ""
+        and part:GetAttribute("Original3DAssetId") == assetId
+        and (part.Name ~= "TransitGlazing" or (part.Size - V(3.5, 1.1, .18)).Magnitude < .06)
+    return (native or fitted) and part.Anchored
         and not part.CanCollide and not part.CanTouch and not part.CanQuery
         and part:GetAttribute("SceneryLodHidden") ~= true
         and part.LocalTransparencyModifier < .95
@@ -161,8 +190,8 @@ local function ownerEligible(building, district, variant)
         and type(index) == "number" and index % 1 == 0 and index >= 1 and index <= 16
 end
 
-local function matchesNative(part, origin)
-    if not visibleCosmetic(part) then return false end
+local function matchesNative(part, origin, variant)
+    if not visibleCosmetic(part, variant) then return false end
     local center = origin:PointToObjectSpace(part.Position)
     return math.abs(center.X) <= 7 and center.Y >= 16 and center.Y <= 29
         and math.abs(center.Z) <= 4.25 and math.max(part.Size.X, part.Size.Y, part.Size.Z) <= 13
@@ -261,6 +290,10 @@ local function mount(item, district, variant, profile, source)
     for _, native in ipairs(item.natives) do
         watch(entry.connections, native.AncestryChanged, drop)
         watch(entry.connections, native:GetAttributeChangedSignal("SceneryLodHidden"), drop)
+        if native:IsA("MeshPart") then
+            watch(entry.connections, native:GetPropertyChangedSignal("MeshId"), drop)
+            watch(entry.connections, native:GetAttributeChangedSignal("Original3DAssetId"), drop)
+        end
         for _, property in ipairs(NATIVE_PROPERTIES) do
             watch(entry.connections, native:GetPropertyChangedSignal(property), drop)
         end
@@ -292,7 +325,7 @@ local function candidate(building, district, variant, profile, camera, look, ran
     local natives = {}
     for _, name in ipairs(profile.natives) do
         local native = building:FindFirstChild(name)
-        if not matchesNative(native, origin)
+        if not matchesNative(native, origin, variant)
             or (native.Transparency >= 1 and (not entry or entry.originals[native] == nil)) then return nil end
         table.insert(natives, native)
     end

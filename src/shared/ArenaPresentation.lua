@@ -1,5 +1,19 @@
 local ArenaPresentation = {}
 
+-- The six-by-six bay underlay fits the closed bevel of the approved
+-- service-hatch base. Full local tiles share the same authored anchors.
+ArenaPresentation.GroundBayAssetId = 102746904688141
+ArenaPresentation.GroundBayCenter = .153
+ArenaPresentation.GroundBayThickness = .035
+
+function ArenaPresentation.isGroundBayGeometry(part)
+    if part:IsA("MeshPart") then
+        return part.MeshId ~= ""
+            and part:GetAttribute("Original3DAssetId") == ArenaPresentation.GroundBayAssetId
+    end
+    return part:IsA("Part") and part.Shape == Enum.PartType.Block
+end
+
 local function planar(vector)
     return Vector3.new(vector.X, 0, vector.Z)
 end

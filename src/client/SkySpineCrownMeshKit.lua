@@ -282,7 +282,7 @@ end
 
 local function setNativeVisibility(saved, visible)
     if saved.pylon then
-        PlatformNativeTrimReplacementKit.setCrownPylonMask(saved.part, visible)
+        PlatformNativeTrimReplacementKit.setPrimaryPylonMask(saved.part, visible)
     else
         PlatformNativeTrimReplacementKit.setSkySpineRoofMask(saved.part, false, visible)
     end
@@ -616,6 +616,10 @@ function Kit.pbrCount()
         end
     end
     return models, appearances
+end
+
+function Kit.isGatewayDeck(arena,deck)
+    return authentic(deck,arena,arena:FindFirstChild("Base"))
 end
 
 function Kit.supportsCommandArt(deck)

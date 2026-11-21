@@ -2,19 +2,20 @@
 -- Shared by route residency and the cosmetic reinforcement at each joint.
 local Rules = {}
 
-local function traversable(deck)
+local function traversable(deck, departure)
     if not deck or not deck:IsA("BasePart") or not deck.Anchored
         or not deck.CanCollide or deck.Transparency >= .75
         or deck:GetAttribute("ChaosPermanentRoute") ~= true
         or not deck.Name:match("^Platform%d+$") then return false end
     local phase = deck:GetAttribute("CollapsePhase")
     local shutter = deck:GetAttribute("BridgeShutterPhase")
-    return (phase == nil or phase == "Normal" or phase == "Safe")
+    return (phase == nil or phase == "Normal" or phase == "Safe"
+        or (deck == departure and phase == "Warning"))
         and (shutter == nil or shutter == "Idle")
 end
 
-function Rules.spineJunction(spine,promenade)
-    if not traversable(spine) or not traversable(promenade) or spine == promenade
+function Rules.spineJunction(spine,promenade,departure)
+    if not traversable(spine,departure) or not traversable(promenade,departure) or spine == promenade
         or not spine.Parent or spine.Parent ~= promenade.Parent
         or spine.Parent.Name ~= "Platforms"
         or spine:GetAttribute("SkySpineInterchange") ~= true

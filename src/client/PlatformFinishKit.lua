@@ -1,6 +1,6 @@
 -- Chaos Signal: minimal, recognizable platform detailing on moving geometry.
 -- Decorative welds follow the authoritative platform without collisions.
--- No custom asset IDs, dynamic emitters, scripted physics or animation loops.
+-- Approved sculpture fits the same slots and welds as its basic fallback.
 local PlatformFinishKit = {}
 -- This module is also loaded as a pure helper by Roblox Cloud engine suites:
 -- their ModuleScript sandbox has no global 'script'. Runtime Roblox clients
@@ -40,7 +40,7 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     part.Material = material
     part.Transparency = alpha
     part:SetAttribute("ChaosBaseTransparency", alpha)
-    if shape and shape ~= "WedgePart" then part.Shape = shape end
+    if not mesh and shape and shape ~= "WedgePart" then part.Shape = shape end
     part.Anchored = false
     part.Massless = true
     part.CanCollide = false
@@ -67,6 +67,27 @@ local function add(parent, platform, name, localFrame, size, color, material, al
     end
     joint.Parent = part
     return part
+end
+
+function PlatformFinishKit.trimProfilePose(frame, size, swapped)
+    if swapped then
+        return frame * CFrame.Angles(0, math.pi * 0.5, 0),
+            Vector3.new(size.Z, size.Y, size.X)
+    end
+    return frame, size
+end
+
+function PlatformFinishKit.fitTrimProfile(profile, frame, size, alongX, assetId)
+    local mesh = profile and profile:Clone()
+    if not mesh then return nil, frame, size end
+    local swapped = (profile.Size.X > profile.Size.Z) ~= alongX
+    mesh:ClearAllChildren()
+    mesh.TextureID = ""
+    mesh.MaterialVariant = ""
+    mesh:SetAttribute("Original3DAssetId", assetId)
+    mesh:SetAttribute("PlatformTrimAxisSwap", if swapped then true else nil)
+    frame, size = PlatformFinishKit.trimProfilePose(frame, size, swapped)
+    return mesh, frame, size
 end
 
 -- StreamingEnabled does not guarantee the order in which platform Parts
@@ -120,7 +141,7 @@ end
 
 -- Chunky, angled corner armor changes the silhouette without touching
 -- the physical collision deck. Earlier armor sat below the deck bottom:
--- invisible from the mobile third-person camera. Wedges now sit above
+-- invisible from the mobile third-person camera. The plates now sit above
 -- the panel near the corners but INSIDE the true collision footprint,
 -- so decorative armor never suggests a safe overhanging walkway.
 -- High gets all four corners, Medium an opposing diagonal, Low none.
@@ -146,7 +167,7 @@ function PlatformFinishKit.surfacePaintOffset(platform, thickness)
     return platform.Size.Y * 0.5 + 0.055 + 0.05 + halfThickness + 0.012
 end
 
-function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
+function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme, profile)
     if not parent or not platform or not platform:IsA("BasePart")
         or not NAMES[variant] or not theme then
         return {}
@@ -176,6 +197,14 @@ function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
                 sy * 0.5 + 0.05,
                 def[2] * (sz * 0.5 - armorSize * 0.53)
             ) * CFrame.Angles(0, math.rad(def[3]), 0)
+            local mesh = profile and profile.part:Clone()
+            if mesh then
+                mesh:ClearAllChildren()
+                mesh.TextureID = ""
+                mesh.MaterialVariant = ""
+                mesh:SetAttribute("OriginalPlatformCornerArmor3D", true)
+                mesh:SetAttribute("Original3DAssetId", profile.assetId)
+            end
             local plate = add(parent, platform,
                 variant .. "CornerArmor" .. cornerIndex,
                 frame,
@@ -183,7 +212,8 @@ function PlatformFinishKit.buildArmor(parent, platform, variant, tier, theme)
                 color,
                 Enum.Material.Metal,
                 0.04,
-                "WedgePart"
+                "WedgePart",
+                mesh
             )
             plate:SetAttribute("ChaosArmorCorner", cornerIndex)
             table.insert(built, plate)
@@ -223,7 +253,9 @@ function PlatformFinishKit.mountHarborCornerArmor(parent, platform, natives, sou
     for _,native in ipairs(natives) do
         local joint = native:FindFirstChild("ChaosPlatformTrimWeld")
         local corner = native:GetAttribute("ChaosArmorCorner")
-        if native.Parent ~= parent or not native:IsA("WedgePart") or not corner
+        local fittedArmor = native:IsA("MeshPart")
+            and native:GetAttribute("OriginalPlatformCornerArmor3D") == true
+        if native.Parent ~= parent or not (native:IsA("WedgePart") or fittedArmor) or not corner
             or native.Name ~= "HarborCornerArmor"..corner or not joint or not joint:IsA("Weld")
             or joint.Part0 ~= native or joint.Part1 ~= platform then return nil end
         fallback[native] = native.Transparency
@@ -281,7 +313,12 @@ function PlatformFinishKit.mountHarborLandingKeel(parent, platform, keel, mount,
         fallback[mount] = mount.Transparency
     end
     local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
-    local meshes = sideKit.harborLandingKeel(source,platform,joint.C1,keel.Size)
+    local frame, size = joint.C1, keel.Size
+    if keel:GetAttribute("PlatformTrimAxisSwap") == true then
+        frame *= CFrame.Angles(0, -math.pi * 0.5, 0)
+        size = Vector3.new(size.Z, size.Y, size.X)
+    end
+    local meshes = sideKit.harborLandingKeel(source, platform, frame, size)
     if not meshes then return nil end
     publishHarborTrim(parent,nil,meshes,fallback)
     return meshes,fallback
@@ -294,7 +331,8 @@ function PlatformFinishKit.harborKeelMountSize(platform)
     return Vector3.new(math.min(size.X*.58,7*scale),.27,math.min(size.Z*.22,1.8*scale))
 end
 
-function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant, index, selectedBridge, harborSource)
+function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant,
+    index, selectedBridge, harborSource, forgedProfile)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not NAMES[variant] then
         return {}
@@ -347,9 +385,10 @@ function PlatformFinishKit.buildSideRails(parent, platform, tier, theme, variant
     local built = {}
     for railIndex, segment in ipairs(segments) do
         if count == 4 or railIndex <= 2 then
+            local mesh, frame, size = PlatformFinishKit.fitTrimProfile(forgedProfile,
+                CFrame.new(segment[1]), segment[2], railIndex <= 2, 126298311664881)
             local piece = add(parent, platform, "PlatformRecessedSideRail" .. railIndex,
-                CFrame.new(segment[1]), segment[2], color,
-                material, 0.08)
+                frame, size, color, material, 0.08, nil, mesh)
             table.insert(built, piece)
         end
     end
@@ -430,14 +469,25 @@ function PlatformFinishKit.applySkybridgeFootprint(snapshot)
             -- Roblox platform axis, or a rotated girder becomes a ghost
             -- structure beyond the shrinking collision deck.
             local importedAxis = piece:GetAttribute("OriginalBridgeLongAxis")
-            if importedAxis == "X" then
+            if piece:GetAttribute("ChaosArmorCorner") then
+                -- Keep the original setback from the moving end of the bridge.
+                local delta = (span - snapshot.originalSpan) * .5
+                scaled = position + (snapshot.alongX
+                    and Vector3.new(math.sign(position.X) * delta, 0, 0)
+                    or Vector3.new(0, 0, math.sign(position.Z) * delta))
+                piece.Size = size
+            elseif importedAxis == "X" then
                 piece.Size = Vector3.new(
                     math.max(0.05, size.X * ratio), size.Y, size.Z)
             elseif importedAxis == "Z" then
                 piece.Size = Vector3.new(
                     size.X, size.Y, math.max(0.05, size.Z * ratio))
             else
-                piece.Size = snapshot.alongX
+                local alongX = snapshot.alongX
+                if piece:GetAttribute("PlatformTrimAxisSwap") == true then
+                    alongX = not alongX
+                end
+                piece.Size = alongX
                     and Vector3.new(size.X > 2.2 and size.X * ratio or size.X,
                         size.Y, size.Z)
                     or Vector3.new(size.X, size.Y,
@@ -445,7 +495,8 @@ function PlatformFinishKit.applySkybridgeFootprint(snapshot)
             end
             local localFrame = CFrame.new(scaled) * rotation
             local joint = piece:FindFirstChild("ChaosPlatformTrimWeld")
-            if joint and joint:IsA("Weld") then
+                or piece:FindFirstChild("PlatformIdentityWeld")
+            if joint and joint:IsA("Weld") and joint.Part1 == platform then
                 -- C0 is identity, so C1 is the exact platform-relative
                 -- frame. Updating it changes the physical weld offset.
                 joint.C1 = localFrame
@@ -485,8 +536,8 @@ end
 -- carapace/hub slot; never add the native hatch geometry on Low.
 -- No extra lights, textures, gameplay collision or update loops.
 -- Use already approved five-arena floor sculptures for genuine welded
--- service-hatch detail on actual moving decks. The native three-layer hatch
--- below remains a fallback until the approved source has replicated.
+-- service-hatch detail on actual moving decks. The three-layer finish
+-- also fits individual approved regions into the existing fallback slots.
 -- No new asset upload, physics, render loop or server-side platform change.
 -- The same five creator-approved reliefs are used for both legacy
 -- source mounting and the near-camera selection. Never reserve a scarce
@@ -499,12 +550,28 @@ local SERVICE_HATCH_ASSETS = {
     Harbor = 94830155055482,
 }
 
-local function serviceHatchSource(variant)
-    local assetId = SERVICE_HATCH_ASSETS[variant]
-    if not assetId then return nil end
+local SERVICE_HANDLE_ASSET = 135412901717584
+local FULL_SERVICE_HATCH_PARTS = 7
+-- The source is split into material regions. Use only the closed beveled
+-- castings for the lid and collar, plus the dock fitting's open hoop.
+local SERVICE_HATCH_REGIONS = {
+    Classic = {Vector3.new(8.00, .12, 4.34), Vector3.new(6.32, .022, 3.1682)},
+    Towers = {Vector3.new(10.22, .12, .94), Vector3.new(8.0738, .022, .6862)},
+    Crossroads = {Vector3.new(3.50, .12, .66), Vector3.new(2.765, .022, .4818)},
+    Orbital = {Vector3.new(4.60, .041, .57), Vector3.new(4.2818, .022, .7884)},
+    Harbor = {Vector3.new(7.55, .12, 2.74), Vector3.new(4.983, .038, 1.507)},
+}
+local SERVICE_HANDLE_REGION = Vector3.new(.82, .22446, .26955)
+local PLATFORM_DETAIL_REGIONS = {
+    Classic = Vector3.new(1.42, .033, .12), -- survey notch
+    Orbital = Vector3.new(2.85, .025, .11), -- diagnostic trace
+    Harbor = Vector3.new(2.50, .16, .16), -- cast load roller
+}
+
+local function approvedFloorRelief(name, assetId)
     local holder = game:GetService("ReplicatedStorage")
         :FindFirstChild("ApprovedFloorReliefTemplates")
-    local source = holder and holder:FindFirstChild(variant)
+    local source = holder and holder:FindFirstChild(name)
     if not holder or not holder:IsA("Folder")
         or holder:GetAttribute("OwnerVerified") ~= true
         or not source or not source:IsA("Model") or source.Parent ~= holder
@@ -527,6 +594,14 @@ local function serviceHatchSource(variant)
         end
     end
     if count < 1 or count > 12 then return nil end
+    return source, count
+end
+
+local function serviceHatchSource(variant)
+    local assetId = SERVICE_HATCH_ASSETS[variant]
+    if not assetId then return nil end
+    local source, count = approvedFloorRelief(variant, assetId)
+    if not source then return nil end
     local _, dimensions = source:GetBoundingBox()
     if math.max(dimensions.X, dimensions.Z) < 2.7
         or math.min(dimensions.X, dimensions.Z) < .45
@@ -534,6 +609,55 @@ local function serviceHatchSource(variant)
         return nil
     end
     return source, dimensions, assetId, count
+end
+
+local function serviceDetailRegion(source, dimensions)
+    if not source then return nil end
+    local match
+    for _, part in ipairs(source:GetChildren()) do
+        if not part:IsA("MeshPart") then continue end
+        local size = part.Size
+        local bounds = Vector3.new(math.max(size.X, size.Z), size.Y, math.min(size.X, size.Z))
+        if (bounds - dimensions).Magnitude < .04 then
+            if match or not part.Anchored or not part.Archivable or part.MeshId == ""
+                or part.Transparency >= 1 or part.CFrame.UpVector.Y < .999 then
+                return nil
+            end
+            match = part
+        end
+    end
+    return match
+end
+
+function PlatformFinishKit.artProfiles(variant, includeHandle)
+    local regions = SERVICE_HATCH_REGIONS[variant]
+    if not regions then return nil end
+    local source, _, assetId = serviceHatchSource(variant)
+    local handleSource = if includeHandle then approvedFloorRelief("HarborTie", SERVICE_HANDLE_ASSET)
+        else nil
+    local detail = PLATFORM_DETAIL_REGIONS[variant]
+    local hatch = serviceDetailRegion(source, regions[1])
+    local collar = serviceDetailRegion(source, regions[2])
+    local hatchAssetId = assetId
+    if variant == "Harbor" and not hatch then
+        if collar then
+            hatch = collar
+        else
+            -- The other closed casting fits the same footprint. Keep its
+            -- provenance separate from Harbor's collar and roller.
+            local classic, _, classicId = serviceHatchSource("Classic")
+            hatch = serviceDetailRegion(classic, SERVICE_HATCH_REGIONS.Classic[1])
+            hatchAssetId = hatch and classicId or nil
+        end
+    end
+    return {
+        hatch = hatch,
+        hatchAssetId = hatchAssetId,
+        collar = collar,
+        handle = serviceDetailRegion(handleSource, SERVICE_HANDLE_REGION),
+        detail = detail and serviceDetailRegion(source, detail) or nil,
+        assetId = assetId,
+    }
 end
 
 local function harborLashingWidth(platform, variant)
@@ -564,7 +688,7 @@ function PlatformFinishKit.selectOriginalServiceHatches(
         or type(ordered) ~= "table"
         or not base or not base:IsA("BasePart") then return chosen end
     local source, sourceSize, _, sourceParts = serviceHatchSource(variant)
-    if not source or (lowReady and sourceParts ~= 7) then return chosen end
+    if not source or sourceParts ~= FULL_SERVICE_HATCH_PARTS then return chosen end
     local sourceLong = math.max(sourceSize.X, sourceSize.Z)
     local sourceShort = math.min(sourceSize.X, sourceSize.Z)
     local legacyStep = tier == "High" and 9 or 18
@@ -601,7 +725,7 @@ function PlatformFinishKit.selectOriginalServiceHatches(
             local nominal = harborLashingWidth(platform,variant)
             local legacy = id % 3 == 1 and (nominal or math.min(sx,sz)) >= 8
                 and (nominal or math.max(sx,sz)) <= 36
-            local lashing = sourceParts == 7 and nominal
+            local lashing = nominal
             if (lashing or (legacy and not nominal))
                 and (phase == nil or phase == "Normal" or phase == "Safe")
                 and (shutter == nil or shutter == "Idle") then
@@ -661,8 +785,7 @@ local function originalServiceHatch(parent, platform, variant, tier,
     end
     local source, original, assetId, expectedPieces =
         serviceHatchSource(variant)
-    if not source or (tier == "Low" and expectedPieces ~= 7)
-        or (lashingWidth and expectedPieces ~= 7) then
+    if not source or expectedPieces ~= FULL_SERVICE_HATCH_PARTS then
         return nil
     end
     local copy = source:Clone()
@@ -736,7 +859,7 @@ local function originalServiceHatch(parent, platform, variant, tier,
 end
 
 function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
-        tier, theme, index, selected)
+        tier, theme, index, selected, profiles)
     if not parent or not platform or not platform:IsA("BasePart")
         or (tier == "Low" and selected ~= true)
         or not NAMES[variant] or not theme
@@ -774,22 +897,35 @@ function PlatformFinishKit.buildServiceHatch(parent, platform, variant,
     }
     local color = theme.Structure:Lerp(theme.Detail, 0.28)
     local accent = theme.Detail:Lerp(theme.Surface, 0.42)
-    local hatch = add(parent, platform, variant .. "ServiceHatch",
-        CFrame.new(0, upper, -sz * 0.19),
+    local function detail(name, height, size, tint, material, alpha, profile, assetId)
+        local mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
+            profile, CFrame.new(0, height, -sz * 0.19), size, true, assetId)
+        local item = add(parent, platform, variant .. name, frame, dimensions,
+            tint, material, alpha, nil, mesh)
+        item:SetAttribute("ChaosServiceHatch", true)
+        return item
+    end
+    profiles = profiles or {}
+    local hatch = detail("ServiceHatch", upper,
         Vector3.new(hatchWidth, 0.18, hatchDepth), color,
-        materials[variant], 0.05)
-    hatch:SetAttribute("ChaosServiceHatch", true)
-    local collar = add(parent, platform, variant .. "ServiceCollar",
-        CFrame.new(0, upper + 0.11, -sz * 0.19),
+        materials[variant], 0.05, profiles.hatch, profiles.hatchAssetId or profiles.assetId)
+    local collarProfile, collarId = profiles.collar, profiles.assetId
+    local handleProfile, handleId = profiles.handle, SERVICE_HANDLE_ASSET
+    if variant == "Harbor" then
+        if not collarProfile then
+            collarProfile, collarId = profiles.hatch, profiles.hatchAssetId or profiles.assetId
+        end
+        if not handleProfile then
+            handleProfile, handleId = profiles.detail, profiles.assetId
+        end
+    end
+    local collar = detail("ServiceCollar", upper + 0.11,
         Vector3.new(math.max(1.0, hatchWidth - 0.70), 0.08,
             math.max(1.0, hatchDepth - 0.70)),
-        accent, Enum.Material.Metal, 0.11)
-    collar:SetAttribute("ChaosServiceHatch", true)
-    local handle = add(parent, platform, variant .. "ServiceHandle",
-        CFrame.new(0, upper + 0.18, -sz * 0.19),
+        accent, Enum.Material.Metal, 0.11, collarProfile, collarId)
+    local handle = detail("ServiceHandle", upper + 0.18,
         Vector3.new(math.min(1.7, hatchWidth * 0.36), 0.10, 0.25),
-        theme.Structure, Enum.Material.DiamondPlate, 0.02)
-    handle:SetAttribute("ChaosServiceHatch", true)
+        theme.Structure, Enum.Material.DiamondPlate, 0.02, handleProfile, handleId)
     return {hatch, collar, handle}
 end
 
@@ -802,6 +938,13 @@ local function loadBraceFrame(size, corner, harbor)
     local drop = math.clamp(math.min(size.X,size.Z)*.24,1.5,3)
     local finish = Vector3.new(dir[1]*size.X*.11,bottom-drop,dir[2]*size.Z*.08)
     return CFrame.lookAt((start+finish)*.5,finish),(finish-start).Magnitude
+end
+
+local function carapaceSparFrame(size, side)
+    local bottom = -size.Y * .5
+    local start = Vector3.new(side * size.X * .35, bottom - .14, -size.Z * .24)
+    local finish = Vector3.new(side * size.X * .11, bottom - .65, size.Z * .10)
+    return CFrame.lookAt((start + finish) * .5, finish), (finish - start).Magnitude
 end
 
 -- Classic's authored zigzag decks shrink along BOTH horizontal axes.
@@ -835,10 +978,20 @@ function PlatformFinishKit.captureRouteFootprint(platform, pieces)
                 localCFrame = if welded then joint.C1
                     else platform.CFrame:ToObjectSpace(piece.CFrame),
             }
-            local corner = piece:GetAttribute("HarborLoadBraceCorner")
-            if BRACE_CORNERS[corner] and welded then
-                local frame,length = loadBraceFrame(snapshot.originalSize,corner,true)
-                entry.braceCorner = corner
+            local harborCorner = piece:GetAttribute("HarborLoadBraceCorner")
+            local corner = harborCorner or piece:GetAttribute("ChaosLoadBraceCorner")
+            local sparSide = piece:GetAttribute("CarapaceSparSide")
+            local isSpar = sparSide == -1 or sparSide == 1
+            if welded and (BRACE_CORNERS[corner] or isSpar) then
+                local frame, length
+                if isSpar then
+                    frame, length = carapaceSparFrame(snapshot.originalSize, sparSide)
+                    entry.sparSide = sparSide
+                else
+                    frame, length = loadBraceFrame(snapshot.originalSize, corner, harborCorner ~= nil)
+                    entry.braceCorner = corner
+                    entry.harborBrace = harborCorner ~= nil
+                end
                 entry.braceLength = length
                 entry.braceOffset = frame:ToObjectSpace(joint.C1)
             end
@@ -871,10 +1024,24 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
             -- contracting bridge while the other collapses incorrectly.
             local rimSwapped = part:GetAttribute(
                 "OriginalPlatformRimAxisSwap") == true
-            if data.braceCorner then
+            local armorCorner = part:GetAttribute("ChaosArmorCorner")
+            local axesSwapped = rimSwapped or part:GetAttribute("PlatformTrimAxisSwap") == true
+                or (type(armorCorner) == "number" and armorCorner % 2 == 0)
+            if part:GetAttribute("TowerLiftCoreCylinder") == true then
+                -- The rolled cylinder's X is vertical and its Y spans
+                -- the deck's X, so keep its axial thickness unchanged.
+                part.Size = Vector3.new(data.size.X,
+                    math.max(data.minimum, data.size.Y * ratioX),
+                    math.max(data.minimum, data.size.Z * ratioZ))
+            elseif data.braceLength then
                 -- Keep the socket at the deck edge and refit the diagonal
                 -- to the new lower anchor instead of squashing its width.
-                local frame,length = loadBraceFrame(deck.Size,data.braceCorner,true)
+                local frame, length
+                if data.sparSide then
+                    frame, length = carapaceSparFrame(deck.Size, data.sparSide)
+                else
+                    frame, length = loadBraceFrame(deck.Size, data.braceCorner, data.harborBrace)
+                end
                 local offset = data.braceOffset
                 local ratio = length/data.braceLength
                 local position = offset.Position
@@ -886,10 +1053,18 @@ function PlatformFinishKit.applyRouteFootprint(snapshot)
                     data.size.Y,
                     math.max(.05, data.size.Z*scaleZ))
             else
+                local scaleX = axesSwapped and ratioZ or ratioX
+                local scaleZ = axesSwapped and ratioX or ratioZ
+                if part:GetAttribute("PlatformFinishDiagonal") == true then
+                    -- Slanted markings keep their angle. Fit to
+                    -- the narrower contraction so neither tip can overhang.
+                    scaleX = math.min(ratioX, ratioZ)
+                    scaleZ = scaleX
+                end
                 part.Size = Vector3.new(
-                    math.max(data.minimum, data.size.X*(rimSwapped and ratioZ or ratioX)),
+                    math.max(data.minimum, data.size.X * scaleX),
                     data.size.Y,
-                    math.max(data.minimum, data.size.Z*(rimSwapped and ratioX or ratioZ)))
+                    math.max(data.minimum, data.size.Z * scaleZ))
             end
             local joint = part:FindFirstChild("ChaosPlatformTrimWeld")
                 or part:FindFirstChild("PlatformIdentityWeld")
@@ -938,7 +1113,8 @@ function PlatformFinishKit.braceCount(tier)
     return 0
 end
 
-function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, theme, harborSource)
+function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, theme,
+    harborSource, forgedProfile)
     if not parent or not platform or not platform:IsA("BasePart")
         or not NAMES[variant] or not theme
         or platform:GetAttribute("ChaosSkybridge") == true then
@@ -972,14 +1148,13 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     local color = profile.tone
     local built = {}
     for i = 1, count do
-        local frame,length = loadBraceFrame(size,i,harbor)
-        local brace = add(
-            parent, platform, variant .. "LoadBrace" .. i, frame,
-            Vector3.new(profile.width, profile.depth, length),
-            color, profile.material, tier == "High" and 0.08 or 0.14
-        )
+        local frame, length = loadBraceFrame(size, i, harbor)
+        local mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(forgedProfile, frame,
+            Vector3.new(profile.width, profile.depth, length), false, 126298311664881)
+        local brace = add(parent, platform, variant .. "LoadBrace" .. i, pose, dimensions,
+            color, profile.material, tier == "High" and 0.08 or 0.14, nil, mesh)
         brace:SetAttribute("ChaosLoadBrace", true)
-        if harbor then brace:SetAttribute("HarborLoadBraceCorner",i) end
+        brace:SetAttribute(harbor and "HarborLoadBraceCorner" or "ChaosLoadBraceCorner", i)
         built[#built + 1] = brace
     end
     local phase = platform:GetAttribute("CollapsePhase")
@@ -989,8 +1164,8 @@ function PlatformFinishKit.buildLoadBraces(parent, platform, variant, tier, them
     local sideKit = PremiumPlatformSideMeshKit or require("./PremiumPlatformSideMeshKit")
     local meshes,fallback = {},{}
     for i,native in ipairs(built) do
-        local pieces = sideKit.harborLoadBrace(harborSource,platform,
-            native.ChaosPlatformTrimWeld.C1,native.Size.Z,i)
+        local frame, length = loadBraceFrame(size, i, true)
+        local pieces = sideKit.harborLoadBrace(harborSource, platform, frame, length, i)
         if not pieces then
             for _,piece in ipairs(meshes) do piece:Destroy() end
             return built
@@ -1033,7 +1208,8 @@ function PlatformFinishKit.carapaceCount(tier, index)
     return 0
 end
 
-function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme, index, selectedForOriginal)
+function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme, index,
+    selectedForOriginal, profiles)
     if not parent or not platform or not platform:IsA("BasePart")
         or not theme or not CARAPACE_PROFILES[variant]
         or platform:GetAttribute("ChaosSkybridge") == true then
@@ -1054,8 +1230,8 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
 
     -- Source-authenticated sculpted full underside/side facings replace
     -- seven crude WedgePart/Part modules on sparse High/Medium decks.
-    -- The native art below is only built when the genuine mesh is absent.
-    if PremiumPlatformSideMeshKit then
+    -- The individual fittings are used when the whole model does not mount.
+    if PremiumPlatformSideMeshKit and selectedForOriginal ~= false then
         local original = PremiumPlatformSideMeshKit.carapace(
             parent, platform, variant, tier, index, selectedForOriginal)
         if original then return original end
@@ -1066,12 +1242,46 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
     local shellColor = theme.Structure:Lerp(theme.Detail, p.tint)
     local coreColor = theme.Surface:Lerp(theme.Structure, 0.54)
     local accent = theme.Detail:Lerp(theme.Secondary, 0.09)
+    local skirt = profiles and profiles.skirt
+    local casting = skirt and skirt.parts[1]
+    local castingRotation = casting and skirt.frame:ToObjectSpace(casting.CFrame).Rotation
+    if castingRotation and (casting.MeshId == "" or math.abs(casting.Size.Y - .33) > .04
+        or castingRotation.UpVector.Y < .999
+        or math.max(math.abs(castingRotation.RightVector.X),
+            math.abs(castingRotation.RightVector.Z)) < .999) then
+        casting, castingRotation = nil, nil
+    end
     local built = {}
-    local function piece(name, frame, size, color, material, alpha, shape)
+    local function piece(name, frame, size, color, material, alpha, shape, sideFin, sparSide)
+        local mesh, swapped
+        if shape == "WedgePart" and casting then
+            mesh = PlatformFinishKit.fitTrimProfile(casting, frame, size,
+                casting.Size.X > casting.Size.Z, skirt.assetId)
+            if mesh then
+                frame *= castingRotation
+                swapped = math.abs(castingRotation.RightVector.Z) > .999
+                if swapped then size = Vector3.new(size.Z, size.Y, size.X) end
+            end
+        elseif not shape and profiles then
+            local spar = sparSide and profiles.spar
+            mesh, frame, size = PlatformFinishKit.fitTrimProfile(
+                spar or profiles.hatch, frame, size, sparSide == nil,
+                spar and 126298311664881 or profiles.hatchAssetId or profiles.assetId)
+            swapped = mesh and mesh:GetAttribute("PlatformTrimAxisSwap") == true
+        end
         local item = add(parent, platform, variant .. "DeckCarapace"
             .. tostring(index) .. name, frame, size,
-            color, material, alpha, shape)
+            color, material, alpha, shape, mesh)
         item:SetAttribute("OriginalDeckCarapace", true)
+        item:SetAttribute("Original3DStructuralSide", nil)
+        -- The port/starboard fins are already quarter-turned relative to
+        -- the deck, independently of the imported casting's own axes.
+        if (sideFin == true) ~= (swapped == true) then
+            item:SetAttribute("PlatformTrimAxisSwap", true)
+        else
+            item:SetAttribute("PlatformTrimAxisSwap", nil)
+        end
+        if sparSide then item:SetAttribute("CarapaceSparSide", sparSide) end
         built[#built + 1] = item
     end
 
@@ -1092,7 +1302,7 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
         -- An inset keel below the deck cuts away the toy floating-cube look.
         -- It is noncolliding, massless, and cannot change real jump height.
         piece("RecessedLoadKeel",
-            CFrame.new(0, -sy * 0.5 - 0.36, 0),
+            CFrame.new(0, -sy * 0.5 - 0.33, 0),
             Vector3.new(math.max(3.0, sx * 0.61), 0.68,
                 math.max(3.0, sz * 0.57)),
             coreColor, p.core, 0.055)
@@ -1100,7 +1310,7 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
             CFrame.new(-sx * 0.5 + 0.12, y, 0)
                 * CFrame.Angles(0, math.pi * 0.5, 0),
             Vector3.new(sz * 0.66, 0.84, 0.90),
-            accent, p.shell, 0.075, "WedgePart")
+            accent, p.shell, 0.075, "WedgePart", true)
     end
 
     if budget >= 7 then
@@ -1108,17 +1318,12 @@ function PlatformFinishKit.buildCarapace(parent, platform, variant, tier, theme,
             CFrame.new(sx * 0.5 - 0.12, y, 0)
                 * CFrame.Angles(0, -math.pi * 0.5, 0),
             Vector3.new(sz * 0.66, 0.84, 0.90),
-            accent, p.shell, 0.075, "WedgePart")
+            accent, p.shell, 0.075, "WedgePart", true)
         for side = -1, 1, 2 do
-            local start = Vector3.new(side * sx * 0.35,
-                -sy * 0.5 - 0.14, -sz * 0.24)
-            local finish = Vector3.new(side * sx * 0.11,
-                -sy * 0.5 - 1.70, sz * 0.10)
-            local delta = finish - start
+            local frame, length = carapaceSparFrame(platform.Size, side)
             piece(side == -1 and "PortDiagonalSpar" or "StarboardDiagonalSpar",
-                CFrame.lookAt((start + finish) * 0.5, finish),
-                Vector3.new(0.44, 0.51, delta.Magnitude),
-                coreColor, p.core, 0.07)
+                frame, Vector3.new(0.44, 0.51, length),
+                coreColor, p.core, 0.07, nil, false, side)
         end
     end
     return built
@@ -1127,9 +1332,11 @@ end
 -- Platform disappearance is gameplay, not an artistic overlay: any local
 -- welded armor or painted glyph must also become completely invisible.
 -- Saved base transparencies survive repeated Warning/Gone/Restore cycles.
+-- Takeoff cues use their own visibility because their landing can also close.
 function PlatformFinishKit.applyCollapseVisibility(parts, phase)
     for _, item in ipairs(parts or {}) do
-        if item and item.Parent and item:IsA("BasePart") then
+        if item and item.Parent and item:IsA("BasePart")
+            and item:GetAttribute("ParkourTakeoffCue") ~= true then
             local original = item:GetAttribute("ChaosBaseTransparency")
             if type(original) ~= "number" then
                 original = item.Transparency
@@ -1151,11 +1358,9 @@ function PlatformFinishKit.applyCollapseVisibility(parts, phase)
 end
 
 -- The actual approved full underside owns its structural silhouette.
--- Omit only redundant primitive underside paint after a complete genuine
--- 3D carapace/hull mount. Surface guidance and all source-failure native
--- fallback detail remain unchanged. The optional flag defaults to false.
+-- The full underside has priority over individual visual fittings.
 function PlatformFinishKit.build(parent, platform, variant, tier, theme,
-    genuineUnderdeck)
+    genuineUnderdeck, profiles)
     local names = NAMES[variant]
     if not parent or not platform or not platform:IsA("BasePart")
         or not names or not theme
@@ -1166,6 +1371,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
     local sx, sy, sz = platform.Size.X, platform.Size.Y, platform.Size.Z
     local top = PlatformFinishKit.surfacePaintOffset(platform, 0.05)
     local count = PlatformFinishKit.count(tier)
+    local hasLens = variant == "Crossroads" or variant == "Orbital"
     local built = {}
     local function piece(i, localFrame, size, color, material, alpha, shape)
         if i > count then return end
@@ -1177,8 +1383,34 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
             -- Keep all surface markings on the other three variants.
             return
         end
-        table.insert(built, add(parent, platform, names[i], localFrame, size,
-            color, material, alpha, shape))
+        local mesh
+        if profiles then
+            local profile, assetId
+            if i == 3 and hasLens then
+                local lens = profiles.lens
+                profile, assetId = lens and lens.part, lens and lens.assetId
+            else
+                assetId = profiles.assetId
+                if i == 2 then
+                    profile = profiles.detail or profiles.collar
+                    if not profile and variant == "Harbor" then
+                        profile, assetId = profiles.hatch, profiles.hatchAssetId or assetId
+                    end
+                elseif i == 3 and variant == "Towers" then
+                    profile = profiles.collar
+                else
+                    profile, assetId = profiles.hatch, profiles.hatchAssetId or assetId
+                end
+            end
+            mesh, localFrame, size = PlatformFinishKit.fitTrimProfile(profile, localFrame, size,
+                size.X >= size.Z, assetId)
+        end
+        local item = add(parent, platform, names[i], localFrame, size,
+            color, material, alpha, shape, mesh)
+        if variant == "Crossroads" and i <= 2 then
+            item:SetAttribute("PlatformFinishDiagonal", true)
+        end
+        table.insert(built, item)
     end
 
     if variant == "Classic" then
@@ -1189,7 +1421,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
         piece(2, CFrame.new(-sx * 0.23, top + 0.015, -sz * 0.23),
             Vector3.new(0.12, 0.027, sz * 0.22),
             theme.Secondary, Enum.Material.Metal, 0.25)
-        piece(3, CFrame.new(-sx * 0.43, -sy * 0.11, 0),
+        piece(3, CFrame.new(-sx * 0.5 + 0.04, -sy * 0.11, 0),
             Vector3.new(0.24, sy * 0.68, sz * 0.26),
             theme.Structure, Enum.Material.DiamondPlate, 0.08)
 
@@ -1198,7 +1430,7 @@ function PlatformFinishKit.build(parent, platform, variant, tier, theme,
         piece(1, CFrame.new(0, -sy * 0.5 - 0.16, 0),
             Vector3.new(sx * 0.58, 0.27, sz * 0.20),
             theme.Structure, Enum.Material.DiamondPlate, 0.10)
-        piece(2, CFrame.new(sx * 0.36, -sy * 0.24, 0),
+        piece(2, CFrame.new(sx * 0.36, -sy * 0.735 + 0.035, 0),
             Vector3.new(0.33, sy * 0.47, sz * 0.51),
             theme.Detail, Enum.Material.Metal, 0.11)
         piece(3, CFrame.new(0, -sy * 0.5 - 0.33, 0),

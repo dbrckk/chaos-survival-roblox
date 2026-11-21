@@ -369,7 +369,13 @@ local function mount(deck, arena, base, source, expected)
             watch(native:GetPropertyChangedSignal(property))
         end
         watch(native:GetAttributeChangedSignal("OriginalStructuralBevel"))
+        watch(native:GetAttributeChangedSignal("OriginalPlatformBevel3D"))
         watch(native:GetAttributeChangedSignal("PremiumArchitecturalSurface"))
+        if native:IsA("MeshPart") then
+            watch(native:GetAttributeChangedSignal("Original3DAssetId"))
+            watch(native:GetAttributeChangedSignal("OriginalHarborLandingTrimReserve3D"))
+            watch(native:GetPropertyChangedSignal("MeshId"))
+        end
     end
     for _,piece in ipairs(pieces) do
         local joint = entry.joints[piece]

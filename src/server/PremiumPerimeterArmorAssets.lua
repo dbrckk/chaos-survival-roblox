@@ -7,13 +7,29 @@ local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Assets = {}
+local CAP_ID = 88962643359267
 local SOURCES = {
     {name = "Wing", id = 138096293972093,
         width = 3.277, height = 1.64, depth = 5.62},
-    {name = "Cap", id = 88962643359267,
+    {name = "Cap", id = CAP_ID,
         width = 2.7699, height = 2.14, depth = 2.34},
 }
 local started = false
+
+function Assets.wayfinderProfile()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedPerimeterArmorTemplates")
+    if not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
+    local model = holder:FindFirstChild("Cap")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalPerimeterArmor3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= CAP_ID then return nil end
+    local mesh = model:FindFirstChild("WayfinderBase")
+    return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh.MeshId ~= ""
+        and mesh or nil
+end
 
 local function validGeometry(model, profile)
     local count = 0
@@ -36,6 +52,24 @@ local function validGeometry(model, profile)
         math.max(profile.width, profile.depth)
     return math.abs(x - sx) <= 0.30
         and math.abs(z - sz) <= 0.32
+end
+
+local function markWayfinderBase(model)
+    -- The ARMOR region of the approved cap is one closed swept casting.
+    -- Its source bounds identify it in either horizontal import orientation.
+    local base
+    for _, mesh in ipairs(model:GetChildren()) do
+        if mesh:IsA("MeshPart") and mesh.Archivable and mesh.MeshId ~= "" then
+            local size = mesh.Size
+            if math.abs(math.max(size.X, size.Z) - 2.76985) < 0.12
+                and math.abs(math.min(size.X, size.Z) - 2.34) < 0.12
+                and math.abs(size.Y - 2.14) < 0.10 then
+                if base then return end
+                base = mesh
+            end
+        end
+    end
+    if base then base.Name = "WayfinderBase" end
 end
 
 function Assets.start()
@@ -73,6 +107,7 @@ function Assets.start()
                         sanitized:SetAttribute("OwnerVerified", true)
                         sanitized:SetAttribute("CosmeticOnly", true)
                         sanitized:SetAttribute("OriginalPerimeterArmor3D", true)
+                        if profile.name == "Cap" then markWayfinderBase(sanitized) end
                         sanitized.Parent = holder
                         holder:SetAttribute(profile.name .. "Ready", true)
                         break

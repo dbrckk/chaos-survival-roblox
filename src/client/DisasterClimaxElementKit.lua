@@ -1,5 +1,5 @@
 -- Authored procedural 3D climax silhouettes for seven distinct hazards.
--- Client-only visuals; no hitboxes, lights, emitters or external assets.
+-- Client-only visuals; no hitboxes, lights or emitters.
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 
@@ -213,7 +213,7 @@ function Kit.recipe(kind, index, count, span, stage, tier)
 end
 
 function Kit.emit(parent, kind, deckFrame, span, stage, primary,
-        secondary, tier, reduced)
+        secondary, tier, reduced, clonePiece)
     local pieces = {}
     local count = Kit.count(tier, reduced)
     if not parent or not VALID[kind] or typeof(deckFrame) ~= "CFrame"
@@ -224,7 +224,7 @@ function Kit.emit(parent, kind, deckFrame, span, stage, primary,
     for i = 1, count do
         local spec = Kit.recipe(kind, i, count, span, stage, tier)
         if not spec then return pieces end
-        local part = Instance.new("WedgePart")
+        local part = (clonePiece and clonePiece()) or Instance.new("WedgePart")
         part.Name = spec.Name .. i
         part.Size = spec.Size
         part.CFrame = deckFrame

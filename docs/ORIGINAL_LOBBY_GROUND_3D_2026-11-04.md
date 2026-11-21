@@ -8,7 +8,7 @@ Le lobby est une plateforme physique de 74 × 74 studs avec un panneau central d
 
 Le nouveau PremiumLobbyGroundMeshKit réemploie le Model original approuvé **72507987666671**, déjà importé et chargé côté serveur par PremiumRouteMeshAssets : véritables triangles, UV et tangentes, jusqu'à sept MeshParts par dalle (source de 2 976 triangles). Aucune nouvelle ressource Marketplace, requête HTTP client, génération de Part simulant un mesh ou nouvel AssetId.
 
-Jusqu'à quatre dalles 3D sont réduites à environ 34 studs et disposées en un carré 2×2, avec des rotations par quarts de tour. Leur surface reste sous les tutoriels VOTE / SURVIVE / REPEAT, les marquages et la plateforme centrale ; le floor collidable demeure autoritaire et inchangé. Les anciennes lignes natives du client sont omises uniquement si les dalles réellement authentifiées sont montées.
+Jusqu'à quatre dalles 3D sont réduites à environ 34 studs et disposées en un carré 2×2, avec des rotations par quarts de tour. Leur surface reste sous les tutoriels VOTE / SURVIVE / REPEAT, les marquages et la plateforme centrale ; le floor collidable demeure autoritaire et inchangé. Chaque dalle montée prend le relais des joints et trappes de son secteur.
 
 ## Budget et sécurité
 
@@ -18,13 +18,41 @@ Jusqu'à quatre dalles 3D sont réduites à environ 34 studs et disposées en un
 | Medium | 2 | 1 | 0 |
 | High | 4 | 2 | 0 |
 
-Limite supérieure si la source conserve sept parties : 28 MeshParts et environ 11 904 triangles source en High, contenus dans le dossier LobbySurfaceDetailLocal déjà recensé par VisualBudgetRules. Aucun nouveau SpotLight, RenderStepped, collider, toucher, raycast ni boucle de chargement. Pas de nouvelle texture raster 2K sur ce lot.
+Les quatre dalles du vestibule totalisent 28 MeshParts et environ 11 904 triangles source en High avec la source actuelle à sept pièces. Le dossier LobbySurfaceDetailLocal est déjà recensé par VisualBudgetRules. Aucun nouveau SpotLight, RenderStepped, collider, toucher, raycast ni boucle de chargement. Pas de nouvelle texture raster 2K sur ce lot.
 
 Avant tout montage, le client confirme l'ID exact, le dossier vérifié, les attributs CosmeticOnly / OwnerVerified / PremiumGround3D, le type Model, l'absence de scripts, des MeshParts uniquement et la taille attendue. Les quatre clones sont intégralement préparés avant publication dans le dossier : si un seul échoue, le montage est annulé.
 
 La surveillance événementielle reconstruit le sol après arrivée tardive du modèle, streaming de Lobby.Floor, changement de carte, pression FPS ou changement de qualité. La disparition anormale d'un MeshPart client déclenche la reconstruction. Le serveur conserve sa géométrie native, ses panneaux de guidage et les fonctions de sécurité.
 
+Le client attend que tous les maillages du modèle approuvé soient chargés avant de monter les dalles du vestibule ou de l’estrade. Pendant l’attente, les joints et trappes de secours restent en place. Le préchargement est commun au portique et aux pylônes, avec une nouvelle tentative après vingt secondes si un maillage échoue.
+
+## Estrade centrale
+
+L’estrade reprend le relief biseauté de la même dalle approuvée sur une empreinte de 23,4 × 23,4 studs. Le maillage suit le repère du plateau de collision, dépasse sa surface de 0,024 stud et reste sous ses quatre repères lumineux. Le signal central occupe 7,5 × 7,5 studs afin de laisser les reliefs visibles autour.
+
+En Medium et High, les quatre repères cyan et violets peuvent utiliser le profil forgé approuvé de Tower Run. Ils suivent les diagonales autour du halo, au-dessus de la dalle et à distance du chevron de sortie. Le guide natif de mêmes dimensions sert de secours pendant le chargement du profil ou sous pression graphique.
+
+Les repères d’ambiance au pied de l’estrade reprennent le profil de fonderie approuvé et s’alignent sur le revêtement visible, au-dessus des dalles du vestibule. Leurs positions libèrent l’allée et les trois panneaux d’instructions. Chaque repère utilise une seule plaque animée et garde sa teinte et sa pulsation selon la phase.
+
+À pression 0, la dalle centrale utilise la marge sous les plafonds existants de 24 MeshParts en Medium et 48 en High. Avec le modèle à sept pièces, l’ensemble du lobby passe à trois dalles en Medium (21 MeshParts) et cinq en High (35 MeshParts). La dalle centrale se retire dès la pression 1. Le plateau natif sert de secours lorsque le maillage ou le budget manque. Le client recalcule son montage si l’estrade arrive après le sol.
+
 Deux attributs diagnostiques du joueur sont renseignés depuis le montage réel : LocalOriginalLobbyGroundTileCount et LocalOriginalLobbyGroundMeshPartCount. Ces compteurs ne mesurent pas le rendu ni la VRAM.
+
+## Raccord vers le portail
+
+Le chevron cyan dessiné par deux profils forgés indique la sortie de l’estrade. L’allée et ses deux rails partent au pied du rebord et se terminent cinq studs après le portail, à l’intérieur du vestibule. Les chevrons de départ et les repères d’approche suivent l’empreinte de l’allée. Le signal de lancement se déplace de l’estrade vers le portail.
+
+Chaque rail reçoit deux brides et deux embouts métalliques ajustés à son empreinte. Ils réutilisent le profil forgé approuvé de Tower Run, avec une pièce de secours de mêmes dimensions par emplacement. Les brides passent sous le haut du guide lumineux et les embouts le coiffent aux extrémités. Les huit pièces restent hors du balayage de lancement.
+
+Les bandes transversales et leurs guides lumineux peuvent utiliser le même profil forgé. L’allée conserve quatre bandes en Low et sept bandes accompagnées de quatre guides en Medium et High. Leur relief affleure le tablier sous le balayage de lancement et les repères animés. Le client garde les formes de secours lorsque le maillage manque.
+
+Les quatre arceaux s’appuient sur huit socles biseautés. La première paire repose sur l’estrade et les trois suivantes sur le revêtement du vestibule, au-delà des rails. Les montants s’emboîtent dans les socles et conservent la hauteur de leur traverse lumineuse. Les socles utilisent le profil de fonderie approuvé lorsque le maillage est chargé.
+
+Huit colliers forgés relient les montants aux traverses. Ils reprennent le profil approuvé de Tower Run et laissent dépasser la face supérieure des traverses lumineuses. Chaque collier dispose d’une forme de secours aux mêmes dimensions.
+
+## Finition de secours du vestibule
+
+Le client pose les joints et les trappes de maintenance sur la face supérieure du revêtement visible dans les secteurs dépourvus de dalle. Les quatre paires de positions possibles contournent les zones d’entraînement, les inscriptions et l’allée du portail. Sans dalle, la configuration prévoit quatre joints et quatre trappes en Low, six de chaque en Medium et huit de chaque en High, avec les huit petits inserts lumineux en High. Avec les deux dalles avant en Medium, les secteurs du portail gardent deux joints et quatre trappes. En High sous pression 1, les secteurs libres gardent quatre joints et quatre trappes sans inserts lumineux. Le client compte la dalle surélevée de l’estrade à part pour choisir les finitions du vestibule. Le streaming du revêtement et le changement de pression déclenchent leur recalcul.
 
 ## Acceptation visuelle restante
 

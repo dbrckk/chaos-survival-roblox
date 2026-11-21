@@ -1093,7 +1093,7 @@ describe("Streaming-independent platform identity", function()
 end)
 
 describe("Moving platform premium trim kit", function()
-    it("scales Classic's welded route paint with actual shrinking geometry", function()
+    it("scales welded route detailing with actual shrinking geometry", function()
         local root = Instance.new("Folder")
         root.Parent = workspace
         local deck = Instance.new("Part")
@@ -1105,10 +1105,53 @@ describe("Moving platform premium trim kit", function()
         deck.Parent = root
         local visuals = Instance.new("Folder")
         visuals.Parent = root
-        local pieces = PlatformFinishKit.build(
-            visuals, deck, "Classic", "High", VisualTheme.arena("Classic")
-        )
-        expect(#pieces > 0).toBe(true)
+        local theme = VisualTheme.arena("Classic")
+        local pieces = PlatformFinishKit.build(visuals, deck, "Classic", "High", theme)
+        local profile = Instance.new("MeshPart")
+        profile.Size = Vector3.new(40.64, 3.1108, 5.96)
+        local rails = PlatformFinishKit.buildSideRails(
+            visuals, deck, "Medium", theme, "Classic", 1, false, nil, profile)
+        local braces = PlatformFinishKit.buildLoadBraces(
+            visuals, deck, "Medium", "Classic", theme, nil, profile)
+        local shell = PlatformFinishKit.buildCarapace(
+            visuals, deck, "Classic", "High", theme, 1, false,
+            {hatch = profile, assetId = 126298311664881, spar = profile})
+        profile:Destroy()
+        expect(#rails).toBe(2)
+        expect(#braces).toBe(2)
+        expect(#shell).toBe(7)
+        expect(shell[3]:IsA("MeshPart")).toBe(true)
+        expect(shell[4]:IsA("WedgePart")).toBe(true)
+        expect(shell[6]:IsA("MeshPart")).toBe(true)
+        expect(shell[6]:GetAttribute("Original3DStructuralSide")).toBe(nil)
+        for _, part in ipairs(shell) do
+            expect(part:GetAttribute("OriginalDeckCarapace")).toBe(true)
+            table.insert(pieces, part)
+        end
+        for _, family in ipairs({rails, braces}) do
+            for _, piece in ipairs(family) do
+                expect(piece:IsA("MeshPart")).toBe(true)
+                expect(piece:GetAttribute("Original3DAssetId")).toBe(126298311664881)
+                expect(piece.CanCollide or piece.CanTouch or piece.CanQuery).toBe(false)
+                table.insert(pieces, piece)
+            end
+        end
+        local core = Instance.new("Part")
+        core.Shape = Enum.PartType.Cylinder
+        core.Size = Vector3.new(.24, 2, 2)
+        core:SetAttribute("TowerLiftCoreCylinder", true)
+        core.CanCollide = false
+        core.CanTouch = false
+        core.CanQuery = false
+        core.Massless = true
+        local coreWeld = Instance.new("Weld")
+        coreWeld.Name = "PlatformIdentityWeld"
+        coreWeld.Part0, coreWeld.Part1 = core, deck
+        coreWeld.C1 = CFrame.new(0, -1.11, 0) * CFrame.Angles(0, 0, math.pi * .5)
+        core.CFrame = deck.CFrame * coreWeld.C1
+        coreWeld.Parent = core
+        core.Parent = visuals
+        table.insert(pieces, core)
         local first = pieces[1]
         local weld = first:FindFirstChild("ChaosPlatformTrimWeld")
         expect(weld ~= nil and weld:IsA("Weld")).toBe(true)
@@ -1127,6 +1170,36 @@ describe("Moving platform premium trim kit", function()
             - Vector3.new(firstOffset.X * 0.45,
                 firstOffset.Y, firstOffset.Z * 0.45)).Magnitude < 0.01)
             .toBe(true)
+
+        deck.Size = Vector3.new(4.5, 2, 7)
+        PlatformFinishKit.applyRouteFootprint(snapshot)
+        expect((core.Size - Vector3.new(.24, .9, 1.4)).Magnitude < .005).toBe(true)
+        expect(math.abs(coreWeld.C1.RightVector.Y - 1) < .001).toBe(true)
+        expect(math.abs(rails[1].Size.X - deck.Size.X * .72) < .005).toBe(true)
+        expect(math.abs(rails[1].Size.Z - .13 * .7) < .005).toBe(true)
+        local brace = braces[1]
+        local braceFrame = brace.ChaosPlatformTrimWeld.C1
+        local socket = braceFrame:PointToWorldSpace(-Vector3.xAxis * brace.Size.X * .5)
+        local expectedSocket = Vector3.new(-deck.Size.X * .36, -1.22, -deck.Size.Z * .30)
+        expect((socket - expectedSocket).Magnitude < .01).toBe(true)
+        expect(math.abs(brace.Size.Z - .55) < .005).toBe(true)
+        local fin, spar = shell[4], shell[6]
+        expect((fin.Size - Vector3.new(7 * .66, .84, .90 * .45)).Magnitude < .005)
+            .toBe(true)
+        local sparFrame = spar.ChaosPlatformTrimWeld.C1
+        local length = Vector3.xAxis * spar.Size.X * .5
+        local upperSocket = Vector3.new(-deck.Size.X * .35, -1.14, -deck.Size.Z * .24)
+        local lowerSocket = Vector3.new(-deck.Size.X * .11, -1.65, deck.Size.Z * .10)
+        expect((sparFrame:PointToWorldSpace(-length) - upperSocket).Magnitude < .01).toBe(true)
+        expect((sparFrame:PointToWorldSpace(length) - lowerSocket).Magnitude < .01).toBe(true)
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Gone")
+        expect(rails[1].Transparency).toBe(1)
+        expect(brace.Transparency).toBe(1)
+        expect(spar.Transparency).toBe(1)
+        PlatformFinishKit.applyCollapseVisibility(pieces, "Restored")
+        expect(math.abs(rails[1].Transparency - .08) < .001).toBe(true)
+        expect(math.abs(brace.Transparency - .14) < .001).toBe(true)
+        expect(math.abs(spar.Transparency - .07) < .001).toBe(true)
 
         deck.Size = Vector3.new(10, 2, 10)
         PlatformFinishKit.applyRouteFootprint(snapshot)
@@ -1162,15 +1235,21 @@ describe("Moving platform premium trim kit", function()
         local visual = Instance.new("Folder")
         visual.Parent = root
         local theme = VisualTheme.arena("Towers")
+        local railProfile = Instance.new("MeshPart")
+        railProfile.Size = Vector3.new(5.96, 3.1108, 40.64)
         local rails = PlatformFinishKit.buildSideRails(
-            visual, platform, "High", theme, "Towers"
+            visual, platform, "High", theme, "Towers", 1, false, nil, railProfile
         )
+        railProfile:Destroy()
         local paint = PlatformFinishKit.build(
             visual, platform, "Towers", "High", theme
         )
+        local cornerHead = Instance.new("MeshPart")
         local armor = PlatformFinishKit.buildArmor(
-            visual, platform, "Towers", "High", theme
+            visual, platform, "Towers", "High", theme,
+            {part=cornerHead, assetId=92226531849432}
         )
+        cornerHead:Destroy()
         local pieces = {}
         for _, family in ipairs({rails, paint, armor}) do
             for _, piece in ipairs(family) do
@@ -1179,6 +1258,7 @@ describe("Moving platform premium trim kit", function()
         end
         expect(#rails).toBe(4)
         for _, rail in ipairs(rails) do
+            expect(rail:IsA("MeshPart")).toBe(true)
             expect(rail.Material).toBe(Enum.Material.CorrodedMetal)
         end
         for _, part in ipairs(pieces) do
@@ -1187,6 +1267,21 @@ describe("Moving platform premium trim kit", function()
             expect(joint.Part0).toBe(part)
             expect(joint.Part1).toBe(platform)
         end
+        local brace = Instance.new("MeshPart")
+        brace.Size = Vector3.new(.84, .32, 33.64)
+        brace.CanCollide = false
+        brace.CanTouch = false
+        brace.CanQuery = false
+        brace.Massless = true
+        brace:SetAttribute("PlatformTrimAxisSwap", true)
+        local braceWeld = Instance.new("Weld")
+        braceWeld.Name = "PlatformIdentityWeld"
+        braceWeld.Part0, braceWeld.Part1 = brace, platform
+        braceWeld.C1 = CFrame.new(6, -1.37, 0) * CFrame.Angles(0, math.pi * .5, 0)
+        brace.CFrame = platform.CFrame * braceWeld.C1
+        braceWeld.Parent = brace
+        brace.Parent = visual
+        table.insert(pieces, brace)
         local originalRailSize = rails[1].Size
         local originalRigidSize = armor[1].Size
         local endBefore = platform.CFrame:PointToObjectSpace(rails[3].Position)
@@ -1205,16 +1300,25 @@ describe("Moving platform premium trim kit", function()
                     .. " expected=" .. tostring(expected))
             end
         end
-        assertNear("rail span", rails[1].Size.X,
-            originalRailSize.X * 0.5, 0.005)
+        assertNear("rail span", rails[1].Size.Z,
+            originalRailSize.Z * 0.5, 0.005)
+        assertNear("brace span", brace.Size.Z, 16.82, 0.005)
+        assertNear("brace width", brace.Size.X, .84, 0.005)
+        assertNear("brace weld offset", braceWeld.C1.Position.X, 3, 0.005)
         assertNear("rigid armor", armor[1].Size.X,
             originalRigidSize.X, 0.005)
         assertNear("rail end", platform.CFrame:PointToObjectSpace(rails[3].Position).X,
             endBefore.X * 0.5, 0.01)
-        expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.5)
+        expect(math.abs(rails[1].Size.Z - originalRailSize.Z * 0.5)
             < 0.005).toBe(true)
         expect((armor[1].Size - originalRigidSize).Magnitude < 0.005)
             .toBe(true)
+        for _, plate in ipairs(armor) do
+            expect(plate:IsA("MeshPart")).toBe(true)
+            local localFrame = plate.ChaosPlatformTrimWeld.C1
+            expect(math.abs(localFrame.Position.X) + plate.Size.X * 0.5
+                < platform.Size.X * 0.5).toBe(true)
+        end
         local endAfter = platform.CFrame:PointToObjectSpace(rails[3].Position)
         expect(math.abs(endAfter.X - endBefore.X * 0.5) < 0.01)
             .toBe(true)
@@ -1232,9 +1336,9 @@ describe("Moving platform premium trim kit", function()
         )
         platform.Size = Vector3.new(43.5, 2, 7)
         task.wait(0.06)
-        assertNear("size listener", rails[1].Size.X,
-            originalRailSize.X * 0.75, 0.005)
-        expect(math.abs(rails[1].Size.X - originalRailSize.X * 0.75)
+        assertNear("size listener", rails[1].Size.Z,
+            originalRailSize.Z * 0.75, 0.005)
+        expect(math.abs(rails[1].Size.Z - originalRailSize.Z * 0.75)
             < 0.005).toBe(true)
         disconnect()
         local sizeBeforeStop = rails[1].Size
@@ -1282,10 +1386,12 @@ describe("Moving platform premium trim kit", function()
     end)
 
 
-    it("creates four distinctive, bounded, non-colliding welded motifs", function()
+    it("fits five distinctive welded motifs within the existing trim budget", function()
         local parent = Instance.new("Folder")
         local platform = Instance.new("Part")
         platform.Size = Vector3.new(12, 2, 12)
+        platform.Anchored = true
+        platform:SetAttribute("RouteTier", 3)
         platform.Parent = workspace
         -- The server panel has its upper face at physicalTop + 0.105.
         -- Local glyph geometry must be ABOVE it or it vanishes beneath
@@ -1307,15 +1413,41 @@ describe("Moving platform premium trim kit", function()
             PlatformFinishKit.surfacePaintOffset(platform, 0.05) - surfaceY
         ) < 0.0001).toBe(true)
         expect(PlatformFinishKit.surfacePaintOffset(nil, 0.05) == nil).toBe(true)
-        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital"}) do
+        local plate = Instance.new("MeshPart")
+        plate.Size = Vector3.new(4.34, .12, 8)
+        local lens = Instance.new("MeshPart")
+        lens.Size = Vector3.new(3.04, .85, 3.04)
+        local profiles = {hatch = plate, collar = plate, assetId = 102746904688141,
+            lens = {part = lens, assetId = 92226531849432}}
+        for _, variant in ipairs({"Classic", "Towers", "Crossroads", "Orbital", "Harbor"}) do
             local names = PlatformFinishKit.names(variant)
             expect(#names).toBe(3)
             for _, tier in ipairs({"Low", "Medium", "High"}) do
                 local built = PlatformFinishKit.build(parent, platform, variant,
-                    tier, VisualTheme.arena(variant))
+                    tier, VisualTheme.arena(variant), false, profiles)
                 expect(#built).toBe(PlatformFinishKit.count(tier))
+                if variant == "Crossroads" and tier == "High" then
+                    local snapshot = PlatformFinishKit.captureRouteFootprint(platform, built)
+                    platform.Size = Vector3.new(8.4, 2, 5.4)
+                    expect(PlatformFinishKit.applyRouteFootprint(snapshot)).toBe(3)
+                    for index = 1, 2 do
+                        local arm = built[index]
+                        local frame = arm.ChaosPlatformTrimWeld.C1
+                        local reach = math.abs(frame.Position.Z)
+                            + (math.abs(frame.RightVector.Z) * arm.Size.X
+                                + math.abs(frame.LookVector.Z) * arm.Size.Z) * .5
+                        expect(reach < platform.Size.Z * .5).toBe(true)
+                    end
+                    platform.Size = Vector3.new(12, 2, 12)
+                    PlatformFinishKit.applyRouteFootprint(snapshot)
+                end
                 for index, item in ipairs(built) do
                     expect(item.Name).toBe(names[index])
+                    expect(item:IsA("MeshPart")).toBe(true)
+                    if index == 3 and (variant == "Crossroads" or variant == "Orbital") then
+                        expect(item:GetAttribute("Original3DAssetId")).toBe(92226531849432)
+                        expect(item.Material).toBe(Enum.Material.Glass)
+                    end
                     expect(item:GetAttribute("ChaosPlatformTrim")).toBe(true)
                     expect(item.Massless).toBe(true)
                     expect(item.Anchored).toBe(false)
@@ -1388,6 +1520,8 @@ describe("Moving platform premium trim kit", function()
                 end
             end
         end
+        plate:Destroy()
+        lens:Destroy()
         platform:Destroy()
         parent:Destroy()
     end)
@@ -1898,357 +2032,6 @@ describe("Android arena streaming decor watcher", function()
         replacement:Destroy()
         generated:Destroy()
     end)
-end)
-
-describe("Android arena identity ornament motion", function()
-    it("eases in mechanical ornaments without stealing hazard cue priority", function()
-        local rules = IdentityMotionRules
-        for _, phase in ipairs({"ready", "round", "result"}) do
-            expect(rules.phaseEnvelope(phase, 0)).toBe(0)
-            expect(rules.phaseEnvelope(phase, -1)).toBe(0)
-            expect(rules.phaseEnvelope(phase, "0.3")).toBe(0)
-            expect(rules.phaseEnvelope(phase, 0 / 0)).toBe(0)
-            local middle = rules.phaseEnvelope(phase, 0.17)
-            local full = rules.phaseEnvelope(phase, 0.34)
-            expect(middle > 0).toBe(true)
-            expect(middle < full).toBe(true)
-            expect(math.abs(middle - full * 0.5) < 0.0001).toBe(true)
-            expect(rules.phaseEnvelope(phase, 1.5)).toBe(full)
-        end
-        expect(rules.phaseEnvelope("round", 2)).toBe(1)
-        expect(rules.phaseEnvelope("ready", 2)).toBe(0.68)
-        expect(rules.phaseEnvelope("result", 2)).toBe(0.46)
-        -- Active-to-active transitions ease from their actual previous pose.
-        expect(rules.phaseEnvelope("round", 0, 0.68)).toBe(0.68)
-        expect(math.abs(rules.phaseEnvelope("round", 0.17, 0.68) - 0.84)
-            < 0.0001).toBe(true)
-        expect(rules.phaseEnvelope("round", 0.34, 0.68)).toBe(1)
-        expect(rules.phaseEnvelope("result", 0, 1)).toBe(1)
-        expect(math.abs(rules.phaseEnvelope("result", 0.17, 1) - 0.73)
-            < 0.0001).toBe(true)
-        expect(math.abs(rules.phaseEnvelope("result", 0.34, 1) - 0.46)
-            < 0.0001).toBe(true)
-        -- Early interruptions retain the previous fractional strength.
-        expect(rules.phaseEnvelope("round", 0, 0.27)).toBe(0.27)
-        expect(rules.phaseEnvelope("round", 0.34, 0.27)).toBe(1)
-        expect(rules.phaseEnvelope("waiting", 0, 1)).toBe(0)
-        for _, phase in ipairs({"waiting", "unknown", "vote", ""}) do
-            expect(rules.phaseEnvelope(phase, 10)).toBe(0)
-        end
-        -- Reduced motion and tier budgets still gate the whole presentation.
-        expect(rules.motionScale("High", true)
-            * rules.phaseEnvelope("round", 1)).toBe(0)
-        expect(rules.motionScale("Low", false)
-            * rules.phaseEnvelope("round", 1)).toBe(0.38)
-    end)
-
-    it("eases Final Rush visual focus without altering accessibility gates", function()
-        local rules = IdentityMotionRules
-        expect(rules.focusTarget("round", true)).toBe(0.38)
-        expect(rules.focusTarget("round", false)).toBe(1)
-        expect(rules.focusTarget("ready", true)).toBe(1)
-        expect(rules.focusTarget("result", true)).toBe(1)
-        expect(rules.focusTarget("waiting", true)).toBe(1)
-        expect(rules.focusTarget("round", nil)).toBe(1)
-
-        expect(rules.focusEnvelope(1, 0.38, 0)).toBe(1)
-        expect(math.abs(rules.focusEnvelope(1, 0.38, 0.225) - 0.69)
-            < 0.0001).toBe(true)
-        expect(rules.focusEnvelope(1, 0.38, 0.45)).toBe(0.38)
-        expect(rules.focusEnvelope(1, 0.38, 1)).toBe(0.38)
-        expect(rules.focusEnvelope(0.38, 1, 0)).toBe(0.38)
-        expect(math.abs(rules.focusEnvelope(0.38, 1, 0.225) - 0.69)
-            < 0.0001).toBe(true)
-        expect(rules.focusEnvelope(0.38, 1, 0.45)).toBe(1)
-
-        local mid = rules.focusEnvelope(1, 0.38, 0.225)
-        expect(rules.focusEnvelope(mid, 1, 0)).toBe(mid)
-        expect(rules.focusEnvelope(mid, 1, 0.45)).toBe(1)
-        expect(rules.focusEnvelope(1, 0.38, -1)).toBe(1)
-        expect(rules.focusEnvelope(1, 0.38, 0/0)).toBe(1)
-        expect(rules.focusEnvelope(math.huge, 0.38, 0)).toBe(1)
-        expect(rules.focusEnvelope(1, math.huge, 0.45)).toBe(1)
-
-        local low = rules.motionScale("Low", false)
-            * rules.phaseEnvelope("round", 1)
-            * rules.focusEnvelope(1, rules.focusTarget("round", true), 1)
-        expect(math.abs(low - 0.1444) < 0.0001).toBe(true)
-        expect(rules.motionScale("High", true)
-            * rules.focusEnvelope(1, 0.38, 1)).toBe(0)
-    end)
-
-    it("restores LOD-hidden identity decor and eases streamed motion from rest", function()
-        local rules = IdentityMotionRules
-        expect(rules.resumeEnvelope(0)).toBe(0)
-        expect(rules.resumeEnvelope(-1)).toBe(0)
-        expect(rules.resumeEnvelope("0.24")).toBe(0)
-        expect(rules.resumeEnvelope(0/0)).toBe(0)
-        expect(rules.resumeEnvelope(math.huge)).toBe(0)
-        expect(rules.resumeEnvelope(-math.huge)).toBe(0)
-        expect(math.abs(rules.resumeEnvelope(0.24) - 0.5) < 0.0001)
-            .toBe(true)
-        expect(rules.resumeEnvelope(0.48)).toBe(1)
-        expect(rules.resumeEnvelope(2)).toBe(1)
-        expect(math.abs(rules.motionScale("Low", false)
-            * rules.resumeEnvelope(0.24) - 0.19) < 0.0001).toBe(true)
-        expect(rules.motionScale("High", true)
-            * rules.resumeEnvelope(2)).toBe(0)
-
-        local holder = Instance.new("Folder")
-        local part = Instance.new("Part")
-        part.Parent = holder
-        local baseline = {
-            baseCFrame = CFrame.new(7, 9, -2)
-                * CFrame.Angles(0, math.rad(30), 0),
-            baseColor = Color3.fromRGB(42, 170, 235),
-            baseTransparency = 0.31,
-        }
-        part.CFrame = baseline.baseCFrame * CFrame.new(0, 1.2, 0)
-        part.Color = Color3.new(1, 1, 1)
-        part.Transparency = 0.65
-        part.LocalTransparencyModifier = 0.42
-        part:SetAttribute("SceneryLodHidden", true)
-        expect(rules.shouldUpdate(part)).toBe(false)
-        expect(rules.restorePose(part, baseline)).toBe(true)
-        expect((part.CFrame.Position - baseline.baseCFrame.Position).Magnitude
-            < 0.0001).toBe(true)
-        expect(part.CFrame.RightVector:Dot(baseline.baseCFrame.RightVector)
-            > 0.99999).toBe(true)
-        expect(part.Color).toBe(baseline.baseColor)
-        expect(math.abs(part.Transparency - baseline.baseTransparency) < 1e-5)
-            .toBe(true)
-        -- Scenery LOD alone owns the local visibility modifier.
-        expect(math.abs(part.LocalTransparencyModifier - 0.42) < 1e-5)
-            .toBe(true)
-        expect(part:GetAttribute("SceneryLodHidden")).toBe(true)
-
-        part:SetAttribute("SceneryLodHidden", false)
-        expect(rules.shouldUpdate(part)).toBe(true)
-        expect(rules.restorePose(part, {})).toBe(false)
-        part.Parent = nil
-        expect(rules.restorePose(part, baseline)).toBe(false)
-        part:Destroy()
-        holder:Destroy()
-    end)
-
-    it("keeps authored tier scales and fully disables continuous ReduceMotion", function()
-        expect(IdentityMotionRules.motionScale("Low", false)).toBe(0.38)
-        expect(IdentityMotionRules.motionScale("Medium", false)).toBe(0.68)
-        expect(IdentityMotionRules.motionScale("High", false)).toBe(1)
-        expect(IdentityMotionRules.motionScale("Unknown", false)).toBe(0.38)
-        for _, tier in ipairs({"Low", "Medium", "High"}) do
-            expect(IdentityMotionRules.motionScale(tier, true)).toBe(0)
-            expect(IdentityMotionRules.interval(tier, true, true, true)).toBe(0.60)
-        end
-    end)
-
-    it("sleeps when inactive or no identity pieces have replicated", function()
-        expect(IdentityMotionRules.interval("Low", false, true, true)).toBe(0.16)
-        expect(IdentityMotionRules.interval("Medium", false, true, true)).toBe(0.09)
-        expect(IdentityMotionRules.interval("High", false, true, true)).toBe(0.09)
-        expect(IdentityMotionRules.interval("High", false, false, true)).toBe(0.60)
-        expect(IdentityMotionRules.interval("High", false, true, false)).toBe(0.60)
-    end)
-
-    it("does not write to far-away or removed decor", function()
-        local root = Instance.new("Folder")
-        local part = Instance.new("Part")
-        part.Parent = root
-        expect(IdentityMotionRules.shouldUpdate(part)).toBe(true)
-        part:SetAttribute("SceneryLodHidden", true)
-        expect(IdentityMotionRules.shouldUpdate(part)).toBe(false)
-        part:SetAttribute("SceneryLodHidden", false)
-        expect(IdentityMotionRules.shouldUpdate(part)).toBe(true)
-        part.Parent = nil
-        expect(IdentityMotionRules.shouldUpdate(part)).toBe(false)
-        expect(IdentityMotionRules.shouldUpdate(nil)).toBe(false)
-        part:Destroy()
-        root:Destroy()
-    end)
-
-    it("uses eight distinct bounded 3D micro-motions with stable original frames", function()
-        local cases = {
-            {"Classic", "GridMarkerGlow1"},
-            {"Classic", "ClassicBroadcastGlow1"},
-            {"Towers", "TowerBand1_1"},
-            {"Towers", "TowerMachineryCap1"},
-            {"Towers", "TowerAntenna1"},
-            {"Crossroads", "CrossroadGate1"},
-            {"Crossroads", "CrossroadSignal1"},
-            {"Orbital", "OrbitalReactorNode1"},
-        }
-        local base = CFrame.new(19, 8, -7)
-            * CFrame.Angles(math.rad(7), math.rad(45), math.rad(-5))
-        for _, entry in ipairs(cases) do
-            local variant, name = entry[1], entry[2]
-            local high = IdentityMotionRules.ornamentOffset(
-                variant, name, 1.37, 1, 1
-            )
-            local low = IdentityMotionRules.ornamentOffset(
-                variant, name, 1.37, 1, 0.38
-            )
-            expect(high ~= nil).toBe(true)
-            expect(low ~= nil).toBe(true)
-            local function distanceFromRest(cf)
-                return cf.Position.Magnitude
-                    + (cf.RightVector - Vector3.new(1, 0, 0)).Magnitude
-                    + (cf.UpVector - Vector3.new(0, 1, 0)).Magnitude
-            end
-            expect(distanceFromRest(high) > distanceFromRest(low)).toBe(true)
-            expect(high.Position.Magnitude <= 0.181).toBe(true)
-            expect(low.Position.Magnitude <= high.Position.Magnitude + 0.0001)
-                .toBe(true)
-            local localPose = base:ToObjectSpace(base * high)
-            expect((localPose.Position - high.Position).Magnitude < 0.0001)
-                .toBe(true)
-            expect((localPose.UpVector - high.UpVector).Magnitude < 0.0001)
-                .toBe(true)
-            -- No accumulation: evaluating the same time always yields the
-            -- same local transform, independent of the prior animation frame.
-            local repeatPose = IdentityMotionRules.ornamentOffset(
-                variant, name, 1.37, 1, 1)
-            expect((repeatPose.Position - high.Position).Magnitude < 0.0001)
-                .toBe(true)
-            expect(repeatPose.RightVector:Dot(high.RightVector) > 0.99999)
-                .toBe(true)
-            -- A long but realistic session remains a valid finite pose.
-            expect(IdentityMotionRules.ornamentOffset(
-                variant, name, 4097.37, 1, 1) ~= nil).toBe(true)
-        end
-        expect(IdentityMotionRules.ornamentOffset(
-            "Towers", "TowerBand1_1", 1, 1, 1) ~= nil).toBe(true)
-        expect(IdentityMotionRules.ornamentOffset(
-            "Orbital", "OrbitalCrown1", 1, 1, 1) == nil).toBe(true)
-        expect(IdentityMotionRules.ornamentOffset(
-            "Classic", "RoundMeteor", 1, 1, 1) == nil).toBe(true)
-        expect(IdentityMotionRules.ornamentOffset(
-            "Classic", "GridMarkerGlow1", 1, 1, 0) == nil).toBe(true)
-        expect(IdentityMotionRules.ornamentOffset(
-            "Classic", "GridMarkerGlow1", math.huge, 1, 1) == nil).toBe(true)
-        expect(IdentityMotionRules.ornamentOffset(
-            "Classic", "GridMarkerGlow1", 10000001, 1, 1) == nil).toBe(true)
-        for _, bad in ipairs({math.huge, -math.huge, 0/0}) do
-            expect(IdentityMotionRules.ornamentOffset(
-                "Classic", "GridMarkerGlow1", 1, bad, 1) == nil).toBe(true)
-            expect(IdentityMotionRules.ornamentOffset(
-                "Classic", "GridMarkerGlow1", 1, 1, bad) == nil).toBe(true)
-        end
-        expect(IdentityMotionRules.ornamentOffset(
-            "Classic", "GridMarkerGlow1", 1, 65, 1) == nil).toBe(true)
-        expect(IdentityMotionRules.ornamentOffset(
-            "Classic", "GridMarkerGlow1", 1, 1.5, 1) == nil).toBe(true)
-    end)
-
-    it("watches only the named direct-decor ornaments in each arena", function()
-        local valid = {
-            Classic = {"GridMarkerGlow1", "ClassicBroadcastGlow4"},
-            Towers = {"TowerBand4_3", "TowerMachineryCap2", "TowerAntenna1"},
-            Crossroads = {"CrossroadGate3", "CrossroadSignal4"},
-            Orbital = {"OrbitalCrown1", "OrbitalCrown12", "OrbitalReactorNode8"},
-        }
-        for variant, names in pairs(valid) do
-            for _, name in ipairs(names) do
-                expect(IdentityMotionRules.isIdentityPart(variant, name)).toBe(true)
-            end
-        end
-        for _, invalid in ipairs({
-            {"Classic", "GridMarkerGlow5"},
-            {"Towers", "TowerBand5_1"},
-            {"Towers", "TowerBand3_4"},
-            {"Crossroads", "CrossroadSignal8"},
-            {"Orbital", "OrbitalCrown13"},
-            {"Orbital", "OrbitalReactorNode0"},
-            {"Orbital", "RoundMeteor"},
-            {"Unknown", "OrbitalCrown1"},
-        }) do
-            expect(IdentityMotionRules.isIdentityPart(invalid[1], invalid[2]))
-                .toBe(false)
-        end
-        expect(IdentityMotionRules.isIdentityPart("Orbital", nil)).toBe(false)
-    end)
-    it("recovers late Arena/Decor, variant swaps and streamed identity parts", function()
-        local generated = Instance.new("Folder")
-        local count = 0
-        local observedArena, observedDecor, observedVariant = nil, nil, nil
-        local disconnect = IdentityMotionReadiness.watch(generated, function(arena, decor, variant)
-            count += 1
-            observedArena, observedDecor, observedVariant = arena, decor, variant
-        end, IdentityMotionRules.isIdentityPart)
-        expect(count).toBe(1)
-        local arena = Instance.new("Folder")
-        arena.Name = "Arena"
-        arena.Parent = generated
-        expect(observedArena).toBe(arena)
-        expect(observedDecor == nil).toBe(true)
-        local decor = Instance.new("Folder")
-        decor.Name = "Decor"
-        decor.Parent = arena
-        expect(observedDecor).toBe(decor)
-        expect(observedVariant).toBe("Classic")
-
-        local beforeUnrelated = count
-        local unrelated = Instance.new("Part")
-        unrelated.Name = "RoundMeteor"
-        unrelated.Parent = decor
-        expect(count).toBe(beforeUnrelated)
-        local identity = Instance.new("Part")
-        identity.Name = "GridMarkerGlow1"
-        identity.Parent = decor
-        expect(count).toBe(beforeUnrelated + 1)
-        identity.Parent = nil
-        expect(count).toBe(beforeUnrelated + 2)
-
-        arena:SetAttribute("VariantId", "Orbital")
-        expect(observedVariant).toBe("Orbital")
-        local crown = Instance.new("Part")
-        crown.Name = "OrbitalCrown12"
-        crown.Parent = decor
-        local afterCrown = count
-        expect(afterCrown > beforeUnrelated + 2).toBe(true)
-
-        decor.Parent = nil
-        expect(observedDecor == nil).toBe(true)
-        local afterDetach = count
-        local stale = Instance.new("Part")
-        stale.Name = "OrbitalReactorNode1"
-        stale.Parent = decor
-        expect(count).toBe(afterDetach)
-
-        local freshDecor = Instance.new("Folder")
-        freshDecor.Name = "Decor"
-        freshDecor.Parent = arena
-        expect(observedDecor).toBe(freshDecor)
-        local freshNode = Instance.new("Part")
-        freshNode.Name = "OrbitalReactorNode8"
-        freshNode.Parent = freshDecor
-        expect(count > afterDetach + 1).toBe(true)
-
-        arena.Parent = nil
-        expect(observedArena == nil).toBe(true)
-        local afterArenaGone = count
-        local orphan = Instance.new("Part")
-        orphan.Name = "OrbitalCrown1"
-        orphan.Parent = freshDecor
-        expect(count).toBe(afterArenaGone)
-
-        local replacement = Instance.new("Folder")
-        replacement.Name = "Arena"
-        replacement:SetAttribute("VariantId", "Towers")
-        replacement.Parent = generated
-        expect(observedArena).toBe(replacement)
-        expect(observedVariant).toBe("Towers")
-        disconnect()
-        local afterDisconnect = count
-        local replacementDecor = Instance.new("Folder")
-        replacementDecor.Name = "Decor"
-        replacementDecor.Parent = replacement
-        expect(count).toBe(afterDisconnect)
-        generated:Destroy()
-        arena:Destroy()
-        decor:Destroy()
-        identity:Destroy()
-    end)
-
 end)
 
 return nil

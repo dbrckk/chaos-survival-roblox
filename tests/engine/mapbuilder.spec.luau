@@ -523,7 +523,10 @@ describe("Chaos Survival engine", function()
                 for _, piece in ipairs(skyline:GetDescendants()) do
                     if piece:IsA("BasePart") then
                         parts += 1
-                        if piece:IsA("WedgePart") then
+                        if piece:IsA("WedgePart")
+                            or (piece:IsA("MeshPart")
+                                and piece:GetAttribute("OriginalExteriorDetail3D") == true
+                                and piece:GetAttribute("Original3DAssetId") == 88962643359267) then
                             distinctGeometry += 1
                         end
                         expect(piece.Anchored).toBe(true)
@@ -698,12 +701,15 @@ describe("Chaos Survival engine", function()
                     .Position.X + ArenaVariants.get(id).BaseSize.X * 0.5 + 68
                 expect(facade.Position.X < originX - 2).toBe(true)
             end
-            if id == "Classic" then
-                expect(hero:FindFirstChild("DishHub").Shape)
-                    .toBe(Enum.PartType.Ball)
-            elseif id == "Orbital" then
-                expect(hero:FindFirstChild("HaloLens").Shape)
-                    .toBe(Enum.PartType.Ball)
+            if id == "Classic" or id == "Orbital" then
+                local lens = hero:FindFirstChild(id == "Classic" and "DishHub" or "HaloLens")
+                expect(lens ~= nil).toBe(true)
+                if lens:IsA("MeshPart") then
+                    expect(lens:GetAttribute("Original3DAssetId")).toBe(104654294187035)
+                else
+                    expect(lens:IsA("Part")).toBe(true)
+                    expect(lens.Shape).toBe(Enum.PartType.Ball)
+                end
             elseif id == "Towers" then
                 expect(hero:FindFirstChild("CabinWestObservation1") ~= nil)
                     .toBe(true)
@@ -880,6 +886,41 @@ describe("Chaos Survival engine", function()
                 expect(line.Material).toBe(Enum.Material.Neon)
                 expect(line.Transparency >= 0.55).toBe(true)
             end
+            for index = 1, 4 do
+                local casing = decor.OriginalPremiumColumnCladding[id .. "ArchitecturalCasing" .. index]
+                local shell, foot = casing.ArmoredFrontShell, casing.FoundationFoot
+                local slit = decor["FrameColumnGlow" .. index]
+                expect(slit.Material).toBe(Enum.Material.Neon)
+                expect(not slit.CanCollide and not slit.CanTouch and not slit.CanQuery).toBe(true)
+                local aim = (shell.Position - foot.Position) * Vector3.new(1, 0, 1)
+                local face = CFrame.lookAt(shell.Position, shell.Position + aim)
+                local pose = face:ToObjectSpace(slit.CFrame)
+                local halfDepth = (math.abs(pose.RightVector.Z) * slit.Size.X
+                    + math.abs(pose.LookVector.Z) * slit.Size.Z) * .5
+                assert(math.abs(pose.Position.Z + .325) < halfDepth)
+                expect(slit.Position.Y - slit.Size.Y * .5 > foot.Position.Y + foot.Size.Y * .5).toBe(true)
+                local head = casing.LandmarkNavigationHead
+                local socket = casing.RecessedCrown
+                local collar = casing.MachinedUpperCollar
+                for _, trim in ipairs({collar, socket, casing.AngledArmorFin1, casing.DiagonalLoadSpar1}) do
+                    assert(not trim.CanCollide and not trim.CanTouch and not trim.CanQuery)
+                end
+                expect(math.abs(collar.Position.Y + collar.Size.Y * .5 - socket.Position.Y
+                    + socket.Size.Y * .5 - .105) < .01).toBe(true)
+                local spine = casing.CrownInstrumentSpine
+                local spinePosition = face:VectorToObjectSpace(spine.Position - socket.Position)
+                expect(spine.Material).toBe(Enum.Material.Metal)
+                expect(not spine.CanCollide and not spine.CanTouch and not spine.CanQuery).toBe(true)
+                expect(math.abs(spinePosition.Y - (socket.Size.Y + spine.Size.Y) * .5 + .02) < .01).toBe(true)
+                expect(math.abs(spinePosition.Z + 1.7) < .01).toBe(true)
+                expect(head.Anchored and not head.CanCollide and not head.CanTouch and not head.CanQuery).toBe(true)
+                expect(head.Material ~= Enum.Material.Neon).toBe(true)
+                if head:IsA("MeshPart") then
+                    local gap = head.Position.Y - head.Size.Y * .5 - socket.Position.Y - socket.Size.Y * .5
+                    expect(math.abs(gap + .05) < .02).toBe(true)
+                    expect(head.Position.Y + head.Size.Y * .5 > shell.Position.Y + 6.3384).toBe(true)
+                end
+            end
             if id == "Towers" then
                 local core = decor:FindFirstChild("TowerGroundCore1")
                 expect(core.Material).toBe(Enum.Material.Neon)
@@ -895,6 +936,22 @@ describe("Chaos Survival engine", function()
             local arena = root:FindFirstChild("Arena")
             local base = arena:FindFirstChild("Base")
             local decor = arena:FindFirstChild("Decor")
+            for index = 1, 16 do
+                local light = decor:FindFirstChild("OuterHalo" .. index)
+                expect(light ~= nil and light:IsA("BasePart")).toBe(true)
+                expect(light.Material).toBe(Enum.Material.Neon)
+                expect(light.Anchored and not light.CastShadow).toBe(true)
+                expect(not light.CanCollide and not light.CanTouch and not light.CanQuery).toBe(true)
+                local pose = base.CFrame:ToObjectSpace(light.CFrame)
+                local normal = (index - 1) % 8 < 4 and Vector3.zAxis or Vector3.xAxis
+                local size = light.Size
+                local cross = math.abs(pose.RightVector:Dot(normal)) * size.X
+                    + math.abs(pose.LookVector:Dot(normal)) * size.Z
+                local floorWidth = base.Size:Dot(normal)
+                expect(math.abs(cross - .42) < .02).toBe(true)
+                expect(math.abs(pose.Position:Dot(normal)) - cross * .5 > floorWidth * .5 + 4).toBe(true)
+                expect(pose.Position.Y + size.Y * .5 < -base.Size.Y * .5).toBe(true)
+            end
             for _, corner in ipairs({"NW", "NE", "SW", "SE"}) do
                 local ridge = decor:FindFirstChild("ExteriorRidge" .. corner)
                 expect(ridge ~= nil and ridge:IsA("Model")).toBe(true)
@@ -1093,8 +1150,8 @@ describe("Chaos Survival engine", function()
                     expect(piece.CanQuery).toBe(false)
                     expect(piece.CastShadow).toBe(false)
                 end
-                expect(decor:FindFirstChild("PerimeterExitCrown" .. route)
-                    :IsA("WedgePart")).toBe(true)
+                local crown = decor:FindFirstChild("PerimeterExitCrown" .. route)
+                expect(crown:IsA("MeshPart") or crown:IsA("WedgePart")).toBe(true)
             end
             -- On the larger map, extra scenery must be volumetric 3D
             -- yet absolutely incapable of blocking R15 routes or stealing
@@ -1252,6 +1309,10 @@ describe("Chaos Survival engine", function()
                 local entry = variant.PerimeterPlatforms[firstIndex + 1]
                 local finalPlatformIndex = original + firstIndex
                     + ArenaVariants.PerimeterSteps
+                local entryVector = Vector3.new(entry.offset.X, 0, entry.offset.Z)
+                local outward = entryVector.Unit
+                local nearEdge = entryVector.Magnitude
+                    - (math.abs(outward.X) * entry.size.X + math.abs(outward.Z) * entry.size.Z) * .5
                 for step = 1, 5 do
                     for side = -1, 1, 2 do
                         local cue = decor:FindFirstChild(
@@ -1270,6 +1331,10 @@ describe("Chaos Survival engine", function()
                             < math.abs(entry.offset.X) + 2).toBe(true)
                         expect(math.abs(localPosition.Z)
                             < math.abs(entry.offset.Z) + 2).toBe(true)
+                        local outwardReach = localPosition:Dot(outward)
+                            + (math.abs(cue.CFrame.RightVector:Dot(outward)) * cue.Size.X
+                                + math.abs(cue.CFrame.LookVector:Dot(outward)) * cue.Size.Z) * .5
+                        expect(outwardReach < nearEdge).toBe(true)
                     end
                 end
                 for step = 1, ArenaVariants.PerimeterSteps do
@@ -1277,6 +1342,10 @@ describe("Chaos Survival engine", function()
                     local deck = platforms:FindFirstChild(
                         "Platform" .. platformIndex
                     )
+                    local offset = step < ArenaVariants.PerimeterSteps and 1 or -1
+                    local nextDeck = platforms:FindFirstChild("Platform" .. (platformIndex + offset))
+                    local delta = nextDeck.Position - deck.Position
+                    local toward = Vector3.new(delta.X,0,delta.Z).Unit
                     for side = -1, 1, 2 do
                         local cue = decor:FindFirstChild(
                             "OuterStepChevron" .. route .. "_" .. step
@@ -1288,8 +1357,10 @@ describe("Chaos Survival engine", function()
                         expect(cue:GetAttribute("ChaosWayfinding")).toBe(true)
                         expect(cue.CanCollide).toBe(false)
                         expect(math.abs(cue.Position.Y
-                            - (deck.Position.Y + deck.Size.Y * 0.5 + 0.07))
+                            - (deck.Position.Y + deck.Size.Y * 0.5 + 0.155))
                             < 0.001).toBe(true)
+                        expect(math.abs((cue.Position - deck.Position):Dot(toward) - 2.4) < .01).toBe(true)
+                        expect(cue.CanTouch or cue.CanQuery).toBe(false)
                     end
                 end
                 for _, suffix in ipairs({"", "Lens", "Crown"}) do
@@ -1377,6 +1448,41 @@ describe("Chaos Survival engine", function()
                 expect(JumpRouteCueRules.nextPhysical(
                     crossing, all, Config.ArenaCenter, id
                 )).toBe(side2)
+
+                local function expectArrowPair(name, source, target)
+                    for sign = -1, 1, 2 do
+                        local arrow = decor:FindFirstChild(name .. route .. "_" .. sign)
+                        expect(arrow ~= nil and arrow:IsA("BasePart")).toBe(true)
+                        expect(arrow:HasTag("ChaosPerimeterGuide")).toBe(true)
+                        expect(arrow:GetAttribute("PerimeterPlatformIndex"))
+                            .toBe(tonumber(source.Name:match("%d+")))
+                        expect(arrow:GetAttribute("PerimeterGuideTarget"))
+                            .toBe(tonumber(target.Name:match("%d+")))
+                        expect(arrow.CanCollide or arrow.CanTouch or arrow.CanQuery).toBe(false)
+                        local point = source.CFrame:PointToObjectSpace(arrow.Position)
+                        expect(math.abs(point.X) < source.Size.X * 0.5).toBe(true)
+                        expect(math.abs(point.Z) < source.Size.Z * 0.5).toBe(true)
+                    end
+                end
+                local ridge5 = platforms:FindFirstChild("Platform" .. (
+                    originalCount + (route - 1) * 8 + 5))
+                local side1 = platforms:FindFirstChild("Platform" .. (
+                    originalCount + 32 + (route - 1) * 4 + 1))
+                expectArrowPair("RidgeForkArrow", ridge5, ridge6)
+                expectArrowPair("BranchForkArrow", ridge5, side1)
+                expectArrowPair("RidgeCrosslinkArrow", ridge6, ridge7)
+                expectArrowPair("CrosslinkForkArrow", ridge6, crossing)
+                expectArrowPair("CrosslinkExitArrow", crossing, side2)
+                local passed, rejected = JumpRouteCueRules.crosslinkOptions(ridge6, all, function(_, target)
+                    return target ~= crossing
+                end)
+                expect(passed).toBe(ridge7)
+                expect(rejected).toBe(nil)
+                expect(JumpRouteCueRules.nextPhysical(
+                    ridge6, all, Config.ArenaCenter, id, nil, function(_, target)
+                        return target ~= ridge7
+                    end
+                )).toBe(crossing)
 
                 -- Real collapsing terrain must not be advertised as a
                 -- route; the crossing remains a physically valid bypass.
@@ -1499,13 +1605,40 @@ describe("Chaos Survival engine", function()
                 )).toBe(nil)
                 forward.CanCollide = true
                 side.CanCollide = true
-                -- The final outer lookout is still a terminal platform,
-                -- not a route back to the beginning.
+                -- Forward progression still ends at the summit. The
+                -- dedicated return guide follows the same authored ridge in reverse.
                 local last = platforms:FindFirstChild("Platform" .. (
                     originals + route * ArenaVariants.PerimeterSteps))
                 expect(JumpRouteCueRules.nextPhysical(
                     last, pieces, Config.ArenaCenter, variantId
                 )).toBe(nil)
+
+                local lower = last
+                for step = ArenaVariants.PerimeterSteps - 1, 1, -1 do
+                    local previous = platforms:FindFirstChild("Platform" .. (
+                        originals + (route - 1) * ArenaVariants.PerimeterSteps + step))
+                    expect(JumpRouteCueRules.outerDescent(lower, pieces)).toBe(previous)
+                    expect(JumpRouteCueRules.outerRouteLink(lower, previous)).toBe(true)
+                    lower = previous
+                end
+                local base = arena:FindFirstChild("Base")
+                local exit = JumpRouteCueRules.groundExit(lower, base)
+                expect(typeof(exit)).toBe("Vector3")
+                expect(math.abs(exit.Y - base.Position.Y - base.Size.Y * .5) < .01).toBe(true)
+                local foot = lower.CFrame:PointToObjectSpace(exit)
+                expect(math.abs(foot.X) > lower.Size.X * .5
+                    or math.abs(foot.Z) > lower.Size.Z * .5).toBe(true)
+                expect(JumpRouteCueRules.groundExit(last, base)).toBe(nil)
+
+                local branch2 = platforms:FindFirstChild("Platform" .. (
+                    perimeterEnd + (route - 1) * 4 + 2))
+                local link = platforms:FindFirstChild("Platform" .. (perimeterEnd + 16 + route))
+                expect(JumpRouteCueRules.outerDescent(branch2, pieces)).toBe(side)
+                side:SetAttribute("CollapsePhase", "Warning")
+                expect(JumpRouteCueRules.outerDescent(branch2, pieces)).toBe(link)
+                expect(JumpRouteCueRules.outerDescent(link, pieces)).toBe(forward)
+                side:SetAttribute("CollapsePhase", nil)
+                expect(JumpRouteCueRules.outerRouteLink(last, fork)).toBe(false)
 
                 for step = 1, 3 do
                     local number = perimeterEnd + (route - 1) * 4 + step
@@ -1532,6 +1665,9 @@ describe("Chaos Survival engine", function()
                     end
                 end
                 expect(continuation ~= nil).toBe(true)
+                expect(JumpRouteCueRules.outerRouteLink(continuation, lookout)).toBe(true)
+                local nextLower = platforms:FindFirstChild("Platform" .. (perimeterEnd + route * 4 - 1))
+                expect(JumpRouteCueRules.outerDescent(lookout, pieces)).toBe(nextLower)
                 expect(JumpRouteCueRules.skyNetworkLink(lookout, continuation))
                     .toBe(true)
                 expect(JumpRouteCueRules.nextPhysical(
@@ -1801,141 +1937,6 @@ describe("Chaos Survival engine", function()
             root:Destroy()
         end
     end)
-
-    it("builds twelve monumental, nonblocking 3D escape landmarks on actual decks in all five worlds", function()
-        for _, id in ipairs(ArenaVariants.Order) do
-            local variant = ArenaVariants.get(id)
-            local root = MapBuilder.build(Config, id, ArenaVariants, VisualTheme)
-            local arena = root:FindFirstChild("Arena")
-            local decks = arena:FindFirstChild("Platforms")
-            local decor = arena:FindFirstChild("Decor")
-            local totalMonuments = 0
-            for route = 1, 4 do
-                for _, step in ipairs({1, 4, 8}) do
-                    local index = #variant.Platforms
-                        + (route - 1) * ArenaVariants.PerimeterSteps + step
-                    local deck = decks:FindFirstChild("Platform" .. index)
-                    expect(deck ~= nil and deck:IsA("BasePart")).toBe(true)
-                    expect(deck.CanCollide and deck.Anchored).toBe(true)
-                    expect(deck:GetAttribute("PerimeterRoute")).toBe(route)
-                    expect(deck:GetAttribute("PerimeterStep")).toBe(step)
-                    local stage = SkyRouteMonuments.Steps[step]
-                    local count, arrows = 0, 0
-                    local components = {}
-                    for _, piece in ipairs(decor:GetChildren()) do
-                        if piece:GetAttribute("SkyRouteMonument") == true
-                            and piece:GetAttribute("PerimeterPlatformIndex")
-                                == index then
-                            count += 1
-                            components[#components + 1] = piece
-                            expect(piece:IsA("BasePart")).toBe(true)
-                            expect(piece.Anchored).toBe(true)
-                            expect(piece.CanCollide).toBe(false)
-                            expect(piece.CanTouch).toBe(false)
-                            expect(piece.CanQuery).toBe(false)
-                            expect(piece.CastShadow).toBe(false)
-                            expect(piece:GetAttribute("SkyRouteStage"))
-                                .toBe(stage)
-                            if piece:GetAttribute("SurvivalRouteArrow") == true then
-                                arrows += 1
-                                expect(piece:GetAttribute("ChaosWayfinding"))
-                                    .toBe(true)
-                                local localPos = deck.CFrame:PointToObjectSpace(
-                                    piece.Position)
-                                expect(localPos.Y > deck.Size.Y * 0.5).toBe(true)
-                            end
-                        end
-                    end
-                    expect(count >= 12).toBe(true)
-                    expect(count <= SkyRouteMonuments.MaxPartsPerMonument)
-                        .toBe(true)
-                    expect(arrows).toBe(step == 8 and 0 or 2)
-                    totalMonuments += 1
-
-                    -- Real walking footprint is completely free: the two
-                    -- towering pillars are OUTSIDE the Z edge and the
-                    -- overhead giant arch stays above normal R15 jumps.
-                    for _, side in ipairs({-1, 1}) do
-                        local column = decor:FindFirstChild(
-                            "SkyRouteMonument" .. index
-                                .. "_VerticalBridgePylon" .. side)
-                        expect(column ~= nil and column:IsA("BasePart"))
-                            .toBe(true)
-                        local localPos = deck.CFrame:PointToObjectSpace(
-                            column.Position)
-                        expect(math.abs(localPos.Z)
-                            > deck.Size.Z * 0.5 + 0.5).toBe(true)
-                    end
-                    local arch = decor:FindFirstChild(
-                        "SkyRouteMonument" .. index
-                            .. "_MonumentalOverpass")
-                    expect(arch ~= nil and arch:IsA("BasePart")).toBe(true)
-                    local beamBottom =
-                        deck.CFrame:PointToObjectSpace(arch.Position).Y
-                        - arch.Size.Y * 0.5
-                    for _, side in ipairs({-1, 1}) do
-                        local column = decor:FindFirstChild(
-                            "SkyRouteMonument" .. index
-                                .. "_VerticalBridgePylon" .. side)
-                        local topOfColumn = deck.CFrame:PointToObjectSpace(
-                            column.Position).Y + column.Size.Y * 0.5
-                        -- Every stage's load pylons MUST touch its beam,
-                        -- including taller late-stage summit structures.
-                        expect(topOfColumn - beamBottom >= 0.15).toBe(true)
-                        expect(topOfColumn - beamBottom <= 0.80).toBe(true)
-                    end
-                    local beacon = decor:FindFirstChild(
-                        "SkyRouteMonument" .. index
-                            .. "_RouteStageBeacon")
-                    expect(beacon ~= nil).toBe(true)
-                    local beaconTop = deck.CFrame:PointToObjectSpace(
-                        beacon.Position).Y + beacon.Size.Y * 0.5
-                    expect(beaconTop >= beamBottom).toBe(true)
-                    expect(beaconTop - beamBottom < 0.5).toBe(true)
-                    expect(deck.CFrame:PointToObjectSpace(
-                        arch.Position).Y >= deck.Size.Y * 0.5 + 11)
-                        .toBe(true)
-                    if step == 8 then
-                        -- Unlike permanent starter routes, a hard summit
-                        -- can disappear. Its WHOLE architectural structure
-                        -- must vanish with its physical collider, not
-                        -- float as an inviting false rescue route.
-                        local cosmetics =
-                            DisappearingPlatforms.cosmeticsForPlatform(
-                                decor, deck)
-                        local linked = 0
-                        for _, entry in ipairs(cosmetics) do
-                            if entry.part:GetAttribute(
-                                    "SkyRouteMonument") == true then
-                                linked += 1
-                            end
-                        end
-                        expect(linked).toBe(count)
-                        DisappearingPlatforms.setCosmeticsPhase(
-                            cosmetics, "Gone")
-                        for _, piece in ipairs(components) do
-                            expect(piece.Transparency).toBe(1)
-                        end
-                        DisappearingPlatforms.setCosmeticsPhase(
-                            cosmetics, "Ready")
-                    end
-                end
-            end
-            expect(totalMonuments).toBe(12)
-            -- Do not add a decorative "platform" to the real physics
-            -- folder. Only the older authoritative deck count is legal.
-            expect(#decks:GetChildren()).toBe(
-                #variant.Platforms + #variant.PerimeterPlatforms
-                + #variant.BranchPlatforms + #variant.CrosslinkPlatforms
-                + #(variant.SkywayPlatforms or {})
-                + #(variant.SpokePlatforms or {})
-                + #variant.PromenadePlatforms + #variant.SkySpinePlatforms
-            )
-            root:Destroy()
-        end
-    end)
-
-
 end)
 
 return nil

@@ -2,6 +2,10 @@
 -- stations. Four native WedgeParts are hidden only after all four genuine
 -- Models are assembled. Driven by existing scenery-lod; no extra timer.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local geometryModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if geometryModule then require(geometryModule)
+    else require("../shared/PerimeterCapGeometry")
 local Kit = {}
 
 local IDS = {Cap = 88962643359267, Wing = 138096293972093}
@@ -101,6 +105,25 @@ local function sourceFor(kind)
     local sx,sz=math.min(expect.X,expect.Z),math.max(expect.X,expect.Z)
     if math.abs(x-sx)>.30 or math.abs(z-sz)>.32 then return nil end
     return source
+end
+
+local function capCasting(model)
+    local part = model and model:FindFirstChild("WayfinderBase")
+    if part and part:IsA("MeshPart") and part.Archivable and part.MeshId ~= "" then
+        return part
+    end
+    return nil
+end
+
+function Kit.wayfinderProfile()
+    return capCasting(sourceFor("Cap"))
+end
+
+function Kit.slopedCapProfile(casting)
+    casting = casting or Kit.wayfinderProfile()
+    local rotation, swapped = PerimeterCapGeometry.slope(casting)
+    if rotation then return casting, rotation, swapped, IDS.Cap end
+    return nil
 end
 
 -- The four perimeter stations remain fixed outside the contracting playable

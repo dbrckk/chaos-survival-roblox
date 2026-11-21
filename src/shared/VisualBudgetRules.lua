@@ -204,6 +204,7 @@ VisualBudgetRules.LocalFolders = {
     -- Approved owner-imported arena lobby gate: seven inert original
     -- MeshParts on one client-local Model, no lights or extra frame owner.
     "OriginalLobbyGate3DLocal",
+    "LobbySculptedFinishLocal",
     -- Up to four genuine original forged lobby columns; every imported
     -- MeshPart is counted in the SAME Android 440/680/900 visual ledger.
     -- Physical four pylons stay server-authoritative even when masked.
@@ -287,6 +288,7 @@ VisualBudgetRules.LocalFolders = {
     "GridCircuitLocal",
     "OrbitalHelixLocal",
     "TowerSkyrailLocal",
+    "ChaosShardVfxLocal",
     "LobbyProfileHologramLocal",
     "LobbyRoundRecapLocal",
     "LobbySurfaceDetailLocal",
@@ -369,7 +371,7 @@ local function collectCharacterPolish(model, metrics, record)
                 -- a root Workspace VFX folder. Count every local crystal so
                 -- auto-quality telemetry cannot silently underreport parts.
                 if (part.Name == "UpperTorso" or part.Name == "Torso")
-                    and effect:IsA("WedgePart")
+                    and (effect:IsA("WedgePart") or effect:IsA("MeshPart"))
                     and string.match(effect.Name, "^LocalFreezeArmorFacet%d+$") then
                     metrics.Parts += 1
                     if record then record("CharacterPolishLocal", "Parts") end
@@ -468,7 +470,7 @@ function VisualBudgetRules.collect(root, cooperativeCheckpoint)
                 -- of the SERVER-owned projectile, outside LocalFolders.
                 -- Never count the projectile itself or its server assets.
                 for _, child in ipairs(hazard:GetChildren()) do
-                    if child:IsA("WedgePart")
+                    if (child:IsA("WedgePart") or child:IsA("MeshPart"))
                         and string.match(child.Name, "^LocalMeteorFacet%d+$") then
                         add("AttachedMeteorCosmetics", "Parts")
                     end

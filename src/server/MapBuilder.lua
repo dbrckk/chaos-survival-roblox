@@ -10,6 +10,23 @@ local arenaPresentationModule = shared and shared:FindFirstChild("ArenaPresentat
 local ArenaPresentation = if arenaPresentationModule
     then require(arenaPresentationModule)
     else require("../shared/ArenaPresentation")
+local horizonGeometryModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonGeometryModule then require(horizonGeometryModule)
+    else require("../shared/HorizonMonumentGeometry")
+local capGeometryModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if capGeometryModule then require(capGeometryModule)
+    else require("../shared/PerimeterCapGeometry")
+local platformIdentityModule = shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if platformIdentityModule then require(platformIdentityModule)
+    else require("../shared/PlatformIdentityLodRules")
+local jumpRouteModule = shared and shared:FindFirstChild("JumpRouteCueRules")
+local JumpRouteCueRules = if jumpRouteModule
+    then require(jumpRouteModule)
+    else require("../shared/JumpRouteCueRules")
+local skyRouteConnectionModule = shared and shared:FindFirstChild("SkyRouteConnectionRules")
+local SkyRouteConnectionRules = if skyRouteConnectionModule
+    then require(skyRouteConnectionModule)
+    else require("../shared/SkyRouteConnectionRules")
 -- Cloud engine specs can import new source modules before the published
 -- place has received them; prefer sibling ModuleScript, otherwise source.
 local helixModule = script and script.Parent:FindFirstChild("OrbitalHelix")
@@ -22,6 +39,10 @@ local ArenaDistrictArchitecture = require("./ArenaDistrictArchitecture")
 local HarborScenery = require("./HarborScenery")
 local PromenadeArchitecture = require("./PromenadeArchitecture")
 local SkySpineArchitecture = require("./SkySpineArchitecture")
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+local PremiumLargeStructureAssets = require("./PremiumLargeStructureAssets")
+local ForgedBridgeAssets = require("./PremiumTowersSignatureBridgeAssets")
+local PremiumFloorReliefAssets = require("./PremiumFloorReliefAssets")
 local SkyRouteMonuments = require("./SkyRouteMonuments")
 local ArchitecturalCladding = require("./ArchitecturalCladding")
 local ArenaGroundArchitecture = require("./ArenaGroundArchitecture")
@@ -68,13 +89,38 @@ local function decorPart(parent, name, size, position, color, material)
     return p
 end
 
+local function fitDecorMesh(profile, name, pose, size, color, material, alongX)
+    local detail = RouteSignalGeometry.fit(profile, pose, size, nil, alongX)
+    if not detail then
+        detail = decorPart(nil, name, size, pose.Position, color, material)
+        detail.CFrame = pose
+    end
+    detail.Name = name
+    detail.Color = color
+    detail.Material = material
+    return detail
+end
+
+local function bindLandingBillboard(billboard, deck)
+    local function refresh()
+        local phase = deck:GetAttribute("CollapsePhase")
+        billboard.Enabled = deck.Parent ~= nil
+            and deck.CanCollide and deck.Transparency < 0.75
+            and phase ~= "Warning" and phase ~= "Gone"
+    end
+    deck:GetAttributeChangedSignal("CollapsePhase"):Connect(refresh)
+    deck:GetPropertyChangedSignal("CanCollide"):Connect(refresh)
+    deck:GetPropertyChangedSignal("Transparency"):Connect(refresh)
+    refresh()
+end
+
 -- Four authored 3D perimeter landmarks make an expanded arena read as a
 -- destination rather than a bare enlarged slab. These are original
 -- Roblox-native model assemblies (not externally licensed/imported meshes).
 -- Keep every piece decorative so the danger floor, humanoid collision,
 -- base-shrinking, AI navigation and platform jump tests stay authoritative.
 -- Exactly four stations, no lights, loops, remote calls or live motion.
-local function addPerimeterStations(decor, config, variant, theme)
+local function addPerimeterStations(decor, config, variant, theme, profiles)
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
     local anchors = {
@@ -97,11 +143,21 @@ local function addPerimeterStations(decor, config, variant, theme)
             config.ArenaCenter + anchor.position + Vector3.new(0, baseTop, 0)
         ) * CFrame.Angles(0, anchor.yaw, 0)
 
-        local function piece(name, className, size, offset, material, color, opacity)
-            local item = Instance.new(className or "Part")
+        local function piece(name, className, size, offset, material, color, opacity, profile, inlaySide)
+            local frame = origin * offset
+            local item = profile and RouteSignalGeometry.fit(profile.part, frame, size, inlaySide)
+            if item then
+                item:SetAttribute("OriginalPerimeterStationDetail3D", true)
+                item:SetAttribute("Original3DAssetId", profile.assetId)
+                local turned = not inlaySide
+                    and math.abs(item.CFrame.RightVector:Dot(frame.RightVector)) < .5
+                item:SetAttribute("StationDetailAxisSwap", if turned then true else nil)
+            else
+                item = Instance.new(className or "Part")
+                item.Size = size
+                item.CFrame = frame
+            end
             item.Name = name
-            item.Size = size
-            item.CFrame = origin * offset
             item.Anchored = true
             item.CanCollide = false
             item.CanTouch = false
@@ -114,12 +170,16 @@ local function addPerimeterStations(decor, config, variant, theme)
             return item
         end
 
+        -- Eight station pieces stay native so the existing client LOD kits
+        -- can replace them with complete approved assemblies: two buttresses,
+        -- three machinery housings and three rotor drums. A server MeshPart
+        -- in those slots would block the client replacement.
         -- Recessed platform marker. The real floor underneath stays the
         -- sole walkable surface; the mark never catches feet or incoming
         -- projectiles and does not leave islands after Shrinking Arena.
         piece("InlaidStationBase", "Part", Vector3.new(12, 0.07, 11),
             CFrame.new(0, 0.035, 0), theme.PanelMaterial or Enum.Material.Metal,
-            theme.Structure:Lerp(theme.Surface, 0.18), 0.14)
+            theme.Structure:Lerp(theme.Surface, 0.18), 0.14, profiles.plate)
         for _, side in ipairs({-1, 1}) do
             piece(side < 0 and "LeftButtress" or "RightButtress",
                 "Part", Vector3.new(1.5, 9, 2),
@@ -129,25 +189,25 @@ local function addPerimeterStations(decor, config, variant, theme)
                 "WedgePart", Vector3.new(2.9, 2.2, 2.4),
                 CFrame.new(side * 5.0, 9.1, 0)
                     * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
-                Enum.Material.Metal, theme.Detail, 0.08)
+                Enum.Material.Metal, theme.Detail, 0.08, profiles.wing)
             piece(side < 0 and "LeftLightNotch" or "RightLightNotch",
                 "Part", Vector3.new(0.14, 1.8, 1.1),
                 CFrame.new(side * 5.3, 5.0, -1.06), Enum.Material.Neon,
-                side < 0 and accent or secondary, 0.38)
+                side < 0 and accent or secondary, 0.38, profiles.signal, side)
         end
         piece("CrossBrace", "Part", Vector3.new(9.1, 0.65, 1.25),
             CFrame.new(0, 9.0, -0.2), Enum.Material.Metal,
-            theme.Structure:Lerp(theme.Detail, 0.22), 0.04)
+            theme.Structure:Lerp(theme.Detail, 0.22), 0.04, profiles.brace)
         piece("CoreHousing", "Part", Vector3.new(3.2, 3.7, 2.8),
             CFrame.new(0, 4.9, 0.1), Enum.Material.Metal,
             theme.Detail:Lerp(theme.Structure, 0.35), 0.06)
         local core = piece("CoreLens", "Part", Vector3.new(2.7, 2.7, 2.7),
             CFrame.new(0, 5.1, -1.65), Enum.Material.Glass,
-            accent:Lerp(secondary, 0.25), 0.33)
-        core.Shape = Enum.PartType.Ball
+            accent:Lerp(secondary, 0.25), 0.33, profiles.lens)
+        if core:IsA("Part") then core.Shape = Enum.PartType.Ball end
         piece("WayfindingInset", "Part", Vector3.new(3.1, 0.16, 1.6),
             CFrame.new(0, 0.11, -4.25), Enum.Material.Neon,
-            accent, 0.57)
+            accent, 0.57, profiles.signal)
 
         -- Distinctive architectural kitbash: actual layered 3D forms rather
         -- than generic floating neon blocks. All authored pieces share the
@@ -165,72 +225,164 @@ local function addPerimeterStations(decor, config, variant, theme)
                 CFrame.new(side * 7.0, 3.4, -1.4)
                     * CFrame.Angles(math.rad(90), 0, 0),
                 Enum.Material.Metal, theme.Detail, 0.08)
-            intake.Shape = Enum.PartType.Cylinder
+            if intake:IsA("Part") then intake.Shape = Enum.PartType.Cylinder end
             piece(side < 0 and "AngledServiceWingL" or "AngledServiceWingR",
                 "WedgePart", Vector3.new(3.4, 1.7, 5.7),
                 CFrame.new(side * 7.0, 4.9, 1.1)
                     * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
                 Enum.Material.Metal,
-                theme.Structure:Lerp(theme.Secondary, 0.23), 0.06)
+                theme.Structure:Lerp(theme.Secondary, 0.23), 0.06, profiles.wing)
+            -- Outer cast armor is a separate cosmetic owner: the eight native
+            -- station slots remain available for the complete client LOD kit.
+            piece(side < 0 and "PodArmorL" or "PodArmorR",
+                "Part", Vector3.new(0.34, 2.15, 3.8),
+                CFrame.new(side * 8.96, 2.35, 1.1),
+                Enum.Material.Metal,
+                theme.Detail:Lerp(theme.Structure, 0.42), 0.05, profiles.housing)
             piece(side < 0 and "PodDataRailL" or "PodDataRailR",
                 "Part", Vector3.new(0.18, 0.22, 3.1),
                 CFrame.new(side * 8.85, 3.4, 0.7),
-                Enum.Material.Neon, side < 0 and accent or secondary, 0.40)
+                Enum.Material.Neon, side < 0 and accent or secondary, 0.40, profiles.rail)
         end
         local generator = piece("GeneratorRotor", "Part",
             Vector3.new(2.7, 0.9, 2.7),
             CFrame.new(0, 8.1, -1.4)
                 * CFrame.Angles(math.rad(90), 0, 0),
             Enum.Material.Metal, theme.Detail, 0.08)
-        generator.Shape = Enum.PartType.Cylinder
+        if generator:IsA("Part") then generator.Shape = Enum.PartType.Cylinder end
         piece("GeneratorShield", "Part", Vector3.new(4.0, 0.55, 1.4),
             CFrame.new(0, 7.8, -0.4), Enum.Material.Metal,
-            theme.Structure:Lerp(theme.Accent, 0.24), 0.07)
+            theme.Structure:Lerp(theme.Accent, 0.24), 0.07, profiles.brace)
+        -- Raised cast shoulders frame the generator without replacing the
+        -- native rotor slot owned by the client LOD assembly. Both trims
+        -- are noninteractive and use the already approved station mesh.
+        for _, side in ipairs({-1, 1}) do
+            piece(side < 0 and "GeneratorShoulderL" or "GeneratorShoulderR",
+                "Part", Vector3.new(0.58, 0.75, 2.65),
+                CFrame.new(side * 2.35, 8.05, -1.0),
+                Enum.Material.Metal,
+                theme.Structure:Lerp(theme.Detail, 0.30), 0.06, profiles.housing)
+        end
+        -- Upper service arch: approved swept metal segments visually connect
+        -- the generator shoulders to the tower without adding a walkable ledge.
+        -- The native generator rotor stays untouched for client LOD ownership.
+        for _, side in ipairs({-1, 1}) do
+            piece(side < 0 and "UpperServiceRibL" or "UpperServiceRibR",
+                "Part", Vector3.new(0.52, 2.1, 1.45),
+                CFrame.new(side * 2.35, 9.15, 0.15)
+                    * CFrame.Angles(math.rad(side * 18), 0, 0),
+                Enum.Material.Metal,
+                theme.Detail:Lerp(theme.Structure, 0.38), 0.08, profiles.wing)
+        end
 
         if variant.Id == "Towers" then
             -- Twin crane masts convey vertical scale without placing an
             -- overhead platform where an R15 could become trapped.
             piece("ServiceMast", "Part", Vector3.new(0.75, 6.8, 0.75),
                 CFrame.new(0, 12.6, 0.3), Enum.Material.Metal,
-                theme.Structure, 0.04)
+                theme.Structure, 0.04, profiles.shaft)
             piece("SignalCrown", "WedgePart", Vector3.new(2.2, 1.4, 1.8),
                 CFrame.new(0, 16.6, 0.3), Enum.Material.Metal,
-                secondary, 0.10)
+                secondary, 0.10, profiles.wing)
+            piece("CrownSpine", "Part", Vector3.new(0.46, 2.25, 0.72),
+                CFrame.new(0, 17.55, 0.3), Enum.Material.Metal,
+                theme.Detail, 0.08, profiles.shaft)
         elseif variant.Id == "Orbital" then
             -- Cylindrical receiver and two radial braces distinguish the
             -- reactor site from both tower cranes and grid substations.
             local dish = piece("ReceiverDish", "Part", Vector3.new(3.4, 0.65, 3.4),
                 CFrame.new(0, 10.4, 0), Enum.Material.Metal,
-                theme.Detail, 0.12)
-            dish.Shape = Enum.PartType.Cylinder
+                theme.Detail, 0.12, profiles.turbine)
+            if dish:IsA("Part") then dish.Shape = Enum.PartType.Cylinder end
             piece("ReceiverAntenna", "Part", Vector3.new(0.38, 3.4, 0.38),
                 CFrame.new(0, 12.35, 0), Enum.Material.Metal,
-                accent, 0.22)
+                accent, 0.22, profiles.shaft)
+            piece("ReceiverCrown", "Part", Vector3.new(1.9, 0.42, 1.9),
+                CFrame.new(0, 14.2, 0), Enum.Material.Metal,
+                secondary, 0.10, profiles.housing)
         elseif variant.Id == "Crossroads" then
             piece("ExchangeBeam", "Part", Vector3.new(2.5, 0.75, 8.5),
                 CFrame.new(0, 8.2, 0), Enum.Material.Metal,
-                theme.Detail, 0.10)
+                theme.Detail, 0.10, profiles.wing)
             piece("SwitchyardMarker", "WedgePart", Vector3.new(1.5, 2, 2),
                 CFrame.new(0, 10.0, 0), Enum.Material.Metal,
-                secondary, 0.12)
+                secondary, 0.12, profiles.wing)
+            piece("SwitchyardCrown", "Part", Vector3.new(0.7, 1.4, 1.5),
+                CFrame.new(0, 11.45, 0), Enum.Material.Metal,
+                accent, 0.10, profiles.shaft)
         else
             piece("RelaySpire", "Part", Vector3.new(0.7, 4.4, 0.7),
                 CFrame.new(0, 11.5, 0), Enum.Material.Metal,
-                theme.Detail, 0.10)
+                theme.Detail, 0.10, profiles.shaft)
             piece("RelayCrown", "WedgePart", Vector3.new(2.4, 1.6, 2),
                 CFrame.new(0, 14.6, 0), Enum.Material.Metal,
-                accent, 0.12)
+                accent, 0.12, profiles.wing)
+            piece("RelayCrownFin", "Part", Vector3.new(0.5, 1.4, 1.4),
+                CFrame.new(0, 15.75, 0), Enum.Material.Metal,
+                secondary, 0.10, profiles.brace)
         end
+    end
+end
+
+local function exteriorPart(name, frame, size, material, color, source, alongX, fallbackClass, ridgeTurns)
+    local meshFrame, meshSize = frame, size
+    if ridgeTurns then
+        meshFrame *= CFrame.Angles(0, ridgeTurns * math.pi * .5, 0)
+        if ridgeTurns % 2 ~= 0 then meshSize = Vector3.new(size.Z, size.Y, size.X) end
+        alongX = source.part.Size.X > source.part.Size.Z
+    end
+    local mesh = source and RouteSignalGeometry.fit(source.part, meshFrame, meshSize, nil, alongX)
+    local item = mesh or Instance.new(fallbackClass or "Part")
+    if mesh then
+        mesh:SetAttribute("OriginalExteriorDetail3D", true)
+        mesh:SetAttribute("Original3DAssetId", source.assetId)
+        local turned = not ridgeTurns and math.abs(mesh.CFrame.RightVector:Dot(frame.RightVector)) < .5
+        mesh:SetAttribute("ExteriorDetailAxisSwap", if turned then true else nil)
+        if ridgeTurns then mesh:SetAttribute("ExteriorRidgeCapTurns", ridgeTurns) end
+    else
+        item.Size = size
+        item.CFrame = frame
+    end
+    item.Name = name
+    item.Anchored = true
+    item.CanCollide = false
+    item.CanTouch = false
+    item.CanQuery = false
+    item.CastShadow = false
+    item.Material = material
+    item.Color = color
+    return item
+end
+
+local function horizonPieceBuilder(model, origin, hull, variant, templates)
+    return function(name, kind, size, offset, material, color, opacity, shape)
+        local profile = HorizonMonumentGeometry.profile(model.Name, name)
+        local template = templates[profile]
+        local assetId = HorizonMonumentGeometry.assetId(profile, variant)
+        local source = template and template.MeshId ~= "" and assetId
+            and {part = template, assetId = assetId} or nil
+        if not source and variant == "Harbor" and kind == "Part" and not shape then
+            if profile == "shaft" and templates.harborShaft and templates.harborShaft.part then
+                source = templates.harborShaft
+            elseif profile == "bevel" or profile == "shaft" or profile == "beam" then
+                source = templates.harborCasting
+            end
+        end
+        -- Keep casting slopes in Z and the fitted radar drums on their short X axis.
+        local item = exteriorPart(name, origin * offset, size, material or Enum.Material.Metal,
+            color or hull, source, true, kind)
+        if shape and item:IsA("Part") then item.Shape = shape end
+        item.Transparency = opacity or 0
+        item.Parent = model
     end
 end
 
 -- The enlarged 150+ stud maps need a believable horizon, not just
 -- extra empty floor. Four purpose-built exterior silhouettes provide depth
 -- from the player's ground-height camera while remaining OUTSIDE the
--- hazard arena. These are original, lightweight Roblox-native 3D objects:
--- no remote models, texture IDs, scripts, draw loops, physics or lights.
+-- hazard arena. Each slot uses one fitted approved profile when available.
 -- Taller roofs remain outside every safe player/AI route and kill plane.
-local function addDistantSkyline(decor, config, variant, theme)
+local function addDistantSkyline(decor, config, variant, theme, templates)
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
     local directions = {
@@ -244,6 +396,7 @@ local function addDistantSkyline(decor, config, variant, theme)
         local model = Instance.new("Model")
         model.Name = "SkylineStructure" .. direction.id
         model:SetAttribute("ChaosDistantScenery", true)
+        model:SetAttribute("SignatureVariant", variant.Id)
         model.Parent = decor
 
         local height = (variant.Id == "Towers" and 25
@@ -258,23 +411,7 @@ local function addDistantSkyline(decor, config, variant, theme)
         local metalColor = theme.Detail:Lerp(theme.Structure, 0.65)
         local signalColor = theme.Secondary:Lerp(theme.Structure, 0.54)
 
-        local function detail(name, kind, size, offset, material, color,
-                transparency)
-            local p = Instance.new(kind)
-            p.Name = name
-            p.Size = size
-            p.CFrame = base * offset
-            p.Anchored = true
-            p.CanCollide = false
-            p.CanTouch = false
-            p.CanQuery = false
-            p.CastShadow = false
-            p.Material = material
-            p.Color = color
-            p.Transparency = transparency or 0
-            p.Parent = model
-            return p
-        end
+        local detail = horizonPieceBuilder(model, base, hullColor, variant.Id, templates)
 
         -- Deep metal masses and recessed details are the main read, not
         -- fluorescent slabs. No visual object is a fake walkable platform.
@@ -300,11 +437,10 @@ local function addDistantSkyline(decor, config, variant, theme)
         end
 
         if variant.Id == "Orbital" then
-            local dish = detail("ReceiverHead", "Part",
+            detail("ReceiverHead", "Part",
                 Vector3.new(5.5, 0.75, 5.5),
                 CFrame.new(0, height + 3.4, 0),
-                Enum.Material.Metal, metalColor, 0.06)
-            dish.Shape = Enum.PartType.Cylinder
+                Enum.Material.Metal, metalColor, 0.06, Enum.PartType.Cylinder)
         elseif variant.Id == "Crossroads" then
             detail("ExchangeMast", "Part", Vector3.new(0.7, 5.5, 0.7),
                 CFrame.new(0, height + 4.0, 0),
@@ -338,6 +474,7 @@ local function addDistantSkyline(decor, config, variant, theme)
             local model = Instance.new("Model")
             model.Name = "SkylineDepth" .. direction.id .. layer
             model:SetAttribute("ChaosDistantScenery", true)
+            model:SetAttribute("SignatureVariant", variant.Id)
             model.Parent = decor
             local height = (variant.Id == "Towers" and 31 or 22)
                 + layer * 5 + ((index + layer) % 3) * 3
@@ -346,46 +483,25 @@ local function addDistantSkyline(decor, config, variant, theme)
                     direction.z)
                 + outward * (16 + layer * 10)
                 + side * (layer == 1 and -17 or 19)
-            local body = Instance.new("WedgePart")
-            body.Name = "DistantRoofMass"
-            body.Size = Vector3.new(10 + layer * 3, height, 8)
-            body.CFrame = CFrame.new(origin + Vector3.new(0, height * 0.5, 0))
-                * CFrame.Angles(0, direction.yaw, 0)
-            body.Material = Enum.Material.Metal
-            body.Color = farColor
-            body.Transparency = 0.14 + layer * 0.12
-            body.Anchored = true
-            body.CanCollide = false
-            body.CanTouch = false
-            body.CanQuery = false
-            body.CastShadow = false
-            body.Parent = model
-            local spire = Instance.new("Part")
-            spire.Name = "DistantAerial"
-            spire.Size = Vector3.new(0.38, 4 + layer * 2, 0.38)
-            spire.CFrame = CFrame.new(origin
-                + Vector3.new(0, height + 2 + layer, 0))
-            spire.Material = Enum.Material.Metal
-            spire.Color = farColor
-            spire.Transparency = 0.20 + layer * 0.10
-            spire.Anchored = true
-            spire.CanCollide = false
-            spire.CanTouch = false
-            spire.CanQuery = false
-            spire.CastShadow = false
-            spire.Parent = model
+            local detail = horizonPieceBuilder(model, CFrame.new(origin), farColor, variant.Id, templates)
+            detail("DistantRoofMass", "WedgePart", Vector3.new(10 + layer * 3, height, 8),
+                CFrame.new(0, height * .5, 0) * CFrame.Angles(0, direction.yaw, 0),
+                Enum.Material.Metal, farColor, .14 + layer * .12)
+            detail("DistantAerial", "Part", Vector3.new(.38, 4 + layer * 2, .38),
+                CFrame.new(0, height + 2 + layer, 0),
+                Enum.Material.Metal, farColor, .20 + layer * .10)
         end
     end
 end
 
 -- One large, scene-specific architectural silhouette per arena.
 -- Deliberately positioned beyond the kill/physics floor, behind the playable
--- skyline. These are ORIGINAL runtime Roblox models and require no asset ID.
+-- skyline. Optional approved profiles fit the authored fallback footprints.
 -- Their large-scale shapes are legible from a mobile third-person camera,
 -- with dark industrial mass first and restrained colored accents second.
 -- Never give the hero structure collision, touch, queries, shadows, lights,
 -- animations, untrusted assets, or gameplay significance.
-local function addArenaSignatureMegastructure(decor, config, variant, theme)
+local function addArenaSignatureMegastructure(decor, config, variant, theme, templates)
     local model = Instance.new("Model")
     model.Name = "ArenaSignatureMegastructure"
     model:SetAttribute("ChaosDistantScenery", true)
@@ -405,22 +521,7 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
     local rim = theme.Accent:Lerp(theme.Structure, 0.68)
     local glint = theme.Secondary:Lerp(theme.Structure, 0.50)
 
-    local function piece(name, kind, size, localFrame, material, color, transparency)
-        local object = Instance.new(kind or "Part")
-        object.Name = name
-        object.Size = size
-        object.CFrame = origin * localFrame
-        object.Anchored = true
-        object.CanCollide = false
-        object.CanTouch = false
-        object.CanQuery = false
-        object.CastShadow = false
-        object.Material = material or Enum.Material.Metal
-        object.Color = color or hull
-        object.Transparency = transparency or 0
-        object.Parent = model
-        return object
-    end
+    local piece = horizonPieceBuilder(model, origin, hull, variant.Id, templates)
 
     piece("Foundation", "Part", Vector3.new(35, 1.8, 18),
         CFrame.new(0, -0.9, 0), Enum.Material.Concrete, hull, 0.04)
@@ -454,10 +555,9 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
                     * CFrame.Angles(0, side < 0 and math.pi or 0, 0),
                 Enum.Material.Metal, metal, 0.05)
         end
-        local core = piece("SuspendedReactorCore", "Part",
+        piece("SuspendedReactorCore", "Part",
             Vector3.new(10, 10, 10), CFrame.new(0, 29, 0),
-            Enum.Material.Glass, glint, 0.32)
-        core.Shape = Enum.PartType.Ball
+            Enum.Material.Glass, glint, 0.32, Enum.PartType.Ball)
         piece("CoreRetainer", "Part", Vector3.new(13, 1.4, 3),
             CFrame.new(0, 29, 0), Enum.Material.Metal, hull, 0.06)
     elseif variant.Id == "Towers" then
@@ -573,13 +673,12 @@ local function addArenaSignatureMegastructure(decor, config, variant, theme)
                 CFrame.new(side * 7.5, 24, -0.8)
                     * CFrame.Angles(0, 0, side * math.rad(21)),
                 Enum.Material.Metal, metal)
-            local receiver = piece(
+            piece(
                 side < 0 and "ReceiverDishWest" or "ReceiverDishEast",
                 "Part", Vector3.new(0.8, 10.5, 10.5),
                 CFrame.new(side * 13, 44 + side * 3, 0)
                     * CFrame.Angles(0, math.pi * 0.5, 0),
-                Enum.Material.Metal, metal, 0.10)
-            receiver.Shape = Enum.PartType.Cylinder
+                Enum.Material.Metal, metal, 0.10, Enum.PartType.Cylinder)
             piece(side < 0 and "ReceiverHubWest" or "ReceiverHubEast",
                 "Part", Vector3.new(2.1, 2.1, 2.1),
                 CFrame.new(side * 13, 44 + side * 3, -0.8),
@@ -602,7 +701,7 @@ end
 -- landmark, half the camera directions still show mostly empty distance.
 -- Keep every piece outside the playable deck AND outside the kill plane.
 -- All parts are static, shadowless and noninteractive for Android budgets.
-local function addSouthHorizonMonument(decor, config, variant, theme)
+local function addSouthHorizonMonument(decor, config, variant, theme, templates)
     local model = Instance.new("Model")
     model.Name = "SouthHorizonMonument"
     model:SetAttribute("ChaosDistantScenery", true)
@@ -618,22 +717,7 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
     local alloy = theme.Detail:Lerp(theme.Structure, 0.57)
     local signal = theme.Secondary:Lerp(theme.Structure, 0.36)
 
-    local function piece(name, kind, size, offset, material, color, opacity)
-        local item = Instance.new(kind or "Part")
-        item.Name = name
-        item.Size = size
-        item.CFrame = origin * offset
-        item.Anchored = true
-        item.CanCollide = false
-        item.CanTouch = false
-        item.CanQuery = false
-        item.CastShadow = false
-        item.Material = material or Enum.Material.Metal
-        item.Color = color or hull
-        item.Transparency = opacity or 0
-        item.Parent = model
-        return item
-    end
+    local piece = horizonPieceBuilder(model, origin, hull, variant.Id, templates)
 
     piece("Foundation", "Part", Vector3.new(47, 2, 13),
         CFrame.new(0, -1, 0), Enum.Material.Concrete, hull)
@@ -661,10 +745,9 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
                 CFrame.new(side * 15.5, 11.5, 0),
                 Enum.Material.Metal, hull)
         end
-        local orb = piece("SuspendedOrb", "Part",
+        piece("SuspendedOrb", "Part",
             Vector3.new(6.4, 6.4, 6.4), CFrame.new(0, 23, 0),
-            Enum.Material.Glass, signal, 0.38)
-        orb.Shape = Enum.PartType.Ball
+            Enum.Material.Glass, signal, 0.38, Enum.PartType.Ball)
         piece("OrbClamp", "Part", Vector3.new(9.5, 0.8, 2.4),
             CFrame.new(0, 23, -0.2), Enum.Material.Metal, alloy)
     elseif variant.Id == "Towers" then
@@ -767,13 +850,12 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
                 "Part", Vector3.new(3.5, 28, 4.5),
                 CFrame.new(side * 16, 14, 0),
                 Enum.Material.Concrete, hull)
-            local dish = piece(
+            piece(
                 side < 0 and "WestRadarDish" or "EastRadarDish",
                 "Part", Vector3.new(0.9, 12, 12),
                 CFrame.new(side * 16, 34, 0)
                     * CFrame.Angles(0, math.pi * 0.5, 0),
-                Enum.Material.Metal, alloy, 0.08)
-            dish.Shape = Enum.PartType.Cylinder
+                Enum.Material.Metal, alloy, 0.08, Enum.PartType.Cylinder)
             piece(side < 0 and "WestReceiver" or "EastReceiver",
                 "Part", Vector3.new(2.1, 2.1, 2.1),
                 CFrame.new(side * 16, 34, -2.2),
@@ -794,15 +876,24 @@ local function addSouthHorizonMonument(decor, config, variant, theme)
     end
 end
 
--- Four original sculpted exterior corner ridges close the empty diagonal
--- horizon. They sit beyond both axes of the arena floor, so no collision,
--- hazards, NPC navigation or playable jumps depend on their presence.
--- Twelve anchored wedge shapes per map; no runtime updates or textures.
-local function addExteriorCornerRidges(decor, config, variant, theme)
+-- The four corner groups sit beyond both axes of the arena floor.
+-- Each crest uses one fitted casting or the original wedge.
+local function addExteriorCornerRidges(decor, config, variant, theme, casting)
     local x = variant.BaseSize.X * 0.5 + 28
     local z = variant.BaseSize.Z * 0.5 + 28
     local stone = theme.Structure:Lerp(Color3.fromRGB(25, 31, 39), 0.45)
     local metal = theme.Detail:Lerp(stone, 0.72)
+    local ridgeTurns
+    if variant.Id == "Harbor" then
+        -- The signal region marks the high edge even when an import yaw
+        -- flips or swaps axes. Keep the native wedge until it is readable.
+        local rotation = PerimeterCapGeometry.slope(casting and casting.part)
+        if rotation then
+            ridgeTurns = math.round(math.atan2(-rotation.RightVector.Z, rotation.RightVector.X) / (math.pi * .5))
+        else
+            casting = nil
+        end
+    end
     for _, corner in ipairs({
         {id = "NW", sx = -1, sz = -1},
         {id = "NE", sx = 1, sz = -1},
@@ -821,22 +912,14 @@ local function addExteriorCornerRidges(decor, config, variant, theme)
         for index = 1, 3 do
             local height = 9 + ((index * 7 + corner.sx * 3
                 + corner.sz * 5 + 20) % 11)
-            local ridge = Instance.new("WedgePart")
-            ridge.Name = "Ridge" .. index
-            ridge.Size = Vector3.new(11 + index * 3, height,
-                13 + index * 2)
-            ridge.CFrame = CFrame.new(center + Vector3.new(
+            local size = Vector3.new(11 + index * 3, height, 13 + index * 2)
+            local frame = CFrame.new(center + Vector3.new(
                 (index - 2) * corner.sx * 8, height * 0.5 - 1.5,
                 (index - 2) * corner.sz * 6
             )) * CFrame.Angles(0, yaw + (index - 2) * 0.32, 0)
-            ridge.Anchored = true
-            ridge.CanCollide = false
-            ridge.CanTouch = false
-            ridge.CanQuery = false
-            ridge.CastShadow = false
-            ridge.Material = index == 2 and Enum.Material.Concrete
-                or Enum.Material.Metal
-            ridge.Color = index == 2 and stone or metal
+            local ridge = exteriorPart("Ridge" .. index, frame, size,
+                index == 2 and Enum.Material.Concrete or Enum.Material.Metal,
+                index == 2 and stone or metal, casting, true, "WedgePart", ridgeTurns)
             ridge.Transparency = 0.07 + index * 0.04
             ridge.Parent = model
         end
@@ -844,9 +927,9 @@ local function addExteriorCornerRidges(decor, config, variant, theme)
 end
 
 -- Low-cost original skyline silhouettes beyond the playable boundary.
--- Two offset industrial structures per side add perspective and scale.
+-- One six-piece industrial silhouette per side adds perspective and scale.
 -- All geometry is noninteractive and cannot trap players or NPCs.
-local function addExteriorSilhouettePairs(decor, config, variant, theme)
+local function addExteriorSilhouettes(decor, config, variant, theme, profiles)
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
     local positions = {
@@ -870,51 +953,36 @@ local function addExteriorSilhouettePairs(decor, config, variant, theme)
             + Vector3.new(position.x, floorTop, position.z))
             * CFrame.Angles(0, position.yaw, 0)
 
-        local function segment(name, size, offset, material, color)
-            local p = Instance.new("Part")
-            p.Name = name
-            p.Size = size
-            p.CFrame = frame * CFrame.new(offset)
-            p.Anchored = true
-            p.CanCollide = false
-            p.CanTouch = false
-            p.CanQuery = false
-            p.CastShadow = false
-            p.Material = material
-            p.Color = color
+        local function segment(name, size, offset, material, color, source, alongX)
+            local p = exteriorPart(name, frame * CFrame.new(offset), size, material,
+                color, source, alongX)
             p.Parent = model
-            return p
         end
 
         segment("ReactorShell", Vector3.new(9, height, 8),
-            Vector3.new(0, height * 0.5, 0), Enum.Material.Metal, shell)
+            Vector3.new(0, height * 0.5, 0), Enum.Material.Metal, shell, profiles.shell)
         segment("RoofCanopy", Vector3.new(12, 1.2, 10),
-            Vector3.new(0, height + 0.6, 0), Enum.Material.Metal, trim)
+            Vector3.new(0, height + 0.6, 0), Enum.Material.Metal, trim, profiles.roof, true)
         for side = -1, 1, 2 do
             segment(side < 0 and "LeftRib" or "RightRib",
                 Vector3.new(1.2, height * 0.75, 1.4),
                 Vector3.new(side * 5, height * 0.42, -2.8),
-                Enum.Material.Metal, trim)
+                Enum.Material.Metal, trim, profiles.shaft)
         end
         segment("SignalBand", Vector3.new(6, 0.35, 0.18),
             Vector3.new(0, height * 0.68, -4.08),
-            Enum.Material.Neon, signal)
+            Enum.Material.Neon, signal, profiles.signal)
         segment("Antenna", Vector3.new(0.55, 6, 0.55),
             Vector3.new(0, height + 3.5, 0),
-            Enum.Material.Metal, trim)
+            Enum.Material.Metal, trim, profiles.shaft)
     end
 end
 
-local function addArenaFoundation(decor, config, variant, theme)
+local function addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     local baseSize = variant.BaseSize
     local center = config.ArenaCenter
 
-    -- The previous 315 x 315 x 2.4 decorative brick visually swallowed
-    -- the source-authentic sculpted keel and underside beam MeshParts.
-    -- Keep the nonphysical foundation identity, but make it an OPEN
-    -- manufactured load frame: no giant generic slab, no fake floor and
-    -- no overlapping walkable collision. Its slim native steel rails are
-    -- only a graceful fallback if the owner-approved 3D art is unavailable.
+    -- Four rails meet at their centerlines and leave the keel visible.
     local undercarriage = Instance.new("Model")
     undercarriage.Name = "ArenaUndercarriage"
     undercarriage:SetAttribute("CosmeticOnly", true)
@@ -922,20 +990,43 @@ local function addArenaFoundation(decor, config, variant, theme)
     local insetX = math.max(4, baseSize.X * 0.5 - 3.0)
     local insetZ = math.max(4, baseSize.Z * 0.5 - 3.0)
     for side = -1, 1, 2 do
-        local northSouth = decorPart(
-            undercarriage, "FoundryX" .. tostring(side),
-            Vector3.new(math.max(8, baseSize.X - 12), 2.2, 2.8),
-            center + Vector3.new(0, -2.25, side * insetZ),
+        local northSouth = fitDecorMesh(
+            sweptProfile, "FoundryX" .. tostring(side),
+            CFrame.new(center + Vector3.new(0, -2.25, side * insetZ)),
+            Vector3.new(2 * insetX, 2.2, 2.8),
             theme.Structure, VisualTheme.Materials.Structure)
-        northSouth.Transparency = 0.06
-        northSouth:SetAttribute("PremiumArchitecturalSurface", true)
-        local eastWest = decorPart(
-            undercarriage, "FoundryZ" .. tostring(side),
-            Vector3.new(2.8, 2.2, math.max(8, baseSize.Z - 12)),
-            center + Vector3.new(side * insetX, -2.25, 0),
+        local eastWest = fitDecorMesh(
+            sweptProfile, "FoundryZ" .. tostring(side),
+            CFrame.new(center + Vector3.new(side * insetX, -2.25, 0)),
+            Vector3.new(2.8, 2.2, 2 * insetZ),
             theme.Structure, VisualTheme.Materials.Structure)
-        eastWest.Transparency = 0.06
-        eastWest:SetAttribute("PremiumArchitecturalSurface", true)
+        for _, rail in ipairs({northSouth, eastWest}) do
+            rail.Transparency = 0.06
+            rail:SetAttribute("PremiumArchitecturalSurface", true)
+            rail.Parent = undercarriage
+        end
+    end
+
+    -- Sculpted diagonal corner gussets give the exposed underside a
+    -- load-bearing silhouette. They sit below the authoritative floor and
+    -- remain cosmetic, with native noncolliding fallback if meshes are absent.
+    for xSign = -1, 1, 2 do
+        for zSign = -1, 1, 2 do
+            local corner = center + Vector3.new(
+                xSign * (insetX - 2.0), -2.0, zSign * (insetZ - 2.0))
+            local brace = fitDecorMesh(
+                sweptProfile,
+                "UndercarriageCornerGusset" .. (xSign < 0 and "L" or "R")
+                    .. (zSign < 0 and "N" or "S"),
+                CFrame.new(corner) * CFrame.Angles(0, math.rad(xSign * zSign * 45), 0),
+                Vector3.new(7.2, 2.6, 1.3),
+                theme.Structure,
+                VisualTheme.Materials.Structure
+            )
+            brace.Transparency = 0.05
+            brace:SetAttribute("PremiumArchitecturalSurface", true)
+            brace.Parent = undercarriage
+        end
     end
 
     local deckInset = decorPart(
@@ -949,54 +1040,86 @@ local function addArenaFoundation(decor, config, variant, theme)
     -- A broad neutral midtone keeps the REAL floor readable on mobile;
     -- subdued route paint and red/orange disaster telegraphs stay distinct.
     deckInset.Transparency = 0.03
-    -- Existing Harbor timber remains on smaller route panels. The enormous
-    -- working port deck uses actual salt-worn steel, not a default wooden
-    -- slab pretending to be a seaport floor.
+    -- Keep the broad Harbor floor blue-grey at every graphics tier.
+    -- CorrodedMetal's orange patches read as lava even outside that disaster.
     if variant.Id == "Harbor" then
-        deckInset.Material = Enum.Material.CorrodedMetal
+        deckInset.Material = Enum.Material.Metal
     end
     deckInset:SetAttribute("PremiumArchitecturalSurface", true)
 
+    -- Four broad forged edge skirts break up the arena's exposed slab
+    -- silhouette. Keep them outside the playable deck and below its top:
+    -- no visual obstruction to hazards, spawn guides or mobile wayfinding.
+    local skirtY = -0.32
+    local edgeSkirts = {
+        {name = "North", pose = CFrame.new(center + Vector3.new(0, skirtY, -baseSize.Z * 0.5 - 0.16)),
+            size = Vector3.new(baseSize.X - 4, 1.25, 0.42)},
+        {name = "South", pose = CFrame.new(center + Vector3.new(0, skirtY, baseSize.Z * 0.5 + 0.16)),
+            size = Vector3.new(baseSize.X - 4, 1.25, 0.42)},
+        {name = "West", pose = CFrame.new(center + Vector3.new(-baseSize.X * 0.5 - 0.16, skirtY, 0)),
+            size = Vector3.new(0.42, 1.25, baseSize.Z - 4)},
+        {name = "East", pose = CFrame.new(center + Vector3.new(baseSize.X * 0.5 + 0.16, skirtY, 0)),
+            size = Vector3.new(0.42, 1.25, baseSize.Z - 4)},
+    }
+    for _, edge in ipairs(edgeSkirts) do
+        local skirt = fitDecorMesh(
+            sweptProfile, "ForgedDeckSkirt" .. edge.name,
+            edge.pose, edge.size, theme.Structure,
+            VisualTheme.Materials.Structure
+        )
+        skirt.Transparency = 0.06
+        skirt:SetAttribute("PremiumArchitecturalSurface", true)
+        skirt.Parent = decor
+    end
+
     local laneLengthX = math.max(18, baseSize.X - 18)
     local laneLengthZ = math.max(18, baseSize.Z - 18)
+    local laneY = baseSize.Y * 0.5 + 0.17
+    local laneX = Vector3.new(laneLengthX, 0.06, 0.36)
+    local laneZ = Vector3.new(0.36, 0.06, laneLengthZ)
     local lanes = {
-        {name = "DeckLineNorth", size = Vector3.new(laneLengthX, 0.08, 0.36), pos = Vector3.new(0, 1.17, -12), color = theme.Accent},
-        {name = "DeckLineSouth", size = Vector3.new(laneLengthX, 0.08, 0.36), pos = Vector3.new(0, 1.17, 12), color = theme.Secondary},
-        {name = "DeckLineWest", size = Vector3.new(0.36, 0.08, laneLengthZ), pos = Vector3.new(-12, 1.17, 0), color = theme.Secondary},
-        {name = "DeckLineEast", size = Vector3.new(0.36, 0.08, laneLengthZ), pos = Vector3.new(12, 1.17, 0), color = theme.Accent},
+        {name = "DeckLineNorth", size = laneX, pos = Vector3.new(0, laneY, -12), color = theme.Accent},
+        {name = "DeckLineSouth", size = laneX, pos = Vector3.new(0, laneY, 12), color = theme.Secondary},
+        {name = "DeckLineWest", size = laneZ, pos = Vector3.new(-12, laneY, 0), color = theme.Secondary},
+        {name = "DeckLineEast", size = laneZ, pos = Vector3.new(12, laneY, 0), color = theme.Accent},
     }
 
     for _, def in ipairs(lanes) do
-        local line = decorPart(
-            decor,
+        local line = fitDecorMesh(
+            sweptProfile,
             def.name,
+            CFrame.new(center + def.pos),
             def.size,
-            center + def.pos,
             def.color,
             VisualTheme.Materials.Glow
         )
-        -- These 130+ stud navigation seams should not bloom brighter
-        -- than actual hazard telegraphs on short Android sightlines.
+        -- The shallow section and muted glow keep warning contours readable.
         line.Transparency = 0.58
+        line.Parent = decor
     end
 
-    local radiusX = (baseSize.X * 0.5) + 4.5
-    local radiusZ = (baseSize.Z * 0.5) + 4.5
-    local segmentCount = 16
-    for i = 1, segmentCount do
-        local angle = ((i - 1) / segmentCount) * math.pi * 2
-        local x = math.cos(angle) * radiusX
-        local z = math.sin(angle) * radiusZ
-        local halo = decorPart(
-            decor,
-            "OuterHalo" .. i,
-            Vector3.new(5.5, 0.18, 0.42),
-            center + Vector3.new(x, -1.15, z),
-            (i % 2 == 0) and theme.Accent or theme.Secondary,
-            VisualTheme.Materials.Glow
-        )
-        halo.CFrame = CFrame.new(halo.Position) * CFrame.Angles(0, -angle, 0)
-        halo.Transparency = 0.34
+    -- Place the static exterior accents along the floor's four sides.
+    local outerX = baseSize.X * 0.5 + 4.5
+    local outerZ = baseSize.Z * 0.5 + 4.5
+    local haloY = -baseSize.Y * 0.5 - 0.15
+    local segmentsPerSide = 4
+    local haloSize = Vector3.new(5.5, 0.18, 0.42)
+    for side, edge in ipairs({
+        {offset = Vector3.new(0, haloY, -outerZ), span = baseSize.X, yaw = 0},
+        {offset = Vector3.new(outerX, haloY, 0), span = baseSize.Z, yaw = -math.pi * 0.5},
+        {offset = Vector3.new(0, haloY, outerZ), span = baseSize.X, yaw = math.pi},
+        {offset = Vector3.new(-outerX, haloY, 0), span = baseSize.Z, yaw = math.pi * 0.5},
+    }) do
+        local frame = CFrame.new(center + edge.offset) * CFrame.Angles(0, edge.yaw, 0)
+        for slot = 1, segmentsPerSide do
+            local index = (side - 1) * segmentsPerSide + slot
+            local along = edge.span * ((slot - 0.5) / segmentsPerSide - 0.5)
+            local color = index % 2 == 0 and theme.Accent or theme.Secondary
+            local halo = fitDecorMesh(sweptProfile, "OuterHalo" .. index,
+                frame * CFrame.new(along, 0, 0), haloSize, color, VisualTheme.Materials.Glow)
+            halo.Transparency = 0.34
+            halo.Parent = decor
+        end
     end
 
     local frameOffsets = {
@@ -1007,29 +1130,47 @@ local function addArenaFoundation(decor, config, variant, theme)
     }
 
     for i, offset in ipairs(frameOffsets) do
-        local column = decorPart(
-            decor,
+        local column = fitDecorMesh(
+            beaconShaft,
             "FrameColumn" .. i,
+            CFrame.new(center + offset),
             Vector3.new(1.4, 8.4, 1.4),
-            center + offset,
             theme.Structure,
             VisualTheme.Materials.Structure
         )
         column.Transparency = 0.05
+        column.Parent = decor
 
-        local slit = decorPart(
-            decor,
+        -- Seat the slit in front of the inward-facing shell, above the foot.
+        local face = CFrame.lookAt(column.Position, center + Vector3.new(0, offset.Y, 0))
+        local slit = fitDecorMesh(
+            beaconShaft,
             "FrameColumnGlow" .. i,
-            Vector3.new(0.42, 5.6, 1.48),
-            column.Position,
+            face * CFrame.new(0, 0.4, -2.08),
+            Vector3.new(0.42, 4.8, 0.28),
             (i % 2 == 0) and theme.Secondary or theme.Accent,
             VisualTheme.Materials.Glow
         )
         slit.Transparency = 0.20
+        slit.Parent = decor
     end
 end
 
-local function addVariantIdentity(decor, config, variant, theme)
+local meshRegionByBounds = RouteSignalGeometry.regionByBounds
+
+local function approvedHorizonRegion(holderName, name, tag, assetId, regionSize)
+    local holder = ReplicatedStorage:FindFirstChild(holderName)
+    if not holder or not holder:IsA("Folder") then return nil end
+    local model = RouteSignalGeometry.approvedModel(holder, name, tag, assetId)
+    return model and meshRegionByBounds(model, regionSize) or nil
+end
+
+local function orbitalReactorNodeRegion(regionSize)
+    return approvedHorizonRegion("ApprovedOrbitalReactorLandmarkTemplates", "Node",
+        "OriginalOrbitalReactorLandmark3D", 104654294187035, regionSize)
+end
+
+local function addVariantIdentity(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
     local center = config.ArenaCenter
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
@@ -1043,25 +1184,27 @@ local function addVariantIdentity(decor, config, variant, theme)
         }
 
         for i, offset in ipairs(markers) do
-            local tower = decorPart(
-                decor,
+            local tower = fitDecorMesh(
+                beaconShaft,
                 "GridMarker" .. i,
+                CFrame.new(center + offset),
                 Vector3.new(2.2, 12, 2.2),
-                center + offset,
                 theme.Structure,
                 VisualTheme.Materials.Structure
             )
             tower.Transparency = 0.06
+            tower.Parent = decor
 
-            local crown = decorPart(
-                decor,
+            local crown = fitDecorMesh(
+                castProfile,
                 "GridMarkerGlow" .. i,
+                CFrame.new(tower.Position + Vector3.new(0, 6.1, 0)),
                 Vector3.new(3.8, 0.32, 3.8),
-                tower.Position + Vector3.new(0, 6.1, 0),
                 (i % 2 == 0) and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
             crown.Transparency = 0.16
+            crown.Parent = decor
         end
     elseif variant.Id == "Towers" then
         local corners = {
@@ -1072,59 +1215,64 @@ local function addVariantIdentity(decor, config, variant, theme)
         }
 
         for i, offset in ipairs(corners) do
-            local mast = decorPart(
-                decor,
+            local mast = fitDecorMesh(
+                beaconShaft,
                 "TowerSpine" .. i,
+                CFrame.new(center + offset),
                 Vector3.new(2.6, 20, 2.6),
-                center + offset,
                 theme.Structure,
                 VisualTheme.Materials.Structure
             )
             mast.Transparency = 0.04
+            mast.Parent = decor
 
             for level = 1, 3 do
-                local band = decorPart(
-                    decor,
+                local band = fitDecorMesh(
+                    sweptProfile,
                     "TowerBand" .. i .. "_" .. level,
+                    CFrame.new(mast.Position + Vector3.new(0, -6 + (level * 4.5), 0)),
                     Vector3.new(4.4, 0.28, 4.4),
-                    mast.Position + Vector3.new(0, -6 + (level * 4.5), 0),
                     level == 2 and theme.Secondary or theme.Accent,
                     VisualTheme.Materials.Glow
                 )
                 band.Transparency = 0.22
+                band.Parent = decor
             end
         end
     elseif variant.Id == "Crossroads" then
+        local gateY = variant.BaseSize.Y * 0.5 + 10
         local gates = {
-            {pos = Vector3.new(0, 6, -halfZ + 7), size = Vector3.new(18, 1.2, 1.4)},
-            {pos = Vector3.new(0, 6, halfZ - 7), size = Vector3.new(18, 1.2, 1.4)},
-            {pos = Vector3.new(-halfX + 7, 6, 0), size = Vector3.new(1.4, 1.2, 18)},
-            {pos = Vector3.new(halfX - 7, 6, 0), size = Vector3.new(1.4, 1.2, 18)},
+            {pos = Vector3.new(0, gateY, -halfZ + 7), size = Vector3.new(18, 1.2, 1.4)},
+            {pos = Vector3.new(0, gateY, halfZ - 7), size = Vector3.new(18, 1.2, 1.4)},
+            {pos = Vector3.new(-halfX + 7, gateY, 0), size = Vector3.new(1.4, 1.2, 18)},
+            {pos = Vector3.new(halfX - 7, gateY, 0), size = Vector3.new(1.4, 1.2, 18)},
         }
 
         for i, def in ipairs(gates) do
-            local rail = decorPart(
-                decor,
+            local rail = fitDecorMesh(
+                sweptProfile,
                 "CrossroadGate" .. i,
+                CFrame.new(center + def.pos),
                 def.size,
-                center + def.pos,
                 (i % 2 == 0) and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
             rail.Transparency = 0.18
+            rail.Parent = decor
 
-            local postSize = def.size.X > def.size.Z and Vector3.new(1.2, 10, 1.2) or Vector3.new(1.2, 10, 1.2)
-            local lateral = def.size.X > def.size.Z and Vector3.new(8.5, -5, 0) or Vector3.new(0, -5, 8.5)
+            local lateral = def.size.X > def.size.Z and Vector3.new(8.5, 0, 0) or Vector3.new(0, 0, 8.5)
+            local postCenter = rail.Position - Vector3.new(0, 5, 0)
             for sign = -1, 1, 2 do
-                local post = decorPart(
-                    decor,
+                local post = fitDecorMesh(
+                    beaconShaft,
                     "CrossroadPost" .. i .. "_" .. tostring(sign),
-                    postSize,
-                    rail.Position + (lateral * sign),
+                    CFrame.new(postCenter + lateral * sign),
+                    Vector3.new(1.2, 10, 1.2),
                     theme.Structure,
                     VisualTheme.Materials.Structure
                 )
                 post.Transparency = 0.05
+                post.Parent = decor
             end
         end
     elseif variant.Id == "Orbital" then
@@ -1139,27 +1287,27 @@ local function addVariantIdentity(decor, config, variant, theme)
                 math.sin(angle) * ringRadius
             )
 
-            local segment = decorPart(
-                decor,
+            local segment = fitDecorMesh(
+                sweptProfile,
                 "OrbitalCrown" .. i,
+                CFrame.new(position) * CFrame.Angles(0, -angle, math.rad(4)),
                 Vector3.new(7.4, 0.42, 0.8),
-                position,
                 (i % 2 == 0) and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
-            segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, math.rad(4))
             segment.Transparency = 0.20
+            segment.Parent = decor
         end
 
-        local core = decorPart(
-            decor,
+        local core = fitDecorMesh(
+            orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96)),
             "OrbitalCore",
+            CFrame.new(center + Vector3.new(0, 13, 0)),
             Vector3.new(5, 5, 5),
-            center + Vector3.new(0, 13, 0),
             theme.Secondary,
             VisualTheme.Materials.Glow
         )
-        core.Shape = Enum.PartType.Ball
+        if core:IsA("Part") then core.Shape = Enum.PartType.Ball end
         core.Transparency = 0.34
 
         local coreLight = Instance.new("PointLight")
@@ -1169,10 +1317,11 @@ local function addVariantIdentity(decor, config, variant, theme)
         coreLight.Range = 24
         coreLight.Shadows = false
         coreLight.Parent = core
+        core.Parent = decor
     end
 end
 
-local function addVariantLandmarks(decor, config, variant, theme)
+local function addVariantLandmarks(decor, config, variant, theme, castProfile, sweptProfile, beaconShaft)
     local center = config.ArenaCenter
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
@@ -1185,27 +1334,25 @@ local function addVariantLandmarks(decor, config, variant, theme)
             {offset = Vector3.new(18, 8, -halfZ - 5), size = Vector3.new(5.5, 16, 1.8)},
         }
         for i, def in ipairs(defs) do
-            local fin = decorPart(
-                decor,
-                "ClassicBroadcastFin" .. i,
-                def.size,
-                center + def.offset,
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local fin = fitDecorMesh(
+                sweptProfile, "ClassicBroadcastFin" .. i,
+                CFrame.new(center + def.offset), def.size,
+                theme.Structure, VisualTheme.Materials.Structure
             )
+            fin.Parent = decor
             fin.Transparency = 0.05
 
             local stripSize = def.size.X < def.size.Z
                 and Vector3.new(0.22, 10, def.size.Z + 0.08)
                 or Vector3.new(def.size.X + 0.08, 10, 0.22)
-            local strip = decorPart(
-                decor,
-                "ClassicBroadcastGlow" .. i,
+            local strip = fitDecorMesh(
+                sweptProfile, "ClassicBroadcastGlow" .. i,
+                CFrame.new(fin.Position + Vector3.new(0, 0.5, 0)),
                 stripSize,
-                fin.Position + Vector3.new(0, 0.5, 0),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            strip.Parent = decor
             strip.Transparency = 0.24
         end
     elseif variant.Id == "Towers" then
@@ -1216,34 +1363,31 @@ local function addVariantLandmarks(decor, config, variant, theme)
             Vector3.new(halfX + 6, 12, halfZ + 6),
         }
         for i, offset in ipairs(offsets) do
-            local machinery = decorPart(
-                decor,
-                "TowerMachinery" .. i,
-                Vector3.new(5.2, 24, 5.2),
-                center + offset,
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local machinery = fitDecorMesh(
+                beaconShaft, "TowerMachinery" .. i,
+                CFrame.new(center + offset), Vector3.new(5.2, 24, 5.2),
+                theme.Structure, VisualTheme.Materials.Structure
             )
+            machinery.Parent = decor
             machinery.Transparency = 0.04
 
-            local cap = decorPart(
-                decor,
-                "TowerMachineryCap" .. i,
-                Vector3.new(7.4, 1.0, 7.4),
-                machinery.Position + Vector3.new(0, 12.4, 0),
-                theme.Accent,
+            local cap = fitDecorMesh(
+                castProfile, "TowerMachineryCap" .. i,
+                CFrame.new(machinery.Position + Vector3.new(0, 12.4, 0)),
+                Vector3.new(7.4, 1.0, 7.4), theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            cap.Parent = decor
             cap.Transparency = 0.18
 
-            local antenna = decorPart(
-                decor,
-                "TowerAntenna" .. i,
+            local antenna = fitDecorMesh(
+                beaconShaft, "TowerAntenna" .. i,
+                CFrame.new(machinery.Position + Vector3.new(0, 17.2, 0)),
                 Vector3.new(0.55, 9, 0.55),
-                machinery.Position + Vector3.new(0, 17.2, 0),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            antenna.Parent = decor
             antenna.Transparency = 0.16
         end
     elseif variant.Id == "Crossroads" then
@@ -1254,24 +1398,23 @@ local function addVariantLandmarks(decor, config, variant, theme)
             {offset = Vector3.new(halfX + 4, 8, 0), size = Vector3.new(2.0, 2.0, 28)},
         }
         for i, def in ipairs(defs) do
-            local gantry = decorPart(
-                decor,
-                "CrossroadGantry" .. i,
-                def.size,
-                center + def.offset,
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local gantry = fitDecorMesh(
+                sweptProfile, "CrossroadGantry" .. i,
+                CFrame.new(center + def.offset), def.size,
+                theme.Structure, VisualTheme.Materials.Structure
             )
+            gantry.Parent = decor
             gantry.Transparency = 0.04
 
-            local signal = decorPart(
-                decor,
-                "CrossroadSignal" .. i,
-                def.size.X > def.size.Z and Vector3.new(18, 0.34, 2.12) or Vector3.new(2.12, 0.34, 18),
-                gantry.Position,
+            local signal = fitDecorMesh(
+                sweptProfile, "CrossroadSignal" .. i,
+                CFrame.new(gantry.Position),
+                def.size.X > def.size.Z and Vector3.new(18, 0.34, 2.12)
+                    or Vector3.new(2.12, 0.34, 18),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
+            signal.Parent = decor
             signal.Transparency = 0.16
         end
     elseif variant.Id == "Orbital" then
@@ -1284,36 +1427,33 @@ local function addVariantLandmarks(decor, config, variant, theme)
                 math.sin(angle) * radius
             )
 
-            local node = decorPart(
-                decor,
-                "OrbitalReactorNode" .. i,
-                Vector3.new(4.4, 4.4, 4.4),
-                position,
+            local node = fitDecorMesh(
+                castProfile, "OrbitalReactorNode" .. i,
+                CFrame.new(position), Vector3.new(4.4, 4.4, 4.4),
                 i % 2 == 0 and theme.Secondary or theme.Accent,
                 VisualTheme.Materials.Glow
             )
-            node.Shape = Enum.PartType.Ball
+            if node:IsA("Part") then node.Shape = Enum.PartType.Ball end
+            node.Parent = decor
             node.Transparency = 0.20
 
-            local strut = decorPart(
-                decor,
-                "OrbitalReactorStrut" .. i,
-                Vector3.new(8.5, 0.55, 0.55),
-                center + Vector3.new(
-                    math.cos(angle) * (radius - 4.4),
-                    7,
-                    math.sin(angle) * (radius - 4.4)
-                ),
-                theme.Structure,
-                VisualTheme.Materials.Structure
+            local strutPosition = center + Vector3.new(
+                math.cos(angle) * (radius - 4.4), 7,
+                math.sin(angle) * (radius - 4.4)
             )
-            strut.CFrame = CFrame.new(strut.Position) * CFrame.Angles(0, -angle, 0)
+            local strut = fitDecorMesh(
+                sweptProfile, "OrbitalReactorStrut" .. i,
+                CFrame.new(strutPosition) * CFrame.Angles(0, -angle, 0),
+                Vector3.new(8.5, 0.55, 0.55),
+                theme.Structure, VisualTheme.Materials.Structure
+            )
+            strut.Parent = decor
             strut.Transparency = 0.10
         end
     end
 end
 
-local function addArenaHologram(decor, config, variant, theme)
+local function addArenaHologram(decor, config, variant, theme, sweptProfile)
     local sign = decorPart(
         decor,
         "ArenaIdentityHologram",
@@ -1324,14 +1464,15 @@ local function addArenaHologram(decor, config, variant, theme)
     )
     sign.Transparency = 0.20
 
-    local backGlow = decorPart(
-        decor,
-        "ArenaIdentityGlow",
+    -- The sign stays a native Part so its SurfaceGui remains predictable.
+    -- Only the noninteractive rear glow is eligible for a sculpted mesh.
+    local backGlow = fitDecorMesh(
+        sweptProfile, "ArenaIdentityGlow",
+        CFrame.new(sign.Position + Vector3.new(0, 0, 0.20)),
         Vector3.new(21.2, 7.3, 0.10),
-        sign.Position + Vector3.new(0, 0, 0.20),
-        theme.Accent,
-        VisualTheme.Materials.Glow
+        theme.Accent, VisualTheme.Materials.Glow
     )
+    backGlow.Parent = decor
     backGlow.Transparency = 0.68
 
     local gui = Instance.new("SurfaceGui")
@@ -1380,32 +1521,94 @@ local function addArenaHologram(decor, config, variant, theme)
     hint.Parent = gui
 end
 
-local function addVariantFloorLanguage(decor, config, variant, theme)
-    local center = config.ArenaCenter
+local function floorReliefRegion(name, regionSize)
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates")
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local relief = holder:FindFirstChild(name)
+    if not relief or not relief:IsA("Model")
+        or relief:GetAttribute("OwnerVerified") ~= true
+        or relief:GetAttribute("CosmeticOnly") ~= true
+        or relief:GetAttribute("OriginalFloorRelief3D") ~= true
+        or relief:GetAttribute("Original3DAssetId") ~= PremiumFloorReliefAssets.approvedId(name) then
+        return nil
+    end
+    return meshRegionByBounds(relief, regionSize)
+end
+
+local function towersFloorProfiles()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedVariantTowersLandmarkTemplates")
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local machinery = holder:FindFirstChild("Machinery")
+    if not machinery or not machinery:IsA("Model")
+        or machinery:GetAttribute("OwnerVerified") ~= true
+        or machinery:GetAttribute("CosmeticOnly") ~= true
+        or machinery:GetAttribute("OriginalTowersMachinery3D") ~= true
+        or machinery:GetAttribute("Original3DAssetId") ~= 72143366927826 then
+        return nil
+    end
+    -- The canopy and the twelve-sided core are separate material regions.
+    return meshRegionByBounds(machinery, Vector3.new(7.36, 1.0, 7.36)),
+        meshRegionByBounds(machinery, Vector3.new(5.30, 24, 5.28))
+end
+
+local function addFloorChevron(decor, name, facing, profile, style, color, alpha, wayfinding)
+    for side = -1, 1, 2 do
+        -- Separate the wing surfaces where they meet at the tip.
+        local pose = facing * CFrame.new(side * style.spread, side * 0.003, 0)
+            * CFrame.Angles(0, side * style.angle, 0)
+        local mark = fitDecorMesh(profile, name .. "_" .. tostring(side), pose,
+            style.size, color, VisualTheme.Materials.Glow)
+        mark.Transparency = alpha
+        if wayfinding then mark:SetAttribute("ChaosWayfinding", true) end
+        mark.Parent = decor
+    end
+end
+
+-- Each approved floor relief has a continuous bevelled base in one material region.
+local FLOOR_RELIEF_BASE_REGIONS = {
+    Classic = Vector3.new(8.00, 0.12, 4.34),
+    Towers = Vector3.new(10.22, 0.12, 0.94),
+    Crossroads = Vector3.new(3.50, 0.12, 0.66),
+    Orbital = Vector3.new(5.42, 0.168, 1.08),
+    Harbor = Vector3.new(7.55, 0.12, 2.74),
+}
+
+local function addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile, harborReserve)
+    local center = base.Position
 
     if variant.Id == "Classic" then
-        for i = -2, 2 do
-            if i ~= 0 then
-                local xLine = decorPart(
-                    decor,
-                    "ClassicGridX" .. tostring(i),
-                    Vector3.new(0.16, 0.06, variant.BaseSize.Z - 14),
-                    center + Vector3.new(i * 16, 1.19, 0),
-                    i % 2 == 0 and theme.Secondary or theme.Accent,
-                    VisualTheme.Materials.Glow
-                )
-                xLine.Transparency = 0.54
+        local gridThickness = 0.05
+        local gridY = ArenaPresentation.deckArtOffset(base, gridThickness) + 0.015
+        local xLineSize = Vector3.new(0.16, gridThickness, variant.BaseSize.Z - 14)
+        local zLineSize = Vector3.new(variant.BaseSize.X - 14, gridThickness, 0.16)
+        for _, i in ipairs({-2, -1, 1, 2}) do
+            local color = i % 2 == 0 and theme.Secondary or theme.Accent
+            local xLine = fitDecorMesh(
+                sweptProfile,
+                "ClassicGridX" .. tostring(i),
+                CFrame.new(center + Vector3.new(i * 16, gridY, 0)),
+                xLineSize,
+                color,
+                VisualTheme.Materials.Glow
+            )
+            xLine.Transparency = 0.54
+            xLine.Parent = decor
 
-                local zLine = decorPart(
-                    decor,
-                    "ClassicGridZ" .. tostring(i),
-                    Vector3.new(variant.BaseSize.X - 14, 0.06, 0.16),
-                    center + Vector3.new(0, 1.19, i * 16),
-                    i % 2 == 0 and theme.Secondary or theme.Accent,
-                    VisualTheme.Materials.Glow
-                )
-                zLine.Transparency = 0.54
-            end
+            -- Lift the crossing rail slightly while keeping both axes below sweep warnings.
+            local zLine = fitDecorMesh(
+                sweptProfile,
+                "ClassicGridZ" .. tostring(i),
+                CFrame.new(center + Vector3.new(0, gridY + 0.008, i * 16)),
+                zLineSize,
+                color,
+                VisualTheme.Materials.Glow
+            )
+            zLine.Transparency = 0.54
+            zLine.Parent = decor
         end
 
         -- Four restrained, flush floor chevrons guide new players toward
@@ -1416,6 +1619,7 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0),
             Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
         }
+        local entryStyle = {size = Vector3.new(0.15, 0.05, 1.35), spread = 0.36, angle = math.rad(36)}
         for routeIndex, direction in ipairs(routeDirections) do
             -- Outside the raised tiers, adjacent to each cardinal entry
             -- spawn. The arrow points IN toward the first reachable deck;
@@ -1424,101 +1628,95 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
                 + Vector3.new(0, 1.28, 0)
             local facing = CFrame.lookAt(position,
                 position - direction, Vector3.yAxis)
-            for side = -1, 1, 2 do
-                local marker = decorPart(
-                    decor,
-                    "ClassicEntryChevron" .. routeIndex .. "_" .. tostring(side),
-                    Vector3.new(0.15, 0.05, 1.35),
-                    position,
-                    routeIndex % 2 == 0 and theme.Secondary or theme.Accent,
-                    VisualTheme.Materials.Glow
-                )
-                marker.CFrame = facing
-                    * CFrame.new(side * 0.36, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 36), 0)
-                marker.Transparency = 0.47
-            end
+            addFloorChevron(decor, "ClassicEntryChevron" .. routeIndex, facing, floorProfile,
+                entryStyle, routeIndex % 2 == 0 and theme.Secondary or theme.Accent, 0.47)
         end
     elseif variant.Id == "Towers" then
+        local plateProfile, coreProfile = towersFloorProfiles()
+        local plateSize = Vector3.new(17, 0.08, 17)
+        local coreSize = Vector3.new(5.5, 0.10, 5.5)
+        local plateY = ArenaPresentation.deckArtOffset(base, plateSize.Y) + 0.015
+        -- Keep the translucent core just above the plate to avoid surface overlap.
+        local coreRise = (plateSize.Y + coreSize.Y) * 0.5 + 0.006
         local pads = {
-            Vector3.new(-28, 1.20, -28),
-            Vector3.new(28, 1.20, -28),
-            Vector3.new(-28, 1.20, 28),
-            Vector3.new(28, 1.20, 28),
+            Vector3.new(-28, plateY, -28),
+            Vector3.new(28, plateY, -28),
+            Vector3.new(-28, plateY, 28),
+            Vector3.new(28, plateY, 28),
         }
         for i, offset in ipairs(pads) do
-            local plate = decorPart(
-                decor,
+            local pose = CFrame.new(center + offset)
+            local plate = fitDecorMesh(
+                plateProfile,
                 "TowerGroundPlate" .. i,
-                Vector3.new(17, 0.08, 17),
-                center + offset,
+                pose,
+                plateSize,
                 theme.Surface:Lerp(
                     i % 2 == 0 and theme.Secondary or theme.Accent, 0.24
                 ),
                 theme.PanelMaterial or Enum.Material.Metal
             )
             plate.Transparency = 0.34
+            plate.Parent = decor
 
-            local core = decorPart(
-                decor,
+            local core = fitDecorMesh(
+                coreProfile,
                 "TowerGroundCore" .. i,
-                Vector3.new(5.5, 0.10, 5.5),
-                center + offset + Vector3.new(0, 0.03, 0),
+                pose * CFrame.new(0, coreRise, 0),
+                coreSize,
                 theme.Accent,
                 VisualTheme.Materials.Glow
             )
             core.Transparency = 0.74
+            core.Parent = decor
         end
 
-        -- Eight small floor-inlaid chevrons at four genuine tower ascent
-        -- approaches, not false arrows beneath elevated collision decks.
-        -- Two restrained cyan wings per route are visible to first-time
-        -- players arriving at the original corner and cardinal spawns.
+        -- Four floor chevrons guide the approach to the first tower decks.
         local approaches = {
             {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
         }
+        local ascentStyle = {size = Vector3.new(0.14, 0.055, 1.25), spread = 0.37, angle = math.rad(34)}
         for index, signs in ipairs(approaches) do
             local x, z = signs[1], signs[2]
             local origin = center + Vector3.new(x * 10, 1.22, z * 23)
             local firstDeck = center + Vector3.new(x * 6, 1.22, z * 14)
             local facing = CFrame.lookAt(origin, firstDeck, Vector3.yAxis)
-            for side = -1, 1, 2 do
-                local arrow = decorPart(
-                    decor,
-                    "TowerAscentChevron" .. index .. "_" .. tostring(side),
-                    Vector3.new(0.14, 0.055, 1.25),
-                    origin,
-                    index % 2 == 0 and theme.Accent or theme.Secondary,
-                    VisualTheme.Materials.Glow
-                )
-                arrow.CFrame = facing
-                    * CFrame.new(side * 0.37, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 34), 0)
-                arrow.Transparency = 0.47
-            end
+            addFloorChevron(decor, "TowerAscentChevron" .. index, facing, floorProfile,
+                ascentStyle, index % 2 == 0 and theme.Accent or theme.Secondary, 0.47)
         end
     elseif variant.Id == "Crossroads" then
+        local laneWidth, laneThickness = 13, 0.08
+        local hubWidth, hubThickness = 22, 0.10
+        -- Keep the far ends at 53 studs and tuck the other ends under the hub.
+        local inner, outer = hubWidth * 0.5 - 0.25, 53
+        local laneLength, laneCenter = outer - inner, (outer + inner) * 0.5
+        local laneY = ArenaPresentation.deckArtOffset(base, laneThickness) + 0.015
+        local northSouth = Vector3.new(laneWidth, laneThickness, laneLength)
+        local eastWest = Vector3.new(laneLength, laneThickness, laneWidth)
         local laneDefs = {
-            {size = Vector3.new(13, 0.08, 56), offset = Vector3.new(0, 1.20, -25)},
-            {size = Vector3.new(13, 0.08, 56), offset = Vector3.new(0, 1.20, 25)},
-            {size = Vector3.new(56, 0.08, 13), offset = Vector3.new(-25, 1.20, 0)},
-            {size = Vector3.new(56, 0.08, 13), offset = Vector3.new(25, 1.20, 0)},
+            {size = northSouth, offset = Vector3.new(0, laneY, -laneCenter)},
+            {size = northSouth, offset = Vector3.new(0, laneY, laneCenter)},
+            {size = eastWest, offset = Vector3.new(-laneCenter, laneY, 0)},
+            {size = eastWest, offset = Vector3.new(laneCenter, laneY, 0)},
         }
         for i, def in ipairs(laneDefs) do
-            local lane = decorPart(
-                decor,
+            local lane = fitDecorMesh(
+                floorProfile,
                 "CrossroadLaneFill" .. i,
+                CFrame.new(center + def.offset),
                 def.size,
-                center + def.offset,
                 theme.Surface:Lerp(theme.Detail, 0.36),
                 theme.PanelMaterial or Enum.Material.Metal
             )
             lane.Transparency = 0.38
+            lane.Parent = decor
         end
 
         -- Flux Relay navigation is physically readable from the floor.
-        -- Inlaid cyan chevrons teach the return-to-hub loop rather than
-        -- forcing the player to decode a HUD paragraph during a disaster.
+        -- Keep the chevrons above the lanes and close the gap at their tips.
+        local relayStyle = {size = Vector3.new(0.13, 0.05, 0.95), spread = 0.28, angle = math.rad(34)}
+        local relayY = laneY + (laneThickness + relayStyle.size.Y) * 0.5 + 0.008
+        local relayCenter = center + Vector3.new(0, relayY, 0)
         for laneIndex = 1, 4 do
             local direction = laneIndex == 1 and Vector3.new(1, 0, 0)
                 or (laneIndex == 2 and Vector3.new(0, 0, 1)
@@ -1526,41 +1724,30 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
                         or Vector3.new(0, 0, -1)))
             for stepIndex = 1, 3 do
                 local distance = 23 + stepIndex * 3.15
-                local position = center + direction * distance
-                    + Vector3.new(0, 1.29, 0)
-                local facing = CFrame.lookAt(position,
-                    center + Vector3.new(0, 1.29, 0))
-                for side = -1, 1, 2 do
-                    local mark = decorPart(
-                        decor,
-                        "FluxRouteChevron" .. laneIndex .. "_" ..
-                            stepIndex .. "_" .. tostring(side),
-                        Vector3.new(0.13, 0.05, 0.95),
-                        position,
-                        stepIndex == 3 and theme.Accent or theme.Secondary,
-                        VisualTheme.Materials.Glow
-                    )
-                    mark.CFrame = facing * CFrame.new(side * 0.38, 0, 0)
-                        * CFrame.Angles(0, math.rad(side * 34), 0)
-                    mark.Transparency = 0.36 + (3 - stepIndex) * 0.06
-                    mark.CastShadow = false
-                end
+                local position = relayCenter + direction * distance
+                local facing = CFrame.lookAt(position, relayCenter)
+                addFloorChevron(decor, "FluxRouteChevron" .. laneIndex .. "_" .. stepIndex,
+                    facing, floorProfile, relayStyle, stepIndex == 3 and theme.Accent or theme.Secondary,
+                    0.36 + (3 - stepIndex) * 0.06)
             end
         end
 
-        local hub = decorPart(
-            decor,
+        local hubY = ArenaPresentation.deckArtOffset(base, hubThickness) + 0.02
+        local hub = fitDecorMesh(
+            floorReliefRegion("AnchorBolt", Vector3.new(4.05, 0.60, 4.05)),
             "CrossroadHubMark",
-            Vector3.new(22, 0.10, 22),
-            center + Vector3.new(0, 1.22, 0),
+            CFrame.new(center + Vector3.new(0, hubY, 0)),
+            Vector3.new(hubWidth, hubThickness, hubWidth),
             theme.Detail:Lerp(theme.Secondary, 0.24),
             theme.PanelMaterial or Enum.Material.Metal
         )
         hub.Transparency = 0.32
+        hub.Parent = decor
     elseif variant.Id == "Harbor" then
         -- Two tiers of flush quay markings break up the large industrial
         -- ground without adding false cover, fake water or collider parts.
         -- Blue/seafoam is deliberate; the hazard palette owns amber/red.
+        local quayProfile = floorProfile or sweptProfile or harborReserve
         local lanes = {
             {x = -89, z = -23, alongX = false},
             {x = -89, z = 23, alongX = false},
@@ -1571,93 +1758,401 @@ local function addVariantFloorLanguage(decor, config, variant, theme)
             {x = -23, z = 89, alongX = true},
             {x = 23, z = 89, alongX = true},
         }
+        local thickness = 0.055
+        local quayY = ArenaPresentation.deckArtOffset(base, thickness) + 0.02
         for index, lane in ipairs(lanes) do
-            local line = decorPart(
-                decor, "HarborQuayInlay" .. index,
-                lane.alongX and Vector3.new(52, 0.055, 0.45)
-                    or Vector3.new(0.45, 0.055, 52),
-                center + Vector3.new(lane.x, 1.20, lane.z),
+            local size = lane.alongX and Vector3.new(52, thickness, 0.45)
+                or Vector3.new(0.45, thickness, 52)
+            local line = fitDecorMesh(
+                quayProfile, "HarborQuayInlay" .. index,
+                CFrame.new(center + Vector3.new(lane.x, quayY, lane.z)),
+                size,
                 index % 2 == 0 and theme.Accent or theme.Secondary,
                 theme.PanelMaterial
             )
             line.Transparency = 0.38
-            line.CastShadow = false
+            line.Parent = decor
+        end
+
+        local entryStyle = {size = Vector3.new(0.16, 0.055, 1.35),
+            spread = 0.38, angle = math.rad(35)}
+        local entryY = ArenaPresentation.deckArtOffset(base, entryStyle.size.Y) + 0.02
+        for family, decks in ipairs({variant.Platforms, variant.SpokePlatforms or {}}) do
+            for index, first in ipairs(decks) do
+                local step = first.HarborStep or first.HarborSpokeStep
+                local second = decks[index + 1]
+                if step ~= 1 or not second then continue end
+                local route = first.HarborRoute or first.HarborSpokeRoute
+                if (second.HarborRoute or second.HarborSpokeRoute) ~= route
+                    or (second.HarborStep or second.HarborSpokeStep) ~= 2 then continue end
+                local delta = second.offset - first.offset
+                local forward = Vector3.new(delta.X, 0, delta.Z).Unit
+                local halfSpan = (math.abs(forward.X) * first.size.X + math.abs(forward.Z) * first.size.Z) * 0.5
+                -- Fit on the ground before the first real deck, facing the next landing.
+                local position = center + Vector3.new(first.offset.X, entryY, first.offset.Z)
+                    - forward * (halfSpan + 2.7)
+                local facing = CFrame.lookAt(position, position + forward, Vector3.yAxis)
+                addFloorChevron(decor, "HarborAccessChevron" .. family .. "_" .. route, facing,
+                    quayProfile, entryStyle, theme.Accent, 0.47, true)
+            end
         end
     elseif variant.Id == "Orbital" then
+        local hubDiameter = 14
+        local outerRadius = 25
+        -- End under the outer edge of the ring, leaving its opening clear.
+        local innerRadius = hubDiameter * 0.5 - 0.2
+        local spokeSize = Vector3.new(outerRadius - innerRadius, 0.07, 0.20)
+        local spokeCenter = (innerRadius + outerRadius) * 0.5
+        -- The raised ground modules finish above the inset deck.
+        local spokeY = ArenaPresentation.deckArtOffset(base, spokeSize.Y) + 0.02
         for i = 0, 7 do
             local angle = math.rad(i * 45)
-            local radius = 25
             local position = center + Vector3.new(
-                math.cos(angle) * radius * 0.5,
-                1.20,
-                math.sin(angle) * radius * 0.5
+                math.cos(angle) * spokeCenter,
+                spokeY,
+                math.sin(angle) * spokeCenter
             )
-            local spoke = decorPart(
-                decor,
+            local spoke = fitDecorMesh(
+                sweptProfile or floorProfile,
                 "OrbitalSpoke" .. tostring(i + 1),
-                Vector3.new(radius, 0.07, 0.20),
-                position,
+                CFrame.new(position) * CFrame.Angles(0, -angle, 0),
+                spokeSize,
                 i % 2 == 0 and theme.Accent or theme.Secondary,
                 VisualTheme.Materials.Glow
             )
-            spoke.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
             spoke.Transparency = 0.52
+            spoke.Parent = decor
         end
 
-        local coreMark = decorPart(
-            decor,
+        local accessStyle = {size = Vector3.new(0.16, 0.055, 1.35),
+            spread = 0.38, angle = math.rad(35)}
+        local accessY = ArenaPresentation.deckArtOffset(base, accessStyle.size.Y) + 0.02
+        for index = 1, OrbitalHelix.Count do
+            local route = OrbitalHelix.accessRoute(variant, center, index, "Entry")
+            if route then
+                local start = Vector3.new(route.Start.X, center.Y + accessY, route.Start.Z)
+                local forward = Vector3.new(route.Finish.X - route.Start.X, 0,
+                    route.Finish.Z - route.Start.Z).Unit
+                -- Leave enough gap for the foot of the inclined collider
+                -- to clear the two wings even at minimum arena size.
+                local position = start - forward * 2.5
+                local facing = CFrame.lookAt(position, position + forward, Vector3.yAxis)
+                addFloorChevron(decor, "OrbitalAccessChevron" .. index, facing, floorProfile or sweptProfile,
+                    accessStyle, index % 2 == 1 and theme.Accent or theme.Secondary, 0.47, true)
+            end
+        end
+
+        local markSize = Vector3.new(hubDiameter, 0.10, hubDiameter)
+        local markY = ArenaPresentation.deckArtOffset(base, markSize.Y) + 0.02
+        local markPose = CFrame.new(center + Vector3.new(0, markY, 0))
+        local coreMark = fitDecorMesh(
+            orbitalReactorNodeRegion(Vector3.new(4.11, 0.39, 4.11)),
             "OrbitalCoreMark",
-            Vector3.new(14, 0.10, 14),
-            center + Vector3.new(0, 1.21, 0),
+            markPose,
+            markSize,
             theme.Detail:Lerp(theme.Accent, 0.28),
             theme.PanelMaterial or Enum.Material.Metal
         )
-        coreMark.Shape = Enum.PartType.Cylinder
-        coreMark.CFrame = CFrame.new(coreMark.Position) * CFrame.Angles(0, 0, math.rad(90))
+        if coreMark:IsA("Part") then
+            coreMark.Shape = Enum.PartType.Cylinder
+            coreMark.Size = Vector3.new(markSize.Y, markSize.X, markSize.Z)
+            coreMark.CFrame = markPose * CFrame.Angles(0, 0, math.pi * 0.5)
+        end
         coreMark.Transparency = 0.34
+        coreMark.Parent = decor
     end
 
+    local panelSize = Vector3.new(15, 0.05, 9)
+    -- Clear the sculpted client ground tiles as well as the native finish.
+    local panelY = ArenaPresentation.deckArtOffset(base, panelSize.Y) + 0.03
     local panelOffsetX = math.max(18, (variant.BaseSize.X * 0.5) - 17)
     local panelOffsetZ = math.max(18, (variant.BaseSize.Z * 0.5) - 17)
     local panelRotation = variant.Id == "Orbital" and 45
         or (variant.Id == "Crossroads" and 0 or 8)
     local panelOffsets = {
-        Vector3.new(-panelOffsetX, 1.17, -panelOffsetZ),
-        Vector3.new(panelOffsetX, 1.17, -panelOffsetZ),
-        Vector3.new(-panelOffsetX, 1.17, panelOffsetZ),
-        Vector3.new(panelOffsetX, 1.17, panelOffsetZ),
+        Vector3.new(-panelOffsetX, panelY, -panelOffsetZ),
+        Vector3.new(panelOffsetX, panelY, -panelOffsetZ),
+        Vector3.new(-panelOffsetX, panelY, panelOffsetZ),
+        Vector3.new(panelOffsetX, panelY, panelOffsetZ),
     }
     for i, offset in ipairs(panelOffsets) do
-        local maintenance = decorPart(
-            decor,
+        local pose = CFrame.new(center + offset)
+            * CFrame.Angles(0, math.rad((i % 2 == 0 and -1 or 1) * panelRotation), 0)
+        local maintenance = fitDecorMesh(
+            floorProfile or harborReserve,
             "FloorMaintenancePanel" .. i,
-            Vector3.new(15, 0.045, 9),
-            center + offset,
+            pose,
+            panelSize,
             theme.Surface:Lerp(theme.Structure, 0.38),
             theme.PanelMaterial or VisualTheme.Materials.Panel
         )
-        maintenance.CFrame = CFrame.new(maintenance.Position)
-            * CFrame.Angles(0, math.rad((i % 2 == 0 and -1 or 1) * panelRotation), 0)
         maintenance.Transparency = 0.32
-        maintenance.CanCollide = false
-        maintenance.CanTouch = false
-        maintenance.CanQuery = false
+        maintenance.Parent = decor
     end
 end
 
-local function addPlatformFinish(decor, platform, index, theme)
-    local topPanel = decorPart(
-        decor,
+local function accessChassisSource()
+    local templates = ReplicatedStorage:FindFirstChild("ApprovedRemainingStructureTemplates")
+    if not templates or templates:GetAttribute("OwnerVerified") ~= true then return nil end
+    local chassis = templates:FindFirstChild("AccessChassis")
+    if not chassis or not chassis:IsA("Model")
+        or chassis:GetAttribute("OwnerVerified") ~= true
+        or chassis:GetAttribute("CosmeticOnly") ~= true
+        or chassis:GetAttribute("P4OriginalRemainingStructure3D") ~= true
+        or chassis:GetAttribute("Original3DAssetId") ~= 106401955318567 then return nil end
+    return chassis
+end
+
+local function approvedMeshRegion(model, name)
+    local mesh = model and model:FindFirstChild(name)
+    return mesh and mesh:IsA("MeshPart") and mesh.Archivable and mesh or nil
+end
+
+local function wayfinderBaseSource()
+    local holder = ReplicatedStorage:FindFirstChild("ApprovedPerimeterArmorTemplates")
+    if not holder or not holder:IsA("Folder") or holder:GetAttribute("OwnerVerified") ~= true then
+        return nil
+    end
+    local model = holder:FindFirstChild("Cap")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified") ~= true
+        or model:GetAttribute("CosmeticOnly") ~= true
+        or model:GetAttribute("OriginalPerimeterArmor3D") ~= true
+        or model:GetAttribute("Original3DAssetId") ~= 88962643359267 then return nil end
+    return approvedMeshRegion(model, "WayfinderBase")
+end
+
+local BRANCH_CHEVRON = {
+    size = Vector3.new(0.25, 0.065, 2.0), spread = 0.48, angle = math.rad(34), alpha = 0.44,
+}
+local FORK_CHEVRON = {
+    size = Vector3.new(0.33, 0.065, 2.4), spread = 0.55, angle = math.rad(36), alpha = 0.32,
+}
+
+local PERIMETER_STEP_CHEVRON = {
+    size = Vector3.new(0.26, 0.07, 1.80), spread = 0.42, angle = math.rad(35), alpha = 0.43,
+}
+local PROMENADE_CHEVRON = {
+    size = Vector3.new(0.30, 0.08, 2.55), spread = 0.62, angle = math.rad(35), alpha = 0.34,
+}
+local SPINE_TURN_CHEVRON = {
+    size = Vector3.new(0.35, 0.08, 2.55), spread = 0.62, angle = math.rad(35), alpha = 0.24,
+}
+
+local function addRouteChevron(decor, name, deck, index, forward, color, style, profile, offset, targetIndex)
+    -- Clear the landing panel and keep the marker tied to the physical deck.
+    local point = deck.Position + Vector3.new(0, deck.Size.Y * 0.5 + 0.155, 0)
+        + (offset or Vector3.zero)
+    local look = CFrame.lookAt(point, point + forward)
+    if targetIndex then deck:SetAttribute("PerimeterGuidePainted", true) end
+    for side = -1, 1, 2 do
+        local arrowName = name .. "_" .. tostring(side)
+        local pose = look * CFrame.new(side * style.spread, 0, 0)
+            * CFrame.Angles(0, side * style.angle, 0)
+        local mark = fitDecorMesh(profile, arrowName, pose, style.size, color, VisualTheme.Materials.Glow)
+        mark.Transparency = style.alpha
+        mark:SetAttribute("PerimeterPlatformIndex", index)
+        mark:SetAttribute("ChaosWayfinding", true)
+        if targetIndex then
+            mark:SetAttribute("PerimeterGuideTarget", targetIndex)
+            CollectionService:AddTag(mark, "ChaosPerimeterGuide")
+        end
+        mark.Parent = decor
+    end
+end
+
+local function addSpineExitChevrons(decor, spine, promenade, color, profile)
+    local along = spine.CFrame.LookVector
+    local approachCenter = (promenade.Position - spine.Position):Dot(along)
+    local approachHalf = (math.abs(promenade.CFrame.RightVector:Dot(along)) * promenade.Size.X
+        + math.abs(promenade.CFrame.LookVector:Dot(along)) * promenade.Size.Z) * 0.5
+    local halfSpan = spine.Size.Z * 0.5
+    local near = math.max(-halfSpan, approachCenter - approachHalf)
+    local far = math.min(halfSpan, approachCenter + approachHalf)
+    local style = SPINE_TURN_CHEVRON
+    local sine, cosine = math.sin(style.angle), math.cos(style.angle)
+    local clearance = style.spread + (sine * style.size.Z + cosine * style.size.X) * 0.5
+    -- Keep both arrows inside the shared approach, even if there is only
+    -- a sliver of real overlap at an otherwise valid intersection.
+    if far - near < clearance * 2 then return end
+
+    local center = along * ((near + far) * 0.5)
+    local across = spine.CFrame.RightVector
+    local spacing = spine.Size.X * 0.25
+    local halfWidth = spacing + (cosine * style.size.Z + sine * style.size.X) * 0.5
+    if halfWidth > spine.Size.X * 0.5 then return end
+    local relativeCenter = spine.Position + center - promenade.Position
+    for _, axis in ipairs({promenade.CFrame.RightVector, promenade.CFrame.LookVector}) do
+        local halfDeck = (math.abs(axis:Dot(promenade.CFrame.RightVector)) * promenade.Size.X
+            + math.abs(axis:Dot(promenade.CFrame.LookVector)) * promenade.Size.Z) * 0.5
+        local reach = math.abs(axis:Dot(relativeCenter)) + math.abs(axis:Dot(across)) * halfWidth
+            + math.abs(axis:Dot(along)) * clearance
+        if reach > halfDeck then return end
+    end
+
+    local index = tonumber(spine.Name:match("^Platform(%d+)$"))
+    local prefix = "SkySpine" .. index .. "_PromenadeChevron"
+    local targetIndex = tonumber(promenade.Name:match("^Platform(%d+)$"))
+    for direction = -1, 1, 2 do
+        local forward = across * direction
+        local offset = center + forward * spacing
+        addRouteChevron(decor, prefix .. direction, spine, index, forward, color, style, profile, offset, targetIndex)
+    end
+end
+
+local function harborLandingAlongX(definition)
+    if definition.HarborSkywayLane then return true end
+    if definition.HarborSpokeRoute then return definition.HarborSpokeRoute % 2 == 0 end
+    if definition.HarborRoute then
+        -- Each freight switchback alternates X and Z after the first landing.
+        return definition.HarborStep % 2 == 1
+    end
+    return nil
+end
+
+local function addPlatformGlow(decor, platform, index, theme, routeTier, edgeBand, edgeOverhang, routeAlongX,
+    hubRing)
+    local name = "PlatformGlow" .. index
+    local color = (index % 2 == 0) and theme.Secondary or theme.Accent
+    local transparency = 0.64
+    if routeTier then
+        color = routeTier == 1 and theme.Accent
+            or (routeTier == 2 and theme.Accent:Lerp(theme.Secondary, 0.30)
+                or (routeTier == 3 and theme.Secondary
+                    or theme.Secondary:Lerp(theme.Accent, 0.55)))
+        transparency = 0.72 - routeTier * 0.04
+    end
+
+    local size = platform.Size
+    if hubRing then
+        -- The torus emerges above the panel at .105 studs while staying
+        -- below the local surface markings that start at .117 studs.
+        local diameter = math.min(size.X, size.Z) * 0.72
+        local inlayPose = platform.CFrame * CFrame.new(0, size.Y * 0.5 + 0.091, 0)
+        local inlay = RouteSignalGeometry.fit(hubRing.part, inlayPose, Vector3.new(diameter, 0.05, diameter))
+        if inlay then
+            inlay.Name = name
+            inlay.Color = theme.Detail:Lerp(theme.Secondary, 0.20)
+            inlay.Material = Enum.Material.Metal
+            inlay.Transparency = 0.28
+            inlay:SetAttribute("Original3DAssetId", hubRing.assetId)
+            inlay.Parent = decor
+            return
+        end
+    end
+
+    local alongX = if routeAlongX ~= nil then routeAlongX else size.X > size.Z
+    local atRim = platform:GetAttribute("PerimeterStep") ~= nil
+        or platform:GetAttribute("BranchStep") ~= nil
+        or platform:GetAttribute("CrosslinkRoute") ~= nil
+    -- The grounded riser reaches the arena floor. Place the band below
+    -- the sculpted fascia near the landing surface, rather than at its foot.
+    local height = if atRim then size.Y * 0.5 - 1.02 else -size.Y * 0.5 - 0.47
+    local rimSize = Vector3.new(
+        size.X + (alongX and 0.28 or edgeOverhang),
+        0.14,
+        size.Z + (alongX and edgeOverhang or 0.28)
+    )
+    local rimPose = platform.CFrame * CFrame.new(0, height, 0)
+    local glow = RouteSignalGeometry.fit(edgeBand, rimPose, rimSize, nil, alongX)
+    if not glow then
+        -- Match the approved mesh footprint and position exactly so missing
+        -- assets never cause a shifted or differently sized route cue.
+        glow = decorPart(nil, name, rimSize, rimPose.Position,
+            color, VisualTheme.Materials.Glow)
+        glow.CFrame = rimPose
+    end
+    glow.Name = name
+    glow.Material = VisualTheme.Materials.Glow
+    glow.Color = color
+    glow.Transparency = transparency
+    glow.Parent = decor
+end
+
+local function fitForgedPlatformBevel(profile, pose, size)
+    local bevel = RouteSignalGeometry.fit(profile, pose, size, nil, true)
+    if bevel then
+        bevel:SetAttribute("OriginalPlatformBevel3D", true)
+        bevel:SetAttribute("OriginalElevatedForgedBevel3D", true)
+        bevel:SetAttribute("Original3DAssetId", 126298311664881)
+    end
+    return bevel
+end
+
+local function fitHarborJunctions(decor, platforms, profile)
+    if not profile or profile.MeshId == "" then return end
+    local decks = platforms:GetChildren()
+    local function replaceFacingBevel(deck, side)
+        local index = deck.Name:match("^Platform(%d+)$")
+        local native = index and decor:FindFirstChild("PlatformBevel" .. index .. "_" .. (side > 0 and 4 or 3))
+        if not PlatformIdentityLodRules.isAuthoredPlatformBevel(native) then return end
+
+        -- Unwind any import-axis swap on the original Harbor roller.
+        local yaw = side > 0 and -math.pi * 0.5 or math.pi * 0.5
+        local pose = CFrame.new(native.Position) * deck.CFrame.Rotation * CFrame.Angles(0, yaw, 0)
+        local size = native.Size
+        if math.abs(native.CFrame.RightVector:Dot(pose.RightVector)) < 0.5 then
+            size = Vector3.new(size.Z, size.Y, size.X)
+        end
+        local bevel = fitForgedPlatformBevel(profile, pose, size)
+        if not bevel then return end
+        bevel.Name = native.Name
+        bevel.Color = native.Color
+        bevel.Material = native.Material
+        bevel.Transparency = native.Transparency
+        bevel:SetAttribute("OriginalStructuralBevel", true)
+        native:Destroy()
+        bevel.Parent = decor
+    end
+
+    for _, summit in ipairs(decks) do
+        if summit:GetAttribute("HarborStep") ~= 7 then continue end
+        local crossing = JumpRouteCueRules.nextSkyway(summit, decks)
+        if crossing then
+            local delta = crossing.Position - summit.Position
+            if math.abs(delta.X) > 0 and math.abs(delta.Z) < 0.12 then
+                local side = math.sign(delta.X)
+                replaceFacingBevel(summit, side)
+                replaceFacingBevel(crossing, -side)
+            end
+        end
+    end
+end
+
+local function markHarborReserve(mesh, profile)
+    mesh:SetAttribute("OriginalHarborLandingTrimReserve3D", true)
+    mesh:SetAttribute("Original3DAssetId", profile.assetId)
+end
+
+local function addPlatformFinish(decor, platform, index, theme, panelProfile, underdeckSignal, lattice,
+    frameFallback, bevelProfile, harborAlongX, elevatedTrim, harborRouteBeam, bevelFallback, harborTrimReserve)
+    -- The caisson's sealed cassette provides a continuous landing face.
+    -- The open forged beam is suitable only for the trim below it.
+    local panelReserve = not panelProfile and harborTrimReserve
+        and harborTrimReserve.assetId == HorizonMonumentGeometry.harborCaissonAssetId()
+        and harborTrimReserve
+    local panelSource = panelProfile or (panelReserve and panelReserve.part)
+    -- Keep the panel's authored size and axes for route-mask and shrink checks.
+    local panelAlongX = panelSource and panelSource.Size.X > panelSource.Size.Z
+    local topPanel = fitDecorMesh(
+        panelSource,
         "PlatformPanel" .. index,
+        platform.CFrame * CFrame.new(0, platform.Size.Y * 0.5 + 0.055, 0),
         Vector3.new(
             math.max(1, platform.Size.X - 0.8),
             0.10,
             math.max(1, platform.Size.Z - 0.8)
         ),
-        platform.Position + Vector3.new(0, (platform.Size.Y * 0.5) + 0.055, 0),
         theme.Surface:Lerp(theme.Detail, 0.48),
-        theme.PanelMaterial or VisualTheme.Materials.Panel
+        theme.PanelMaterial or VisualTheme.Materials.Panel,
+        panelAlongX
     )
+    if topPanel:IsA("MeshPart") then
+        topPanel:SetAttribute("OriginalPlatformPanel3D", true)
+        if panelReserve then
+            topPanel:SetAttribute("Original3DAssetId", panelReserve.assetId)
+        end
+    end
     -- Neutral midtone landings remain visible without light emitters;
     -- progression changes tint, while hazards still own bright warning hues.
     -- Quiet, durable walking inset: hazards keep visual priority and the
@@ -1689,6 +2184,7 @@ local function addPlatformFinish(decor, platform, index, theme)
     -- third finish. All stay part-owned, hazard-neutral and zero-cost in
     -- geometry or additional lights.
     local promenadeLane = tonumber(platform:GetAttribute("PromenadeLane"))
+    local promenadeStep = platform:GetAttribute("PromenadeStep")
     local skySpineStep = tonumber(platform:GetAttribute("SkySpineStep"))
     local perimeterStep = tonumber(platform:GetAttribute("PerimeterStep"))
     if promenadeLane == 1 or promenadeLane == 2 then
@@ -1703,6 +2199,7 @@ local function addPlatformFinish(decor, platform, index, theme)
             perimeterStep == 8 and 0.13 or 0.06
         )
     end
+    topPanel.Parent = decor
 
     -- Four separate, shallow edge chamfers give the deck a deliberate
     -- machined silhouette instead of the default square Roblox slab.
@@ -1729,22 +2226,69 @@ local function addPlatformFinish(decor, platform, index, theme)
         {Vector3.new(bevelDepth, 0.30, platform.Size.Z + 0.12),
             Vector3.new(halfX + bevelDepth * 0.27, bevelY, 0)},
     }
+    local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
+    local useBridgeBevel = bevelProfile and bevelProfile.Name == "SweptCrossbeam"
+    local routeBeam = harborRouteBeam and harborRouteBeam.MeshId ~= "" and harborRouteBeam
+    local skyway = platform:GetAttribute("HarborSkywayLane") ~= nil
+    local skywayInterior = PlatformIdentityLodRules.isHarborSkywayInterior(platform)
+    local upperPier = PlatformIdentityLodRules.isHarborUpperPier(platform)
+    local bevelAlongX = bevelProfile and bevelProfile.Size.X > bevelProfile.Size.Z
     for edgeIndex, spec in ipairs(edgeSpecs) do
-        -- All four previously rectangular strips now have a genuine
-        -- *sloped* bevel silhouette. Use the same four Parts, sizes,
-        -- exact names and real deck owner, so collapse/shrink tracking
-        -- still follows the actual playable platform with zero extra
-        -- geometry, lights or physics load even on Low-tier Android.
-        local bevel = Instance.new("WedgePart")
-        bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex
-        bevel.Size = edgeIndex <= 2 and spec[1]
-            or Vector3.new(spec[1].Z, spec[1].Y, spec[1].X)
+        local size = spec[1]
+        if edgeIndex > 2 then size = Vector3.new(size.Z, size.Y, size.X) end
         local where = Vector3.new(
             platform.Position.X, 0, platform.Position.Z) + spec[2]
-        local facings = {0, math.pi, math.pi * 0.5, -math.pi * 0.5}
-        local direction = facings[edgeIndex]
-        bevel.CFrame = CFrame.new(where)
-            * CFrame.Angles(0, direction, 0)
+        local yaw = facings[edgeIndex]
+        local pose = CFrame.new(where) * CFrame.Angles(0, yaw, 0)
+        local bevel
+        -- Long edges are X-aligned on a Promenade and Z-aligned on the Spine.
+        local longEdge = if skySpineStep then edgeIndex > 2 else edgeIndex <= 2
+        -- The upper pier's transverse faces frame the approach on either axis.
+        local pierFace = upperPier and (harborAlongX == (edgeIndex > 2))
+        local forgedProfile = (elevatedTrim and longEdge and elevatedTrim.beam)
+            or (((skyway and edgeIndex <= 2) or skywayInterior or pierFace) and routeBeam)
+        if forgedProfile then
+            bevel = fitForgedPlatformBevel(forgedProfile, pose, size)
+        end
+        local bridgeBevel = not bevel and useBridgeBevel and bevelProfile:Clone()
+        if bridgeBevel then
+            bevel = bridgeBevel
+            -- Keep the footprint of the native wedge. The swept face
+            -- extends downwards to show its facets below the deck lip.
+            bevel.Size = bevelAlongX and Vector3.new(size.X, .44, size.Z)
+                or Vector3.new(size.Z, .44, size.X)
+            bevel.CFrame = CFrame.new(where - Vector3.new(0, .08, 0))
+                * CFrame.Angles(0, yaw + (bevelAlongX and 0 or math.pi * .5), 0)
+        elseif not bevel and not useBridgeBevel then
+            -- Preserve the exact fallback axes and dimensions for the local rim owners.
+            local source = bevelProfile or bevelFallback
+            -- A closed floor casting follows the existing wedge axes so
+            -- the full rim owner can still authenticate either shape.
+            local alongX = bevelProfile ~= nil or (source and source.Size.X > source.Size.Z)
+            bevel = RouteSignalGeometry.fit(source, pose, size, nil, alongX)
+            if bevel then
+                bevel:SetAttribute("OriginalPlatformBevel3D", true)
+                if harborAlongX ~= nil and bevelProfile then
+                    bevel:SetAttribute("Original3DAssetId", 94830155055482)
+                end
+            end
+            if not bevel and harborTrimReserve then
+                bevel = RouteSignalGeometry.fit(harborTrimReserve.part, pose, size, nil, true)
+                if bevel then
+                    bevel:SetAttribute("OriginalPlatformBevel3D", true)
+                    markHarborReserve(bevel, harborTrimReserve)
+                end
+            end
+        end
+        if not bevel then
+            local wedge = Instance.new("WedgePart")
+            wedge.Size = size
+            wedge.CFrame = pose
+            wedge.TopSurface = Enum.SurfaceType.Smooth
+            wedge.BottomSurface = Enum.SurfaceType.Smooth
+            bevel = wedge
+        end
+        bevel.Name = "PlatformBevel" .. index .. "_" .. edgeIndex
         bevel.Color = edgeColor
         bevel.Material = theme.StructureMaterial or edgeMaterial
         bevel.Transparency = 0.08
@@ -1753,41 +2297,110 @@ local function addPlatformFinish(decor, platform, index, theme)
         bevel.CanTouch = false
         bevel.CanQuery = false
         bevel.CastShadow = false
-        bevel.TopSurface = Enum.SurfaceType.Smooth
-        bevel.BottomSurface = Enum.SurfaceType.Smooth
         bevel:SetAttribute("OriginalStructuralBevel", true)
         bevel.Parent = decor
     end
 
-    local underFrame = decorPart(
-        decor,
-        "PlatformUnderFrame" .. index,
-        Vector3.new(platform.Size.X + 0.5, 0.42, platform.Size.Z + 0.5),
-        platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.18, 0),
-        theme.Structure:Lerp(VisualTheme.World.Deep, 0.30),
-        VisualTheme.Materials.Structure
-    )
+    local frameName = "PlatformUnderFrame" .. index
+    local frameColor = theme.Structure:Lerp(VisualTheme.World.Deep, 0.30)
+    local size = platform.Size
+    local frameSize = Vector3.new(size.X + 0.5, 0.42, size.Z + 0.5)
+    local framePose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.18, 0)
+    local underFrame
+    -- Portal spans already have a separate truss below this frame.
+    if elevatedTrim and not PromenadeArchitecture.portalHeight(promenadeStep) then
+        underFrame = RouteSignalGeometry.fit(elevatedTrim.lattice, framePose, frameSize, nil, not skySpineStep)
+        if underFrame then
+            underFrame:SetAttribute("OriginalElevatedLatticeFrame3D", true)
+            underFrame:SetAttribute("Original3DAssetId", 106401955318567)
+        end
+    end
+    local deckLattice = not underFrame and lattice and lattice:Clone()
+    if deckLattice then
+        underFrame = deckLattice
+        if harborAlongX == nil then
+            local meshAlongX = underFrame.Size.X > underFrame.Size.Z
+            local deckAlongX = size.X > size.Z
+            local length = math.max(size.X, size.Z) * 0.98
+            local width = math.min(size.X, size.Z) * 0.93
+            frameSize = meshAlongX and Vector3.new(length, 0.56, width)
+                or Vector3.new(width, 0.56, length)
+            framePose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.27, 0)
+                * CFrame.Angles(0, meshAlongX ~= deckAlongX and math.pi * 0.5 or 0, 0)
+        end
+        -- Harbor retains the original frame envelope so a fully loaded
+        -- sculpted caisson can claim the same structural fallback.
+        underFrame.Size = frameSize
+        underFrame.CFrame = framePose
+    elseif not underFrame then
+        -- Preserve the original frame envelope and deck-relative axes so
+        -- route chassis and cradles can still claim this exact owner.
+        local frameProfile = frameFallback or (elevatedTrim and elevatedTrim.frameFallback)
+            or (harborAlongX ~= nil and panelProfile or nil)
+        local reserve = not frameProfile and harborTrimReserve
+        if reserve then frameProfile = reserve.part end
+        local frameAlongX = frameProfile and frameProfile.Size.X > frameProfile.Size.Z
+        underFrame = fitDecorMesh(frameProfile, frameName, framePose, frameSize,
+            frameColor, VisualTheme.Materials.Structure, frameAlongX)
+        if reserve and underFrame:IsA("MeshPart") then markHarborReserve(underFrame, reserve) end
+    end
+    underFrame.Name = frameName
+    underFrame.Color = frameColor
+    underFrame.Material = VisualTheme.Materials.Structure
     underFrame.Transparency = 0.04
     underFrame:SetAttribute("PremiumArchitecturalSurface", true)
+    if underFrame:IsA("MeshPart") then
+        underFrame:SetAttribute("OriginalPlatformUnderFrame3D", true)
+    end
+    underFrame.Parent = decor
 
-    local core = decorPart(
-        decor,
-        "PlatformCoreGlow" .. index,
-        Vector3.new(
-            math.max(0.8, platform.Size.X * 0.32),
-            0.12,
-            math.max(0.8, platform.Size.Z * 0.32)
-        ),
-        platform.Position - Vector3.new(0, (platform.Size.Y * 0.5) + 0.42, 0),
-        (index % 2 == 0) and theme.Secondary or theme.Accent,
-        VisualTheme.Materials.Glow
-    )
-    core.Transparency = routeTier and
-        (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
+    local coreName = "PlatformCoreGlow" .. index
+    local coreColor = (index % 2 == 0) and theme.Secondary or theme.Accent
+    local coreAlpha = routeTier and (0.72 - math.clamp(routeTier, 1, 4) * 0.04) or 0.56
+    local skybridge = platform:GetAttribute("ChaosSkybridge") == true
+    local flatSize = Vector3.new(math.max(0.8, size.X * 0.32), 0.12, math.max(0.8, size.Z * 0.32))
+    -- Keep the entry ring clear of the frame and the flat rim fallback.
+    local signalDrop = platform:GetAttribute("OrbitalEntryLanding") and 0.62 or 0.42
+    local flatPose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - signalDrop, 0)
+    local signalSize, signalPose = flatSize, flatPose
+    local alongX
+    if promenadeLane or skySpineStep or skybridge or harborAlongX ~= nil then
+        alongX = if harborAlongX ~= nil then harborAlongX else size.X > size.Z
+        -- The outer bands follow the exit; the inserts below a cargo turn
+        -- follow the perpendicular approach from the previous landing.
+        if PlatformIdentityLodRules.isHarborCargoTurn(platform) then alongX = not alongX end
+        local length = (alongX and size.X or size.Z) * 0.62
+        -- A narrow Tower Run deck needs more relative width to clear the ribs.
+        local width = (alongX and size.Z or size.X) * (skybridge and 0.34 or 0.22)
+        signalSize = alongX and Vector3.new(length, 0.30, width)
+            or Vector3.new(width, 0.30, length)
+        signalPose = platform.CFrame * CFrame.new(0, -size.Y * 0.5 - 0.52, 0)
+    end
 
-    local platformBottom = platform.Position.Y - (platform.Size.Y * 0.5)
-    local deckTop = 1.15
-    local supportHeight = platformBottom - deckTop
+    local core = RouteSignalGeometry.fit(underdeckSignal, signalPose, signalSize, nil, alongX)
+    if not core then
+        -- The fallback must occupy the same deck-relative envelope as the
+        -- approved mesh. A world-axis flat Part displaced or rotated incorrectly
+        -- beneath elevated/turned routes when the mesh was unavailable.
+        core = decorPart(nil, coreName, signalSize, signalPose.Position,
+            coreColor, VisualTheme.Materials.Glow)
+        core.CFrame = signalPose
+    end
+    core.Name = coreName
+    core.Color = coreColor
+    core.Material = VisualTheme.Materials.Glow
+    core.Transparency = coreAlpha
+    core.Parent = decor
+end
+
+local function addPlatformSupports(decor, base, platform, index, theme, shaft, assetId, harborCasting)
+    local fittedCasting = not shaft and harborCasting and harborCasting.part
+    if fittedCasting then
+        shaft, assetId = fittedCasting, harborCasting.assetId
+    end
+    local platformBottom = platform.Position.Y - platform.Size.Y * 0.5
+    local footY = PlatformIdentityLodRules.platformSupportFootY(base, platform)
+    local supportHeight = platformBottom - footY
     if supportHeight >= 3.5 then
         local supportWidth = math.clamp(math.min(platform.Size.X, platform.Size.Z) * 0.10, 0.72, 1.35)
         local supportColor = theme.Structure:Lerp(theme.Detail, 0.14)
@@ -1803,23 +2416,31 @@ local function addPlatformFinish(decor, platform, index, theme)
             table.insert(supportOffsets, Vector3.new(insetX, 0, -insetZ))
         end
 
+        -- Keep the authored axes for client overlays and bridge contraction.
+        local shaftAlongX = shaft and shaft.Size.X > shaft.Size.Z
         for supportIndex, offset in ipairs(supportOffsets) do
-            local support = decorPart(
-                decor,
+            -- Transform once into world space. The cosmetic support is
+            -- vertical but inherits the deck yaw for its sculpted facets.
+            local worldOffset = platform.CFrame:PointToWorldSpace(offset)
+            local supportPose = CFrame.new(
+                worldOffset.X, footY + supportHeight * 0.5, worldOffset.Z
+            ) * platform.CFrame.Rotation
+            local support = fitDecorMesh(
+                shaft,
                 "PlatformSupport" .. index .. "_" .. supportIndex,
+                supportPose,
                 Vector3.new(supportWidth, supportHeight, supportWidth),
-                Vector3.new(
-                    platform.Position.X + offset.X,
-                    deckTop + (supportHeight * 0.5),
-                    platform.Position.Z + offset.Z
-                ),
                 supportColor,
-                VisualTheme.Materials.Structure
+                VisualTheme.Materials.Structure,
+                shaftAlongX
             )
             support.Transparency = 0.14
-            support.CanCollide = false
-            support.CanTouch = false
-            support.CanQuery = false
+            if support:IsA("MeshPart") then
+                support:SetAttribute("OriginalPlatformSupport3D", true)
+                if fittedCasting then support:SetAttribute("OriginalHarborPileCasting3D", true) end
+                support:SetAttribute("Original3DAssetId", assetId)
+            end
+            support.Parent = decor
         end
     end
 end
@@ -1854,22 +2475,45 @@ local function buildLobby(root, config)
     floorInset.Transparency = 0.04
     floorInset:SetAttribute("PremiumArchitecturalSurface", true)
 
+    local function sculpt(part, profile)
+        CollectionService:AddTag(part, profile)
+        return part
+    end
+
+    local function detail(profile, name, pose, size, color, material)
+        local finish = decorPart(nil, name, size, pose.Position, color, material)
+        finish.CFrame = pose
+        return sculpt(finish, profile)
+    end
+
+    local function mountSignGui(panel, gui)
+        -- The label uses the original face even if the client masks the
+        -- backing and fits a beveled mesh with a different local axis.
+        local surface = decorPart(nil, "SignTextSurface", panel.Size, panel.Position, panel.Color)
+        surface.CFrame = panel.CFrame
+        surface.Transparency = 1
+        gui.Parent = surface
+        surface.Parent = panel
+    end
+
+    local cast = "LobbySculptedCasting"
+    local shaft = "LobbySculptedShaft"
     local lobbyLanes = {
-        {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24)},
-        {name = "LobbyLaneSouth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, 24)},
-        {name = "LobbyLaneWest", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(-24, 1.16, 0)},
-        {name = "LobbyLaneEast", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(24, 1.16, 0)},
+        {name = "LobbyLaneNorth", size = Vector3.new(2.4, 0.08, 23), offset = Vector3.new(0, 1.16, -24),
+            color = VisualTheme.Accents.Cyan},
+        {name = "LobbyLaneWest", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(-24, 1.16, 0),
+            color = VisualTheme.Accents.Cyan},
+        {name = "LobbyLaneEast", size = Vector3.new(23, 0.08, 2.4), offset = Vector3.new(24, 1.16, 0),
+            color = VisualTheme.Accents.Violet},
     }
 
-    for i, def in ipairs(lobbyLanes) do
-        local lane = decorPart(
-            decor,
-            def.name,
-            def.size,
-            config.LobbyCenter + def.offset,
-            (i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
-            VisualTheme.Materials.Glow
+    for _, def in ipairs(lobbyLanes) do
+        local lane = detail(
+            cast, def.name,
+            CFrame.new(config.LobbyCenter + def.offset), def.size,
+            def.color, VisualTheme.Materials.Glow
         )
+        lane.Parent = decor
         lane.Transparency = 0.38
     end
 
@@ -1890,6 +2534,7 @@ local function buildLobby(root, config)
             VisualTheme.Materials.Panel
         )
         panel.Transparency = 0.03
+        sculpt(panel, cast)
 
         local gui = Instance.new("SurfaceGui")
         gui.Name = "LoopPanelGui"
@@ -1898,8 +2543,6 @@ local function buildLobby(root, config)
         gui.PixelsPerStud = 34
         gui.LightInfluence = 0
         gui.AlwaysOnTop = false
-        gui.Parent = panel
-
         local text = Instance.new("TextLabel")
         text.Size = UDim2.fromScale(1, 1)
         text.BackgroundTransparency = 1
@@ -1910,6 +2553,7 @@ local function buildLobby(root, config)
         text.TextStrokeTransparency = 0.40
         text.TextScaled = true
         text.Parent = gui
+        mountSignGui(panel, gui)
     end
 
     local centerPlatform = part(
@@ -1921,14 +2565,34 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Structure
     )
 
-    local centerGlow = part(
-        decor,
-        "CenterGlow",
-        Vector3.new(20, 0.22, 20),
-        config.LobbyCenter + Vector3.new(0, 2.08, 0),
-        VisualTheme.Accents.Cyan,
-        VisualTheme.Materials.Glow
+    -- Four cosmetic forged skirts conceal the platform's exposed square
+    -- sides without replacing the authoritative walkable collision Part.
+    -- Client-side approved swept meshes have a native-Part fallback.
+    for side = 1, 4 do
+        local alongX = side <= 2
+        local skirt = detail(
+            "LobbySculptedSwept",
+            "CenterPlatformForgedSkirt" .. side,
+            CFrame.new(config.LobbyCenter + Vector3.new(
+                alongX and 0 or (side == 3 and -12.12 or 12.12),
+                1.45,
+                alongX and (side == 1 and -12.12 or 12.12) or 0
+            )),
+            alongX and Vector3.new(23.6, 0.84, 0.38)
+                or Vector3.new(0.38, 0.84, 23.6),
+            VisualTheme.World.Metal,
+            VisualTheme.Materials.Structure
+        )
+        skirt.Parent = decor
+    end
+
+    local centerGlow = detail(
+        cast, "CenterGlow",
+        CFrame.new(config.LobbyCenter + Vector3.new(0, 2.08, 0)),
+        Vector3.new(7.5, 0.22, 7.5),
+        VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
     )
+    centerGlow.Parent = decor
     centerGlow.CanCollide = false
     centerGlow.Transparency = 0.22
 
@@ -1957,14 +2621,13 @@ local function buildLobby(root, config)
             VisualTheme.Materials.Structure
         )
 
-        local cap = part(
-            decor,
-            "PylonGlow" .. i,
+        local cap = detail(
+            cast, "PylonGlow" .. i,
+            CFrame.new(pylon.Position + Vector3.new(0, 5.25, 0)),
             Vector3.new(2.8, 0.55, 2.8),
-            pylon.Position + Vector3.new(0, 5.25, 0),
-            VisualTheme.Accents.Violet,
-            VisualTheme.Materials.Glow
+            VisualTheme.Accents.Violet, VisualTheme.Materials.Glow
         )
+        cap.Parent = decor
         cap.CanCollide = false
 
         local light = Instance.new("PointLight")
@@ -2006,14 +2669,17 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Glow
     )
 
-    local gateInnerGlow = decorPart(
-        decor,
-        "ArenaGateInnerGlow",
+    sculpt(leftColumn, shaft)
+    sculpt(rightColumn, shaft)
+    sculpt(archTop, "LobbySculptedSwept")
+
+    local gateInnerGlow = detail(
+        cast, "ArenaGateInnerGlow",
+        CFrame.new(archCenter + Vector3.new(0, 11.45, -1.62)),
         Vector3.new(17.8, 0.34, 0.48),
-        archCenter + Vector3.new(0, 11.45, -1.62),
-        VisualTheme.Accents.Cyan,
-        VisualTheme.Materials.Glow
+        VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
     )
+    gateInnerGlow.Parent = decor
     gateInnerGlow.Transparency = 0.16
     gateInnerGlow.CanCollide = false
     gateInnerGlow.CanTouch = false
@@ -2021,14 +2687,16 @@ local function buildLobby(root, config)
 
     for side = -1, 1, 2 do
         for index = 1, 2 do
-            local indicator = decorPart(
-                decor,
+            local indicator = detail(
+                shaft,
                 (side < 0 and "ArenaGateIndicatorL" or "ArenaGateIndicatorR") .. index,
+                CFrame.new(archCenter + Vector3.new(
+                    side * (8.45 + index * 0.52), 5.3 + index * 3.8, -1.60)),
                 Vector3.new(0.34, 3.6, 0.34),
-                archCenter + Vector3.new(side * (8.45 + index * 0.52), 5.3 + index * 3.8, -1.60),
                 index == 1 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
                 VisualTheme.Materials.Glow
             )
+            indicator.Parent = decor
             indicator.Transparency = 0.22
             indicator.CanCollide = false
             indicator.CanTouch = false
@@ -2043,7 +2711,7 @@ local function buildLobby(root, config)
     gateGui.PixelsPerStud = 42
     gateGui.LightInfluence = 0
     gateGui.AlwaysOnTop = false
-    gateGui.Parent = archTop
+    mountSignGui(archTop, gateGui)
 
     local gatePanel = Instance.new("Frame")
     gatePanel.Name = "GatePanel"
@@ -2092,64 +2760,128 @@ local function buildLobby(root, config)
     gateSubstatus.TextScaled = true
     gateSubstatus.Parent = gatePanel
 
-    local runwayCenter = config.LobbyCenter + Vector3.new(0, 1.18, 17.5)
+    local stageFront = centerPlatform.Size.Z * 0.5
+    local guideY = centerPlatform.Size.Y * 0.5 + 0.075
+    local tip = centerPlatform.CFrame:PointToWorldSpace(
+        Vector3.new(0, guideY, stageFront - 1.1))
+    for side = -1, 1, 2 do
+        local shoulder = centerPlatform.CFrame:PointToWorldSpace(
+            Vector3.new(side * 2.25, guideY, stageFront - 3.75))
+        local arm = detail(
+            "LobbySculptedSwept",
+            side < 0 and "StageExitChevronLeft" or "StageExitChevronRight",
+            CFrame.lookAt(shoulder:Lerp(tip, 0.5), tip),
+            Vector3.new(0.34, 0.08, (tip - shoulder).Magnitude),
+            VisualTheme.Accents.Cyan, VisualTheme.Materials.Glow
+        )
+        arm.Transparency = 0.24
+        arm.Parent = decor
+    end
+
+    -- Start beyond the forged stage lip and continue to the gate landing.
+    local runwayStart = centerPlatform.Position + arenaDirection * (stageFront + 0.55)
+    local runwayEnd = archCenter + arenaDirection * 5
+    local runwayLength = (runwayEnd - runwayStart):Dot(arenaDirection)
+    local midpoint = runwayStart:Lerp(runwayEnd, 0.5)
+    local runwayCenter = Vector3.new(midpoint.X, floor.Position.Y + 1.18, midpoint.Z)
     local runway = decorPart(
         decor,
         "ArenaRunway",
-        Vector3.new(14, 0.10, 29),
+        Vector3.new(14, 0.10, runwayLength),
         runwayCenter,
         VisualTheme.World.Deep:Lerp(VisualTheme.World.SurfaceRaised, 0.22),
         VisualTheme.Materials.Panel
     )
     runway.Transparency = 0.02
     runway.CanCollide = false
+    sculpt(runway, cast)
 
+    local railOffset = runway.Size.X * 0.5 - 0.60
+    local runwayTop = runway.Size.Y * 0.5
+    local runwayHalfLength = runway.Size.Z * 0.5
     for side = -1, 1, 2 do
-        local rail = decorPart(
-            decor,
-            side < 0 and "ArenaRunwayRailLeft" or "ArenaRunwayRailRight",
-            Vector3.new(0.30, 0.12, 29),
-            runwayCenter + Vector3.new(side * 6.4, 0.10, 0),
-            side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
-            VisualTheme.Materials.Glow
+        local railSide = side < 0 and "Left" or "Right"
+        local accent = side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet
+        local railFrame = runway.CFrame * CFrame.new(side * railOffset, runwayTop, 0)
+        local rail = detail(
+            cast, "ArenaRunwayRail" .. railSide,
+            railFrame * CFrame.new(0, 0.05, 0),
+            Vector3.new(0.30, 0.12, runway.Size.Z), accent, VisualTheme.Materials.Glow
         )
+        rail.Parent = decor
         rail.Transparency = 0.16
-        rail.CanCollide = false
-        rail.CanTouch = false
-        rail.CanQuery = false
+
+        for endSign = -1, 1, 2 do
+            local endName = endSign < 0 and "Stage" or "Portal"
+            -- Both fittings stay inside the deck edge and outboard of
+            -- the animated sweep. Only the terminal covers the light.
+            local clamp = detail(
+                "LobbySculptedSwept", "ArenaRunwayClamp" .. railSide .. endName,
+                railFrame * CFrame.new(0, 0.031, endSign * runwayHalfLength * 0.46),
+                Vector3.new(0.72, 0.10, 0.58),
+                VisualTheme.World.MetalLight, VisualTheme.Materials.Structure
+            )
+            clamp.Parent = decor
+
+            local cap = detail(
+                "LobbySculptedSwept", "ArenaRunwayEndCap" .. railSide .. endName,
+                railFrame * CFrame.new(0, 0.055, endSign * (runwayHalfLength - 0.54)),
+                Vector3.new(0.88, 0.15, 1.08),
+                VisualTheme.World.MetalLight:Lerp(accent, 0.22), VisualTheme.Materials.Structure
+            )
+            cap.Parent = decor
+        end
     end
 
+    local footSize = Vector3.new(0.76, 0.18, 0.78)
+    local jointSize = Vector3.new(0.98, 0.78, 0.88)
+    local ribOffset = runway.Size.X * 0.5 + 0.35
     for i = 1, 4 do
-        local z = 7 + (i * 4.7)
+        local support = i == 1 and centerPlatform or floorInset
+        local z = i == 1 and (stageFront - footSize.Z * 0.5 - 0.11) or (7 + i * 4.7)
         local height = 6.5 + (i * 0.45)
-        local leftRib = decorPart(
-            decor,
-            "ArenaApproachRibL" .. i,
-            Vector3.new(0.55, height, 0.55),
-            config.LobbyCenter + Vector3.new(-7.2, 1.1 + height * 0.5, z),
-            VisualTheme.World.Metal,
-            VisualTheme.Materials.Structure
-        )
-        leftRib.Transparency = 0.04
+        local slabTop = support.Position.Y + support.Size.Y * 0.5
+        local ribStart = slabTop + 0.08
+        local ribEnd = config.LobbyCenter.Y + 1.1 + height
+        for side = -1, 1, 2 do
+            local suffix = (side < 0 and "L" or "R") .. i
+            local x = runway.Position.X + side * ribOffset
+            local worldZ = config.LobbyCenter.Z + z
+            -- The first portal sits on the raised stage. The other three
+            -- land on the inset, with each casting outside the runway.
+            local foot = detail(
+                cast, "ArenaApproachFoot" .. suffix,
+                CFrame.new(x + side * 0.05, slabTop + 0.06, worldZ),
+                footSize, VisualTheme.World.MetalLight, VisualTheme.Materials.Structure
+            )
+            foot.Parent = decor
+            local rib = detail(
+                shaft, "ArenaApproachRib" .. suffix,
+                CFrame.new(x, (ribStart + ribEnd) * 0.5, worldZ),
+                Vector3.new(0.55, ribEnd - ribStart, 0.55),
+                VisualTheme.World.Metal, VisualTheme.Materials.Structure
+            )
+            rib.Transparency = 0.04
+            rib.Parent = decor
 
-        local rightRib = decorPart(
-            decor,
-            "ArenaApproachRibR" .. i,
-            Vector3.new(0.55, height, 0.55),
-            config.LobbyCenter + Vector3.new(7.2, 1.1 + height * 0.5, z),
-            VisualTheme.World.Metal,
-            VisualTheme.Materials.Structure
-        )
-        rightRib.Transparency = 0.04
+            -- Seat the crossbar in the collar while exposing its upper face.
+            local joint = detail(
+                "LobbySculptedSwept", "ArenaApproachJoint" .. suffix,
+                CFrame.new(x + side * 0.05, ribEnd - 0.23, worldZ),
+                jointSize, VisualTheme.World.MetalLight, VisualTheme.Materials.Structure
+            )
+            joint.Parent = decor
+        end
 
-        local topRib = decorPart(
-            decor,
-            "ArenaApproachRibTop" .. i,
-            Vector3.new(14.9, 0.42, 0.55),
-            config.LobbyCenter + Vector3.new(0, 1.1 + height, z),
+        local topRib = detail(
+            shaft, "ArenaApproachRibTop" .. i,
+            CFrame.new(runway.Position.X, ribEnd, config.LobbyCenter.Z + z)
+                * CFrame.Angles(0, 0, math.rad(90)),
+            Vector3.new(0.42, 14.9, 0.55),
             i % 2 == 0 and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan,
             VisualTheme.Materials.Glow
         )
+        topRib.Parent = decor
         topRib.Transparency = 0.24
         topRib.CanCollide = false
         topRib.CanTouch = false
@@ -2165,6 +2897,7 @@ local function buildLobby(root, config)
         VisualTheme.Materials.Structure
     )
     sign.CanCollide = false
+    sculpt(sign, cast)
 
     local surface = Instance.new("SurfaceGui")
     surface.Name = "TitleGui"
@@ -2172,7 +2905,7 @@ local function buildLobby(root, config)
     surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     surface.PixelsPerStud = 45
     surface.AlwaysOnTop = false
-    surface.Parent = sign
+    mountSignGui(sign, surface)
 
     local brandMark = Instance.new("Frame")
     brandMark.Name = "ChaosWorldBrandSigil"
@@ -2284,24 +3017,23 @@ local function buildLobby(root, config)
     }
 
     for i, offset in ipairs(frameOffsets) do
-        local spine = decorPart(
-            decor,
-            "LobbyFrameSpine" .. i,
+        local spine = detail(
+            shaft, "LobbyFrameSpine" .. i,
+            CFrame.new(config.LobbyCenter + offset),
             Vector3.new(1.6, 14, 1.6),
-            config.LobbyCenter + offset,
-            VisualTheme.World.Metal,
-            VisualTheme.Materials.Structure
+            VisualTheme.World.Metal, VisualTheme.Materials.Structure
         )
+        spine.Parent = decor
         spine.Transparency = 0.03
 
-        local band = decorPart(
-            decor,
-            "LobbyFrameBand" .. i,
+        local band = detail(
+            cast, "LobbyFrameBand" .. i,
+            CFrame.new(spine.Position + Vector3.new(0, 5.3, 0)),
             Vector3.new(3.6, 0.34, 3.6),
-            spine.Position + Vector3.new(0, 5.3, 0),
             (i % 2 == 0) and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
             VisualTheme.Materials.Glow
         )
+        band.Parent = decor
         band.Transparency = 0.20
     end
 
@@ -2313,16 +3045,15 @@ local function buildLobby(root, config)
             13.5 + math.sin(angle * 2) * 0.45,
             math.sin(angle) * haloRadius
         )
-        local segment = decorPart(
-            decor,
-            "LobbyHaloSegment" .. i,
+        local segment = detail(
+            cast, "LobbyHaloSegment" .. i,
+            CFrame.new(position) * CFrame.Angles(0, -angle, 0),
             Vector3.new(4.8, 0.22, 0.48),
-            position,
             (i % 3 == 0) and VisualTheme.Accents.Magenta
                 or ((i % 2 == 0) and VisualTheme.Accents.Violet or VisualTheme.Accents.Cyan),
             VisualTheme.Materials.Glow
         )
-        segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
+        segment.Parent = decor
         segment.Transparency = 0.24
         segment.CanCollide = false
         segment.CanTouch = false
@@ -2372,15 +3103,15 @@ local function buildLobby(root, config)
         )
         panel.CanCollide = false
         panel.Transparency = 0.04
+        sculpt(panel, cast)
 
-        local rail = decorPart(
-            decor,
-            "LobbyIdentityRail" .. i,
+        local rail = detail(
+            cast, "LobbyIdentityRail" .. i,
+            CFrame.new(panel.Position + Vector3.new(0, -2.0, 0)),
             Vector3.new(12.4, 0.24, 0.60),
-            panel.Position + Vector3.new(0, -2.0, 0),
-            def.color,
-            VisualTheme.Materials.Glow
+            def.color, VisualTheme.Materials.Glow
         )
+        rail.Parent = decor
         rail.CanCollide = false
         rail.CanTouch = false
         rail.CanQuery = false
@@ -2393,8 +3124,6 @@ local function buildLobby(root, config)
         gui.PixelsPerStud = 44
         gui.LightInfluence = 0
         gui.AlwaysOnTop = false
-        gui.Parent = panel
-
         local label = Instance.new("TextLabel")
         label.Size = UDim2.fromScale(1, 1)
         label.BackgroundTransparency = 1
@@ -2405,6 +3134,7 @@ local function buildLobby(root, config)
         label.TextStrokeTransparency = 0.46
         label.TextScaled = true
         label.Parent = gui
+        mountSignGui(panel, gui)
     end
 
     local lobbySpawn = Instance.new("SpawnLocation")
@@ -2425,7 +3155,7 @@ local function buildLobby(root, config)
 
     -- Retain the existing collidable lobby entrance and pylons, but hide
     -- their simplistic silhouettes behind authored multi-layer 3D casing.
-    StructureRetrofit.buildLobby(decor, config.LobbyCenter)
+    StructureRetrofit.buildLobby(decor, config.LobbyCenter, centerPlatform)
 
     floor:SetAttribute("VisualVersion", 2)
     centerPlatform:SetAttribute("SafeHub", true)
@@ -2502,6 +3232,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     entryGuides.Name = "EntryGuides"
     entryGuides.Parent = arena
 
+    local forgedBridge = ForgedBridgeAssets.approvedSource()
+    local sweptProfile = approvedMeshRegion(forgedBridge, "SweptCrossbeam")
+    local edgeBand = approvedMeshRegion(forgedBridge, "SculptedEdgeBand")
+    local spawnGlowSize = Vector3.new(5.2, 0.12, 5.2)
+    -- Clear the visible floor finish while keeping the gameplay spawn in place.
+    local guideY = base.Position.Y + ArenaPresentation.deckArtOffset(base, spawnGlowSize.Y) + 0.025
     for i, offset in ipairs(variant.SpawnOffsets) do
         -- Markers sit ON the arena floor, never as floating solid slabs
         -- directly inside the player's feet or beneath a mezzanine.
@@ -2529,34 +3265,34 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         s.Transparency = 0.34
 
         local guideColor = i % 2 == 0 and theme.Secondary or theme.Accent
+        local guideFrame = s.CFrame + Vector3.new(0, guideY - spawnPosition.Y, 0)
         for side = -1, 1, 2 do
-            local guide = decorPart(
-                entryGuides,
+            -- Each arm's inner tip points along the spawn's forward axis.
+            local pose = guideFrame * CFrame.new(side * 0.78, 0, -3)
+                * CFrame.Angles(0, math.rad(-side * 34), 0)
+            local guide = fitDecorMesh(
+                sweptProfile,
                 "EntryChevron" .. i .. "_" .. tostring(side),
+                pose,
                 Vector3.new(2.6, 0.08, 0.24),
-                spawnPosition,
                 guideColor,
                 VisualTheme.Materials.Glow
             )
-            guide.CFrame = s.CFrame
-                * CFrame.new(side * 0.78, 0.04, -3.0)
-                * CFrame.Angles(0, math.rad(side * 34), 0)
             guide.Transparency = 0.22
+            guide:SetAttribute("ChaosWayfinding", true)
+            guide.Parent = entryGuides
         end
 
-        local glow = part(
-            arena,
+        local glow = fitDecorMesh(
+            edgeBand,
             "SpawnGlow" .. i,
-            Vector3.new(5.2, 0.12, 5.2),
-            spawnPosition + Vector3.new(0, -0.03, 0),
-            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            guideFrame,
+            spawnGlowSize,
+            guideColor,
             VisualTheme.Materials.Glow
         )
-        glow.CanCollide = false
-        glow.CanTouch = false
-        glow.CanQuery = false
-        glow.CastShadow = false
         glow.Transparency = 0.16
+        glow.Parent = arena
     end
 
     local platforms = Instance.new("Folder")
@@ -2568,94 +3304,185 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     decor:SetAttribute("PremiumSurfaceSkinSource", true)
     decor.Parent = arena
 
-    addArenaFoundation(decor, config, variant, theme)
+    local chassis = accessChassisSource()
+    local underdeckLattice = approvedMeshRegion(chassis, "UnderdeckLattice")
+    local underdeckSpars = approvedMeshRegion(chassis, "UnderdeckSpars")
+    local wayfinderBase = wayfinderBaseSource()
+    local beaconShaft, shaftAssetId = PremiumLargeStructureAssets.shaftProfile(variant.Id)
+    -- A loaded polygonal shaft from another approved column can fill the
+    -- same elevated-route support envelope while the arena's shaft loads.
+    local routeShaft, routeShaftAssetId = beaconShaft, shaftAssetId
+    if not routeShaft then
+        for _, sourceVariant in ipairs(arenaVariants.Order or {}) do
+            if sourceVariant ~= variant.Id then
+                routeShaft, routeShaftAssetId = PremiumLargeStructureAssets.shaftProfile(sourceVariant)
+                if routeShaft then break end
+            end
+        end
+    end
+    local rimBevel = floorReliefRegion("Harbor", Vector3.new(2.50, 0.16, 0.16))
+    local bevelCasting = floorReliefRegion("Classic", FLOOR_RELIEF_BASE_REGIONS.Classic)
+    local baseRegion = FLOOR_RELIEF_BASE_REGIONS[variant.Id]
+    local floorProfile = baseRegion and floorReliefRegion(variant.Id, baseRegion)
+    addArenaFoundation(decor, config, variant, theme, sweptProfile, beaconShaft)
     -- Original modular top deck: 6 x 6 textured industrial panels,
     -- recessed service grooves and volumetric undercarriage fins.
     -- All floor art follows the shrinking REAL base and is noncolliding.
-    ArenaGroundArchitecture.build(decor, base, variant.Id, theme)
-    addPerimeterStations(decor, config, variant, theme)
-    addDistantSkyline(decor, config, variant, theme)
-    addArenaSignatureMegastructure(decor, config, variant, theme)
-    -- One distinctive real 3D skyline per arena. No external asset ID is
-    -- required; this is the always-available mobile-friendly model layer.
-    HeroArchitecture.build(decor, arena:FindFirstChild("Base"), variant.Id, theme)
-    -- Faceted original 3D shells, machined collars, diagonal load spars
-    -- and cantilevers on the four EXISTING foundation towers. No physics.
-    ArchitecturalCladding.build(decor, base, variant.Id, theme)
+    ArenaGroundArchitecture.build(decor, base, variant.Id, theme, underdeckLattice, sweptProfile,
+        wayfinderBase, bevelCasting)
+    local orbitalLens = orbitalReactorNodeRegion(Vector3.new(2.96, 2.9503, 2.96))
+    local rotorAssetId = HorizonMonumentGeometry.assetId("rotor")
+    local perimeterRotor = approvedHorizonRegion(
+        "ApprovedPerimeterRotorTemplates", "Rotor", "OriginalPerimeterRotor3D",
+        rotorAssetId, Vector3.new(2.56, .72, 2.56))
+    local detailProfiles = {
+        bevel = {part = bevelCasting, assetId = HorizonMonumentGeometry.assetId("bevel")},
+        beam = {part = sweptProfile, assetId = 126298311664881},
+        underframe = {part = underdeckSpars, assetId = 106401955318567},
+        cast = {part = wayfinderBase, assetId = 88962643359267},
+        lens = {part = orbitalLens, assetId = 104654294187035},
+        ring = {part = orbitalReactorNodeRegion(Vector3.new(4.11, 0.39, 4.11)),
+            assetId = 104654294187035},
+        rotor = {part = perimeterRotor, assetId = rotorAssetId},
+        shaft = {part = beaconShaft, assetId = shaftAssetId},
+        signal = {part = rimBevel, assetId = PremiumFloorReliefAssets.approvedId("Harbor")},
+    }
+    local harborCasting = variant.Id == "Harbor" and {
+        part = floorProfile or bevelCasting,
+        assetId = PremiumFloorReliefAssets.approvedId(if floorProfile then "Harbor" else "Classic"),
+    } or nil
+    local routeShaftProfile = {part = routeShaft, assetId = routeShaftAssetId}
+    local stationPlate = if detailProfiles.cast.part then detailProfiles.cast else harborCasting
+    local stationSignal = if detailProfiles.beam.part then detailProfiles.beam else harborCasting
+    addPerimeterStations(decor, config, variant, theme, {
+        plate = stationPlate,
+        signal = stationSignal,
+        lens = detailProfiles.lens,
+        rail = if rimBevel then detailProfiles.signal else harborCasting,
+        housing = stationPlate,
+        shaft = if harborCasting then (routeShaft and routeShaftProfile or harborCasting) else detailProfiles.shaft,
+        turbine = detailProfiles.rotor,
+        wing = detailProfiles.beam,
+        brace = stationSignal,
+    })
+    local horizonTemplates = {
+        bevel = bevelCasting,
+        beam = sweptProfile,
+        cast = wayfinderBase,
+        lens = orbitalLens,
+        roller = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil,
+        shaft = beaconShaft,
+        harborShaft = routeShaftProfile,
+        harborCasting = harborCasting,
+        rotor = if variant.Id == "Orbital" then perimeterRotor else nil,
+        depthHull = approvedHorizonRegion(
+            "ApprovedSkylineDepthSculptTemplates", "Roof", "OriginalSkylineDepthSculpt3D",
+            HorizonMonumentGeometry.assetId("depthHull"), Vector3.new(11.4, 33.95, 6.94)),
+    }
+    addDistantSkyline(decor, config, variant, theme, horizonTemplates)
+    addArenaSignatureMegastructure(decor, config, variant, theme, horizonTemplates)
+    local exteriorProfiles = detailProfiles
     if variant.Id == "Harbor" then
-        -- Exterior harbor cranes distinguish the new cargo port without
-        -- extra colliders, sound loops or cameras tracking scenic models.
-        HarborScenery.build(decor, base, theme)
+        exteriorProfiles = table.clone(detailProfiles)
+        exteriorProfiles.bevel = harborCasting
+        exteriorProfiles.shaft = routeShaftProfile
+    end
+    local heroProfiles = exteriorProfiles
+    local harborPileCasting, harborTrimReserve
+    if variant.Id == "Harbor" then
+        heroProfiles = table.clone(exteriorProfiles)
+        local caissonId = HorizonMonumentGeometry.harborCaissonAssetId()
+        local caisson = approvedHorizonRegion(
+            "ApprovedHarborDockCaissonTemplates", "DockCaisson", "OriginalHarborDockCaisson3D",
+            caissonId, Vector3.new(12.82, 2.69, 12.82))
+        heroProfiles.caisson = {part = caisson, assetId = caissonId}
+        harborPileCasting = if caisson then heroProfiles.caisson else harborCasting
+        harborTrimReserve = if caisson then heroProfiles.caisson else detailProfiles.beam
+    end
+    -- The outboard hero keeps its lightweight silhouette and per-piece fallbacks.
+    HeroArchitecture.build(decor, base, variant.Id, theme, heroProfiles)
+    ArchitecturalCladding.build(decor, base, variant.Id, theme, wayfinderBase, sweptProfile)
+    if variant.Id == "Harbor" then
+        exteriorProfiles.wing = {
+            part = approvedHorizonRegion("ApprovedPerimeterArmorTemplates", "Wing",
+                "OriginalPerimeterArmor3D", 138096293972093, Vector3.new(5.62, 1.64, 3.27701)),
+            assetId = 138096293972093,
+        }
+        HarborScenery.build(decor, base, theme, exteriorProfiles)
     end
     -- Twelve 3D models occupy the now-playable outer districts. They are
     -- cosmetic and LOD managed, not new physical/hazard blocking geometry.
-    ArenaDistrictArchitecture.build(decor, base, variant.Id, theme)
-    addSouthHorizonMonument(decor, config, variant, theme)
-    addExteriorCornerRidges(decor, config, variant, theme)
-    addExteriorSilhouettePairs(decor, config, variant, theme)
-    addVariantIdentity(decor, config, variant, theme)
-    addVariantLandmarks(decor, config, variant, theme)
+    ArenaDistrictArchitecture.build(decor, base, variant.Id, theme, wayfinderBase, detailProfiles)
+    addSouthHorizonMonument(decor, config, variant, theme, horizonTemplates)
+    local exteriorCasting = {part = wayfinderBase, assetId = 88962643359267}
+    addExteriorCornerRidges(decor, config, variant, theme, exteriorCasting)
+    addExteriorSilhouettes(decor, config, variant, theme, {
+        shell = harborCasting or detailProfiles.bevel,
+        roof = if wayfinderBase then exteriorCasting else harborCasting,
+        shaft = if harborCasting then (routeShaft and routeShaftProfile or harborCasting) else detailProfiles.shaft,
+        signal = if sweptProfile then detailProfiles.beam else harborCasting,
+    })
+    addVariantIdentity(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
+    addVariantLandmarks(decor, config, variant, theme, wayfinderBase, sweptProfile, beaconShaft)
     -- Faceted exterior machinery over the EXISTING simple skyline markers.
     -- Static beyond the shrinking arena edge, fully noncolliding/LOD-owned.
-    StructureRetrofit.buildArena(decor, base, variant.Id, theme)
-    addVariantFloorLanguage(decor, config, variant, theme)
-    addArenaHologram(decor, config, variant, theme)
+    StructureRetrofit.buildArena(decor, base, variant.Id, theme, exteriorProfiles)
+    local monumentProfiles = table.clone(detailProfiles)
+    monumentProfiles.shaft = routeShaftProfile
+    if floorProfile then
+        monumentProfiles.bevel = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId(variant.Id)}
+    end
+    local routeCasting = variant.Id ~= "Harbor" and (floorProfile or bevelCasting) or nil
+    local harborReserve = harborCasting and harborCasting.part
+    local routeChevronProfile = sweptProfile or routeCasting or harborReserve
+    local markerShaft = if harborCasting then routeShaft or harborReserve else beaconShaft
+    local markerCap = wayfinderBase or harborReserve
+    local exitBeam = if harborCasting then
+        (sweptProfile and detailProfiles.beam or harborCasting) else detailProfiles.beam
+    local exitCrownSlope = if variant.Id == "Harbor" and not sweptProfile
+        then PerimeterCapGeometry.preferredSlope(detailProfiles.cast, exteriorProfiles.wing)
+        else nil
+    local exitCrown = if exitBeam.part then exitBeam else heroProfiles.caisson or exitBeam
+    local exitRib = if harborCasting then
+        (routeShaft and routeShaftProfile or harborCasting) else detailProfiles.shaft
+    local exitLens = if harborCasting and not sweptProfile and orbitalLens
+        then detailProfiles.lens else exitBeam
+    -- Only callers that fit the local span explicitly can accept a
+    -- roller imported along either horizontal axis.
+    local canonicalRim = rimBevel and rimBevel.Size.X > rimBevel.Size.Z and rimBevel or nil
+    addVariantFloorLanguage(decor, base, variant, theme, sweptProfile, floorProfile, harborReserve)
+    addArenaHologram(decor, config, variant, theme, sweptProfile)
 
     local halfX = variant.BaseSize.X * 0.5
     local halfZ = variant.BaseSize.Z * 0.5
     local edgeThickness = 0.35
     local edgeHeight = 0.45
-
+    local edgeY = base.Size.Y * 0.5 + 0.25
     local edgeColor = theme.Accent
-    local north = decorPart(
-        decor,
-        "EdgeNorth",
-        Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
-        config.ArenaCenter + Vector3.new(0, 1.25, -halfZ + 0.4),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    north.CanCollide = false
+    local edgeSizeX = Vector3.new(base.Size.X, edgeHeight, edgeThickness)
+    local edgeSizeZ = Vector3.new(edgeThickness, edgeHeight, base.Size.Z)
+    -- The swept crossbeam is continuous end to end, including the joins at the corners.
+    for _, edge in ipairs({
+        {name = "EdgeNorth", size = edgeSizeX, offset = Vector3.new(0, edgeY, -halfZ + 0.4)},
+        {name = "EdgeSouth", size = edgeSizeX, offset = Vector3.new(0, edgeY, halfZ - 0.4)},
+        {name = "EdgeWest", size = edgeSizeZ, offset = Vector3.new(-halfX + 0.4, edgeY, 0)},
+        {name = "EdgeEast", size = edgeSizeZ, offset = Vector3.new(halfX - 0.4, edgeY, 0)},
+    }) do
+        local border = fitDecorMesh(sweptProfile or harborReserve, edge.name, base.CFrame * CFrame.new(edge.offset),
+            edge.size, edgeColor, Enum.Material.Neon)
+        border.Transparency = 0
+        border.Parent = decor
+    end
 
-    local south = decorPart(
-        decor,
-        "EdgeSouth",
-        Vector3.new(variant.BaseSize.X, edgeHeight, edgeThickness),
-        config.ArenaCenter + Vector3.new(0, 1.25, halfZ - 0.4),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    south.CanCollide = false
-
-    local west = decorPart(
-        decor,
-        "EdgeWest",
-        Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
-        config.ArenaCenter + Vector3.new(-halfX + 0.4, 1.25, 0),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    west.CanCollide = false
-
-    local east = decorPart(
-        decor,
-        "EdgeEast",
-        Vector3.new(edgeThickness, edgeHeight, variant.BaseSize.Z),
-        config.ArenaCenter + Vector3.new(halfX - 0.4, 1.25, 0),
-        edgeColor,
-        Enum.Material.Neon
-    )
-    east.CanCollide = false
-
-    local beacon = decorPart(
-        decor,
+    -- The client uses the center of this part for the orbit and particles.
+    local beacon = fitDecorMesh(
+        markerShaft,
         "CenterBeacon",
+        base.CFrame * CFrame.new(0, 7, 0),
         Vector3.new(1.4, 14, 1.4),
-        config.ArenaCenter + Vector3.new(0, 7, 0),
         edgeColor,
         Enum.Material.Neon
     )
-    beacon.CanCollide = false
     beacon.Transparency = 0.35
 
     local light = Instance.new("PointLight")
@@ -2665,11 +3492,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     light.Range = 28
     light.Shadows = false
     light.Parent = beacon
+    beacon.Parent = decor
 
     -- PerimeterRoutes are appended AFTER every original platform ID.
     -- Keeping the combined parts under Platforms lets all server-owned
     -- disaster and AI systems treat outer routes as real gameplay geometry.
     local platformDefinitions = table.clone(variant.Platforms)
+    local underdeckSignal = approvedMeshRegion(chassis, "UnderdeckSignal")
     for _, definition in ipairs(variant.PerimeterPlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
@@ -2697,6 +3526,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     -- north/south lookouts of every arena. Always append AFTER Harbor's
     -- dock spurs: no existing platform ID, hazard owner, or bot target
     -- changes. Exactly 16 collision decks, no floor-level collision wall.
+    local lookoutEntries, sideLookouts = {}, {}
     for _, definition in ipairs(variant.PromenadePlatforms or {}) do
         table.insert(platformDefinitions, definition)
     end
@@ -2706,6 +3536,20 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         table.insert(platformDefinitions, definition)
     end
 
+    local promenadeJunctions = {}
+    local spineEndpoints = {}
+    local promenadeTone = theme.Accent:Lerp(theme.Detail, 0.34)
+    local closedDeckCasting = floorProfile or bevelCasting
+        or (wayfinderBase and wayfinderBase.MeshId ~= "" and wayfinderBase)
+    -- Harbor landings can reuse the same closed castings for both signals
+    -- when the dedicated rim and core profiles have not loaded.
+    local harborSignalCasting = closedDeckCasting or (heroProfiles.caisson and heroProfiles.caisson.part)
+    local elevatedTrimProfiles = {
+        beam = sweptProfile,
+        lattice = underdeckLattice,
+        -- The portal truss has its own owner under this shallow frame.
+        frameFallback = closedDeckCasting,
+    }
     for i, definition in ipairs(platformDefinitions) do
         local platformPosition = config.ArenaCenter + definition.offset
         local platform = part(
@@ -2857,28 +3701,12 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             platform.Color = theme.Surface:Lerp(theme.Secondary, 0.38)
             platform.Material = theme.StructureMaterial
                 or VisualTheme.Materials.Structure
-            -- Subtle V-shaped paint on real branch decks: orientation
-            -- follows the branch and shrinking disaster follows the deck.
-            local forwardZ = definition.offset.Z >= 0 and 1 or -1
-            local point = platform.Position
-                + Vector3.new(0, platform.Size.Y * 0.5 + 0.055, 0)
-            local look = CFrame.lookAt(
-                point, point + Vector3.new(0, 0, forwardZ)
-            )
-            for side = -1, 1, 2 do
-                local mark = decorPart(
-                    decor, "BranchStepArrow" .. definition.BranchRoute
-                        .. "_" .. definition.BranchStep .. "_"
-                        .. tostring(side),
-                    Vector3.new(0.25, 0.065, 2.0), point,
-                    theme.Secondary, VisualTheme.Materials.Glow
-                )
-                mark.CFrame = look
-                    * CFrame.new(side * 0.48, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 34), 0)
-                mark.Transparency = 0.44
-                mark:SetAttribute("PerimeterPlatformIndex", i)
-                mark:SetAttribute("ChaosWayfinding", true)
+            if definition.BranchStep == 4 then
+                sideLookouts[definition.BranchRoute] = {part = platform, index = i}
+            else
+                local forward = Vector3.new(0, 0, definition.offset.Z >= 0 and 1 or -1)
+                addRouteChevron(decor, "BranchStepArrow" .. definition.BranchRoute .. "_" .. definition.BranchStep,
+                    platform, i, forward, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile, nil, i + 1)
             end
         end
 
@@ -2906,69 +3734,115 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             local span = math.max(platform.Size.X, platform.Size.Z) - 0.8
             local width = math.min(platform.Size.X, platform.Size.Z)
             for side = -1, 1, 2 do
-                local railOffset = (width * 0.5 - 0.34) * side
-                local rail = decorPart(
-                    decor,
-                    "SkybridgeRail" .. i .. "_" .. tostring(side),
-                    alongX and Vector3.new(span, 0.14, 0.20)
-                        or Vector3.new(0.20, 0.14, span),
-                    platform.Position + Vector3.new(
-                        alongX and 0 or railOffset,
-                        (platform.Size.Y * 0.5) + 0.10,
-                        alongX and railOffset or 0
-                    ),
-                    side < 0 and theme.Accent or theme.Secondary,
-                    VisualTheme.Materials.Glow
+                local railOffset = (width * 0.5 - 0.28) * side
+                local railFrame = platform.CFrame * CFrame.new(
+                    alongX and 0 or railOffset, platform.Size.Y * 0.5 + 0.045,
+                    alongX and railOffset or 0
                 )
+                local railName = "SkybridgeRail" .. i .. "_" .. tostring(side)
+                local color = side < 0 and theme.Accent or theme.Secondary
+                local railSize = alongX and Vector3.new(span, 0.08, 0.18)
+                    or Vector3.new(0.18, 0.08, span)
+                local rail = RouteSignalGeometry.fit(sweptProfile, railFrame, railSize)
+                    or decorPart(nil, railName, railSize, railFrame.Position, color,
+                        VisualTheme.Materials.Glow)
+                rail.Name = railName
+                rail.Material = VisualTheme.Materials.Glow
+                rail.Color = color
                 rail.Transparency = 0.16
-                rail.CastShadow = false
+                rail:SetAttribute("ChaosWayfinding", true)
+                rail.Parent = decor
             end
-            -- Three under-deck ribs per bridge suggest structural engineering
-            -- at no collision cost. The bridge itself remains the only
-            -- physical route.
+            -- Three transverse ribs share the existing trim replacement,
+            -- hazard visibility and contraction code through their names.
             for ribIndex = -1, 1 do
-                local rib = decorPart(
-                    decor,
-                    "SkybridgeRib" .. i .. "_" .. tostring(ribIndex),
-                    alongX and Vector3.new(0.46, 0.38, width + 0.22)
-                        or Vector3.new(width + 0.22, 0.38, 0.46),
-                    platform.Position + Vector3.new(
-                        alongX and ribIndex * span * 0.27 or 0,
-                        -(platform.Size.Y * 0.5) - 0.24,
-                        alongX and 0 or ribIndex * span * 0.27
-                    ),
-                    theme.Structure,
-                    VisualTheme.Materials.Structure
+                local ribName = "SkybridgeRib" .. i .. "_" .. tostring(ribIndex)
+                local distance = ribIndex * span * 0.27
+                local ribFrame = platform.CFrame * CFrame.new(
+                    alongX and distance or 0,
+                    -platform.Size.Y * 0.5,
+                    alongX and 0 or distance
                 )
-                rib.CastShadow = false
+                if sweptProfile then
+                    local rib = sweptProfile:Clone()
+                    local sourceAlongX = rib.Size.X > rib.Size.Z
+                    rib.Name = ribName
+                    rib.Size = sourceAlongX and Vector3.new(width + 0.22, 0.62, 0.76)
+                        or Vector3.new(0.76, 0.62, width + 0.22)
+                    rib.CFrame = ribFrame * CFrame.new(0, -0.48, 0)
+                        * CFrame.Angles(0, sourceAlongX == alongX and math.pi * 0.5 or 0, 0)
+                    rib.Color = theme.Structure
+                    rib.Material = VisualTheme.Materials.Structure
+                    rib.Transparency = 0
+                    rib.Parent = decor
+                else
+                    decorPart(
+                        decor, ribName,
+                        alongX and Vector3.new(0.46, 0.38, width + 0.22)
+                            or Vector3.new(width + 0.22, 0.38, 0.46),
+                        (ribFrame * CFrame.new(0, -0.24, 0)).Position,
+                        theme.Structure, VisualTheme.Materials.Structure
+                    )
+                end
             end
         end
 
-        local trim = decorPart(
-            decor,
-            "PlatformGlow" .. i,
-            Vector3.new(definition.size.X + 0.28, 0.12, definition.size.Z + 0.28),
-            platformPosition - Vector3.new(0, (definition.size.Y * 0.5) + 0.13, 0),
-            (i % 2 == 0) and theme.Secondary or theme.Accent,
-            VisualTheme.Materials.Glow
-        )
-        trim.CanCollide = false
-        trim.CanTouch = false
-        trim.CanQuery = false
-        -- An exposed fluorescent slab under every deck made the platforms
-        -- read like toy blocks. The engineered shadow lip is primary,
-        -- with a thinner subdued signal layer beneath it.
-        if routeTier then
-            local tierColor = routeTier == 1 and theme.Accent
-                or (routeTier == 2 and theme.Accent:Lerp(theme.Secondary, 0.30)
-                    or (routeTier == 3 and theme.Secondary
-                        or theme.Secondary:Lerp(theme.Accent, 0.55)))
-            trim.Color = tierColor
-            trim.Transparency = 0.72 - routeTier * 0.04
-        else
-            trim.Transparency = 0.64
+        local skybridge = definition.Skybridge == true
+        local elevatedRoute = definition.PromenadeLane or definition.SkySpineStep
+        local harborAlongX = harborLandingAlongX(definition)
+        local harborLanding = harborAlongX ~= nil
+        local lookoutAccess = definition.BranchRoute or definition.CrosslinkRoute
+        local orbitalEntry = definition.OrbitalEntryLanding == true
+        local glowAlongX = if orbitalEntry then math.abs(definition.offset.X) > math.abs(definition.offset.Z) + 0.01
+            elseif lookoutAccess then definition.BranchStep == 4
+            else harborAlongX
+        if orbitalEntry then
+            platform:SetAttribute("OrbitalEntryLanding", true)
         end
-        addPlatformFinish(decor, platform, i, theme)
+        -- Both stripes must clear the exposed sides of the grounded riser.
+        local edgeOverhang = if skybridge then 0.42
+            elseif definition.PerimeterStep then 1.20
+            elseif elevatedRoute or harborLanding or lookoutAccess then 0.96
+            else 0.28
+        -- While common trim loads, keep the existing deck silhouettes
+        -- with the arena's own closed casting or Harbor's load roller.
+        local reactorLanding = definition.OrbitalReactorLanding == true
+        local orbitalHub = definition.OrbitalRescueHub == true
+        local harborStep = definition.HarborStep or definition.HarborSpokeStep
+        local harborApproach = harborStep ~= nil and harborStep <= 2
+        local harborTurn = PlatformIdentityLodRules.isHarborCargoTurn(platform)
+        local harborUpperPier = PlatformIdentityLodRules.isHarborUpperPier(platform)
+        local harborFreightTrim = harborApproach or harborTurn or harborUpperPier
+            or definition.HarborStep == 7 or definition.HarborSkywayLane ~= nil
+        local trimCasting = if reactorLanding or orbitalEntry or orbitalHub
+            or harborFreightTrim then closedDeckCasting else routeCasting
+        local signalFallback = if harborLanding then rimBevel or harborSignalCasting else trimCasting
+        addPlatformGlow(decor, platform, i, theme, routeTier, edgeBand or signalFallback,
+            edgeOverhang, glowAlongX, orbitalHub and detailProfiles.ring or nil)
+        local elevatedTrim = elevatedRoute and elevatedTrimProfiles or nil
+        local harborRouteBeam = (definition.HarborSkywayLane or harborUpperPier) and sweptProfile or nil
+        local bevelSource = (skybridge and sweptProfile)
+            or (harborLanding and rimBevel) or canonicalRim
+        -- Use the open lattice in the existing shallow frame envelope
+        -- so the landed platform still matches the native trim owners.
+        local frameProfile = ((reactorLanding or orbitalHub) and underdeckLattice)
+            or underdeckSpars or (orbitalEntry and underdeckLattice)
+            or (not elevatedRoute and trimCasting) or nil
+        local coreProfile = (orbitalEntry and detailProfiles.ring.part) or underdeckSignal or signalFallback
+        addPlatformFinish(decor, platform, i, theme, floorProfile or trimCasting,
+            coreProfile,
+            (skybridge or harborLanding) and underdeckLattice or nil,
+            frameProfile, bevelSource, harborAlongX, elevatedTrim,
+            harborRouteBeam, trimCasting, harborLanding and harborTrimReserve or nil)
+        if elevatedRoute or reactorLanding or harborFreightTrim then
+            addPlatformSupports(decor, base, platform, i, theme, routeShaft, routeShaftAssetId,
+                harborFreightTrim and harborPileCasting or nil)
+        else
+            addPlatformSupports(decor, base, platform, i, theme, beaconShaft, shaftAssetId)
+        end
+        if definition.PerimeterRoute or definition.BranchRoute or definition.CrosslinkRoute then
+            SkyRouteMonuments.cladRisers(decor, platform, i, definition, theme, monumentProfiles)
+        end
         -- Real 320-stud arenas need strong visual destinations, not more
         -- small repeated squares. Twelve major route portals stand on
         -- PHYSICAL perimeter ascent decks #1, #4 and #8, not floating
@@ -2977,7 +3851,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- and collapse; pre-existing danger telegraphs remain authoritative.
         if definition.PerimeterRoute then
             SkyRouteMonuments.decorate(
-                decor, platform, i, definition, variant.Id, theme)
+                decor, platform, i, definition, variant.Id, theme, monumentProfiles, platformDefinitions[i + 1])
         end
         -- Six large native-metal arches visibly frame the actual elevated
         -- 200-stud promenades. Every noncolliding part is owned by its
@@ -2985,43 +3859,37 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         -- None adds a blocking wall beneath the high walkways.
         if definition.SkySpineStep then
             SkySpineArchitecture.decorate(
-                decor, platform, i, definition, variant.Id, theme)
+                decor, platform, i, definition, variant.Id, theme, sweptProfile, monumentProfiles)
+            if definition.SkySpineStep == 1 then
+                spineEndpoints[1] = platform
+            elseif definition.SkySpineStep == 10 then
+                spineEndpoints[2] = platform
+            end
         end
         if definition.PromenadeLane then
             PromenadeArchitecture.decorate(
-                decor, platform, i, definition, variant.Id, theme)
+                decor, platform, i, definition, variant.Id, theme,
+                underdeckLattice, monumentProfiles)
 
-            -- These long cross-arena lanes are LEVEL jumping routes:
-            -- JumpRouteCueRules intentionally advertises only ascending
-            -- steps. Give both directions a genuinely physical, visible
-            -- trail of two V-shaped arrows per deck, aligned to the
-            -- actual collider. They follow the platform when it shrinks
-            -- and never create a deceptive secondary collision surface.
-            local arrowY = platform.Size.Y * 0.5 + 0.155
-            local tone = theme.Accent:Lerp(theme.Detail, 0.34)
-            for _, direction in ipairs({-1, 1}) do
-                local point = platform.CFrame * CFrame.new(
-                    direction * math.min(5.0, platform.Size.X * 0.24),
-                    arrowY, 0)
-                local heading = CFrame.lookAt(
-                    point.Position, point.Position
-                        + Vector3.new(direction, 0, 0))
-                for _, side in ipairs({-1, 1}) do
-                    local mark = decorPart(
-                        decor,
-                        "PromenadeJumpChevron" .. i .. "_"
-                            .. tostring(direction) .. "_"
-                            .. tostring(side),
-                        Vector3.new(0.30, 0.08, 2.55), point.Position,
-                        tone, Enum.Material.Neon
-                    )
-                    mark.CFrame = heading
-                        * CFrame.new(side * 0.62, 0, 0)
-                        * CFrame.Angles(0, math.rad(side * 35), 0)
-                    mark.Transparency = 0.34
-                    mark:SetAttribute("PerimeterPlatformIndex", i)
-                    mark:SetAttribute("ChaosWayfinding", true)
+            local step = definition.PromenadeStep
+            local lane = definition.PromenadeLane
+            if step == 4 then
+                promenadeJunctions[lane] = platform
+            elseif step == 1 or step == 8 then
+                lookoutEntries[(lane - 1) * 2 + (step == 1 and 1 or 2)] = platform
+            end
+            local arrowName = "PromenadeJumpChevron" .. i .. "_"
+            local inset = math.min(5.0, platform.Size.X * 0.24)
+            for direction = -1, 1, 2 do
+                local forward = platform.CFrame.RightVector * direction
+                local nextStep = step + direction
+                local targetIndex = i + direction
+                if nextStep < 1 or nextStep > 8 then
+                    local route = (lane - 1) * 2 + (direction < 0 and 1 or 2)
+                    targetIndex = #variant.Platforms + #variant.PerimeterPlatforms + route * 4
                 end
+                addRouteChevron(decor, arrowName .. direction, platform, i,
+                    forward, promenadeTone, PROMENADE_CHEVRON, routeChevronProfile, forward * inset, targetIndex)
             end
         end
 
@@ -3041,22 +3909,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             outpost.MaxDistance = 64
             outpost.AlwaysOnTop = false
             outpost.Parent = platform
-            -- Never advertise a look-out whose solid footing is about to
-            -- disappear. Keep the marker event-driven and tied to the real
-            -- server-owned collision/visibility state, not a new loop.
-            local function refreshOutpost()
-                local phase = platform:GetAttribute("CollapsePhase")
-                outpost.Enabled = platform.Parent ~= nil
-                    and platform.CanCollide and platform.Transparency < 0.75
-                    and phase ~= "Warning" and phase ~= "Gone"
-            end
-            platform:GetAttributeChangedSignal("CollapsePhase")
-                :Connect(refreshOutpost)
-            platform:GetPropertyChangedSignal("CanCollide")
-                :Connect(refreshOutpost)
-            platform:GetPropertyChangedSignal("Transparency")
-                :Connect(refreshOutpost)
-            refreshOutpost()
+            bindLandingBillboard(outpost, platform)
             local sign = Instance.new("TextLabel")
             sign.Name = "OutpostLabel"
             sign.Size = UDim2.fromScale(1, 1)
@@ -3086,6 +3939,7 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
             billboard.MaxDistance = 78
             billboard.AlwaysOnTop = false
             billboard.Parent = platform
+            bindLandingBillboard(billboard, platform)
             local text = Instance.new("TextLabel")
             text.Name = "Lookout"
             text.Size = UDim2.fromScale(1, 1)
@@ -3106,88 +3960,143 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         end
 
         if definition.PerimeterStep == #variant.PerimeterPlatforms / 4 then
-            -- Original native three-dimensional exit facade at the FINAL terrace: four simple
-            -- nonblocking components per route, no extra emitters/lights.
-            -- Mounted on the OUTWARD face of the solid exit pedestal,
-            -- away from the player's approach and central hazard lanes.
+            -- Keep the exit sculpture on the outward face of the final terrace,
+            -- clear of the walkable deck and the approach from the previous step.
             local frontSign = platformPosition.Z >= config.ArenaCenter.Z
                 and 1 or -1
             local outerZ = platformPosition.Z
                 + frontSign * (platform.Size.Z * 0.5 + 0.18)
             for side = -1, 1, 2 do
-                local rib = decorPart(
-                    decor,
+                local rib = fitDecorMesh(
+                    exitRib.part,
                     "PerimeterExitRib" .. definition.PerimeterRoute
                         .. "_" .. tostring(side),
-                    Vector3.new(0.88, platform.Size.Y - 1.05, 0.34),
-                    Vector3.new(platformPosition.X + side * 3.35,
+                    CFrame.new(platformPosition.X + side * 3.35,
                         platformPosition.Y - 0.20, outerZ),
+                    Vector3.new(0.88, platform.Size.Y - 1.05, 0.34),
                     theme.Structure:Lerp(theme.Detail, 0.18),
                     Enum.Material.Metal
                 )
                 rib.Transparency = 0.06
+                if rib:IsA("MeshPart") then rib:SetAttribute("Original3DAssetId", exitRib.assetId) end
                 rib:SetAttribute("PerimeterPlatformIndex", i)
+                rib.Parent = decor
             end
-            local cap = Instance.new("WedgePart")
-            cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
-            cap.Size = Vector3.new(8.0, 1.15, 1.0)
-            cap.CFrame = CFrame.new(
+            local crownSize = Vector3.new(8.0, 1.15, 1.0)
+            local crownFrame = CFrame.new(
                 platformPosition.X,
                 platformPosition.Y + platform.Size.Y * 0.5 - 0.45,
                 outerZ + frontSign * 0.34
             ) * CFrame.Angles(0, frontSign < 0 and math.pi or 0, 0)
+            local profile = exitCrownSlope or exitCrown
+            local source = profile.part
+            local cap
+            if exitCrownSlope then
+                -- The high edge faces out like the wedge. Preserve the
+                -- marked import orientation instead of aligning its long axis.
+                local size = if exitCrownSlope.swapXZ
+                    then Vector3.new(crownSize.Z, crownSize.Y, crownSize.X) else crownSize
+                cap = RouteSignalGeometry.fit(source, crownFrame * exitCrownSlope.rotation,
+                    size, nil, source.Size.X > source.Size.Z)
+            else
+                cap = RouteSignalGeometry.fit(source, crownFrame, crownSize, nil, true)
+            end
+            if not cap then
+                cap = Instance.new("WedgePart")
+                cap.Size = crownSize
+                cap.CFrame = crownFrame
+                cap.Anchored = true
+                cap.CanCollide = false
+                cap.CanTouch = false
+                cap.CanQuery = false
+                cap.CastShadow = false
+            else
+                cap:SetAttribute("Original3DAssetId", profile.assetId)
+            end
+            cap.Name = "PerimeterExitCrown" .. definition.PerimeterRoute
             cap.Color = theme.Detail:Lerp(theme.Structure, 0.30)
             cap.Material = Enum.Material.Metal
-            cap.Anchored = true
-            cap.CanCollide = false
-            cap.CanTouch = false
-            cap.CanQuery = false
-            cap.CastShadow = false
             cap.Transparency = 0.08
-            cap.Parent = decor
             cap:SetAttribute("PerimeterPlatformIndex", i)
-            local lens = decorPart(
-                decor,
-                "PerimeterExitLens" .. definition.PerimeterRoute,
-                Vector3.new(2.1, 2.1, 0.35),
-                Vector3.new(platformPosition.X, platformPosition.Y,
+            cap.Parent = decor
+            local lens = fitDecorMesh(
+                exitLens.part, "PerimeterExitLens" .. definition.PerimeterRoute,
+                CFrame.new(platformPosition.X, platformPosition.Y,
                     outerZ + frontSign * 0.22),
+                Vector3.new(2.1, 2.1, 0.35),
                 theme.Accent:Lerp(theme.Structure, 0.56),
                 Enum.Material.Glass
             )
+            lens.Parent = decor
             lens.Transparency = 0.34
+            if lens:IsA("MeshPart") then lens:SetAttribute("Original3DAssetId", exitLens.assetId) end
             lens:SetAttribute("PerimeterPlatformIndex", i)
         end
     end
 
-    -- The branching choice also needs to be readable AT THE FORK,
-    -- without guessing where sixteen peripheral platforms lead.
+    if variant.Id == "Harbor" then
+        fitHarborJunctions(decor, platforms, sweptProfile)
+    end
+
+    -- Place the transverse chevron only where the real bridge overlaps
+    -- this landing. A nearby disconnected deck must not show a turn cue.
+    for lane = 1, 2 do
+        local deck, spine = promenadeJunctions[lane], spineEndpoints[lane]
+        if SkyRouteConnectionRules.spineJunction(spine, deck) then
+            local index = tonumber(deck.Name:match("^Platform(%d+)$"))
+            local along = deck.CFrame.LookVector
+            local side = (spine.Position - deck.Position):Dot(along) >= 0 and 1 or -1
+            local forward = along * side
+            local targetIndex = tonumber(spine.Name:match("^Platform(%d+)$"))
+            addRouteChevron(decor, "PromenadeJumpChevron" .. index .. "_Spine", deck, index,
+                forward, theme.Secondary, SPINE_TURN_CHEVRON, routeChevronProfile,
+                forward * (deck.Size.Z * 0.25), targetIndex)
+            addSpineExitChevrons(decor, spine, deck, theme.Secondary, routeChevronProfile)
+        end
+    end
+
+    for route, lookout in pairs(sideLookouts) do
+        local deck = lookout.part
+        local entry = lookoutEntries[route]
+        if JumpRouteCueRules.skyNetworkLink(deck, entry) then
+            local delta = (entry.Position - deck.Position) * Vector3.new(1, 0, 1)
+            local offset = PromenadeArchitecture.decorateLookoutJoint(
+                decor, deck, lookout.index, entry, theme, monumentProfiles.beam, monumentProfiles.bevel)
+            local targetIndex = tonumber(entry.Name:match("^Platform(%d+)$"))
+            addRouteChevron(decor, "BranchStepArrow" .. route .. "_4", deck, lookout.index,
+                delta.Unit, theme.Secondary, BRANCH_CHEVRON, routeChevronProfile, offset, targetIndex)
+        end
+    end
+
+    -- Paint both real choices on each fork, and the continuation across
+    -- the short rescue link. The client can mask each pair independently.
+    local perimeterCount = #variant.PerimeterPlatforms
+    local routeDecks = platforms:GetChildren()
+    local function paintChoice(name, deck, destination, color)
+        if not destination then return end
+        local index = tonumber(deck.Name:match("^Platform(%d+)$"))
+        local targetIndex = tonumber(destination.Name:match("^Platform(%d+)$"))
+        local delta = (destination.Position - deck.Position) * Vector3.new(1, 0, 1)
+        if delta.Magnitude < 0.01 then return end
+        local forward = delta.Unit
+        local offset = forward * (math.min(deck.Size.X, deck.Size.Z) * 0.24)
+        addRouteChevron(decor, name, deck, index, forward, color,
+            FORK_CHEVRON, routeChevronProfile, offset, targetIndex)
+    end
+    local ascentColor = Color3.fromRGB(197, 237, 246):Lerp(theme.Accent, 0.20)
     for route = 1, 4 do
-        local forkIndex = #variant.Platforms
-            + (route - 1) * #variant.PerimeterPlatforms / 4 + 5
-        local fork = platforms:FindFirstChild("Platform" .. forkIndex)
-        if fork and fork:IsA("BasePart") then
-            local forwardZ = fork.Position.Z >= config.ArenaCenter.Z
-                and 1 or -1
-            local point = fork.Position
-                + Vector3.new(0, fork.Size.Y * 0.5 + 0.055, 0)
-            local facing = CFrame.lookAt(
-                point, point + Vector3.new(0, 0, forwardZ)
-            )
-            for side = -1, 1, 2 do
-                local arrow = decorPart(
-                    decor, "BranchForkArrow" .. route .. "_"
-                        .. tostring(side),
-                    Vector3.new(0.33, 0.065, 2.4), point,
-                    theme.Secondary, VisualTheme.Materials.Glow
-                )
-                arrow.CFrame = facing
-                    * CFrame.new(side * 0.55, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 36), 0)
-                arrow.Transparency = 0.32
-                arrow:SetAttribute("PerimeterPlatformIndex", forkIndex)
-                arrow:SetAttribute("ChaosWayfinding", true)
-            end
+        local start = #variant.Platforms + (route - 1) * perimeterCount / 4
+        local fork = platforms:FindFirstChild("Platform" .. (start + 5))
+        local ridge = platforms:FindFirstChild("Platform" .. (start + 6))
+        local forward, branch = JumpRouteCueRules.forkOptions(fork, routeDecks)
+        paintChoice("RidgeForkArrow" .. route, fork, forward, ascentColor)
+        paintChoice("BranchForkArrow" .. route, fork, branch, theme.Secondary)
+        local nextRidge, link = JumpRouteCueRules.crosslinkOptions(ridge, routeDecks)
+        paintChoice("RidgeCrosslinkArrow" .. route, ridge, nextRidge, ascentColor)
+        paintChoice("CrosslinkForkArrow" .. route, ridge, link, theme.Secondary)
+        if link then
+            local destination = JumpRouteCueRules.nextPhysical(link, routeDecks, config.ArenaCenter, variant.Id)
+            paintChoice("CrosslinkExitArrow" .. route, link, destination, theme.Secondary)
         end
     end
 
@@ -3198,31 +4107,31 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local path = variant.PerimeterPlatforms
         local perRoute = #path / 4
         local entry = path[(route - 1) * perRoute + 1]
-        local exit = path[route * perRoute]
         for _, cue in ipairs({
-            {name = "Entry", definition = entry, title = "CLIMB / DODGE"},
-            {name = "Lookout", definition = exit, title = "HIGH GROUND"},
+            {name = "Entry", step = 1, title = "CLIMB / DODGE"},
+            {name = "Lookout", step = perRoute, title = "HIGH GROUND"},
         }) do
-            local top = config.ArenaCenter + cue.definition.offset
-                + Vector3.new(0, cue.definition.size.Y * 0.5 + 0.5, 0)
-            local pedestal = decorPart(
-                decor, "DistrictWayfinder" .. route .. cue.name,
-                Vector3.new(1.8, 0.20, 1.8), top, theme.Detail,
-                Enum.Material.Metal
-            )
+            local platformIndex = #variant.Platforms + (route - 1) * perRoute + cue.step
+            local deck = platforms:FindFirstChild("Platform" .. platformIndex)
+            if not deck or not deck:IsA("BasePart") then continue end
+
+            local pedestalHeight = 0.46
+            local center = 0.09 + pedestalHeight * 0.5
+            local pose = deck.CFrame * CFrame.new(0, deck.Size.Y * 0.5 + center, 0)
+            local pedestal = fitDecorMesh(wayfinderBase, "DistrictWayfinder" .. route .. cue.name,
+                pose, Vector3.new(1.8, pedestalHeight, 1.6), theme.Detail, Enum.Material.Metal)
             pedestal.Transparency = 0.22
-            local platformIndex = #variant.Platforms
-                + (route - 1) * perRoute
-                + (cue.name == "Entry" and 1 or perRoute)
             pedestal:SetAttribute("PerimeterPlatformIndex", platformIndex)
+            pedestal.Parent = decor
             local billboard = Instance.new("BillboardGui")
             billboard.Name = "ObjectiveLabel"
             billboard.Size = UDim2.fromOffset(158, 38)
-            billboard.StudsOffsetWorldSpace = Vector3.new(0, 4.4, 0)
+            billboard.StudsOffsetWorldSpace = Vector3.new(0, 4.9 - center, 0)
             billboard.MaxDistance = 85
             billboard.AlwaysOnTop = false
             billboard.Adornee = pedestal
             billboard.Parent = pedestal
+            bindLandingBillboard(billboard, deck)
             local text = Instance.new("TextLabel")
             text.Name = "Objective"
             text.Size = UDim2.fromScale(1, 1)
@@ -3252,17 +4161,15 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
                 arrowPoint, arrowPoint + Vector3.new(sx, 0, 0)
             )
             for side = -1, 1, 2 do
-                local chevron = decorPart(
-                    decor, "DistrictArrow" .. route .. "_" .. marker
-                        .. "_" .. tostring(side),
-                    Vector3.new(0.17, 0.055, 1.50), arrowPoint,
-                    marker == 3 and theme.Accent or theme.Secondary,
-                    VisualTheme.Materials.Glow
-                )
-                chevron.CFrame = forward
-                    * CFrame.new(side * 0.43, 0, 0)
+                local pose = forward * CFrame.new(side * 0.43, 0, 0)
                     * CFrame.Angles(0, math.rad(side * 38), 0)
+                local name = "DistrictArrow" .. route .. "_" .. marker .. "_" .. tostring(side)
+                local color = marker == 3 and theme.Accent or theme.Secondary
+                local chevron = fitDecorMesh(sweptProfile, name, pose, Vector3.new(0.17, 0.055, 1.50),
+                    color, VisualTheme.Materials.Glow)
                 chevron.Transparency = 0.42
+                chevron:SetAttribute("ChaosWayfinding", true)
+                chevron.Parent = decor
             end
         end
     end
@@ -3270,7 +4177,13 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
     if variant.Id == "Orbital" then
         -- Fully physical sloped routes between the outer and inner decks.
         -- No scripted platform movement or client-controlled collisions.
-        OrbitalHelix.build(arena, variant, config.ArenaCenter, theme)
+        OrbitalHelix.build(arena, variant, config.ArenaCenter, theme, {
+            lattice = underdeckLattice,
+            spars = underdeckSpars,
+            forged = sweptProfile,
+            casting = wayfinderBase,
+            floor = {part = floorProfile, assetId = PremiumFloorReliefAssets.approvedId("Orbital")},
+        })
     end
 
     -- Navigation is derived from the ACTUAL eight physical platforms per
@@ -3282,63 +4195,46 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local startIndex = (route - 1) * perRoute
         local entry = variant.PerimeterPlatforms[startIndex + 1]
         local lookout = variant.PerimeterPlatforms[startIndex + perRoute]
-        local outward = Vector3.new(entry.offset.X, 0, entry.offset.Z).Unit
-        local alongSteps = Vector3.new(
-            lookout.offset.X - entry.offset.X, 0,
-            lookout.offset.Z - entry.offset.Z
-        ).Unit
+        local approach = Vector3.new(entry.offset.X, 0, entry.offset.Z)
+        local outward = approach.Unit
+        local approachDepth = (math.abs(outward.X) * entry.size.X
+            + math.abs(outward.Z) * entry.size.Z) * 0.5
+        local approachEnd = approach.Magnitude - approachDepth - 1.6
         local routeColor = route % 2 == 0 and theme.Secondary or theme.Accent
 
-        -- Five chevrons on the floor end at the exact entry platform.
+        -- End just short of the entry terrace so the last arrow remains
+        -- visible instead of passing underneath the grounded platform.
         for step = 1, 5 do
-            local fraction = 0.30 + 0.13 * step
-            local point = config.ArenaCenter + Vector3.new(
-                entry.offset.X * fraction,
-                variant.BaseSize.Y * 0.5 + 0.04,
-                entry.offset.Z * fraction
-            )
+            local distance = approachEnd * (0.45 + 0.55 * (step - 1) / 4)
+            local point = config.ArenaCenter + outward * distance
+                + Vector3.new(0, variant.BaseSize.Y * 0.5 + 0.04, 0)
             local facing = CFrame.lookAt(point, point + outward)
             for side = -1, 1, 2 do
-                local arrow = decorPart(
-                    decor, "OuterRouteChevron" .. route .. "_" .. step
-                        .. "_" .. tostring(side),
-                    Vector3.new(0.28, 0.055, 2.5),
-                    point, routeColor, VisualTheme.Materials.Glow
-                )
-                arrow.CFrame = facing
-                    * CFrame.new(side * 0.57, 0, 0)
+                local name = "OuterRouteChevron" .. route .. "_" .. step .. "_" .. side
+                local pose = facing * CFrame.new(side * 0.57, 0, 0)
                     * CFrame.Angles(0, math.rad(side * 33), 0)
+                local arrow = fitDecorMesh(sweptProfile, name, pose, Vector3.new(0.28, 0.055, 2.5),
+                    routeColor, VisualTheme.Materials.Glow)
                 arrow.Transparency = 0.45
-                arrow.CastShadow = false
                 arrow:SetAttribute("ChaosWayfinding", true)
+                arrow.Parent = decor
             end
         end
 
-        -- A consistent double-chevron etched onto each of the EIGHT real
-        -- destinations. Attach its owning platform ID so Shrinking Arena
-        -- moves/scales the cosmetics WITH that collidable deck.
-        local deckFacing = CFrame.lookAt(Vector3.zero, alongSteps)
+        -- Face the next real landing, or the way back at the terminal.
+        -- Offsetting each arrow keeps the central signs and forks clear.
         for step = 1, perRoute do
-            local deck = variant.PerimeterPlatforms[startIndex + step]
             local platformIndex = #variant.Platforms + startIndex + step
-            local center = config.ArenaCenter + deck.offset
-                + Vector3.new(0, deck.size.Y * 0.5 + 0.07, 0)
-            for side = -1, 1, 2 do
-                local segment = decorPart(
-                    decor, "OuterStepChevron" .. route .. "_" .. step
-                        .. "_" .. tostring(side),
-                    Vector3.new(0.26, 0.07, 1.8),
-                    center, routeColor, VisualTheme.Materials.Glow
-                )
-                segment.CFrame = CFrame.new(center)
-                    * (deckFacing - deckFacing.Position)
-                    * CFrame.new(side * 0.42, 0, 0)
-                    * CFrame.Angles(0, math.rad(side * 35), 0)
-                segment.Transparency = 0.43
-                segment.CastShadow = false
-                segment:SetAttribute("ChaosWayfinding", true)
-                segment:SetAttribute("PerimeterPlatformIndex", platformIndex)
-            end
+            local neighborIndex = platformIndex + (step < perRoute and 1 or -1)
+            local deck = platforms:FindFirstChild("Platform" .. platformIndex)
+            local neighbor = platforms:FindFirstChild("Platform" .. neighborIndex)
+            if not deck or not neighbor then continue end
+            local delta = (neighbor.Position - deck.Position) * Vector3.new(1, 0, 1)
+            if delta.Magnitude <= 0.01 then continue end
+            local forward = delta.Unit
+            local name = "OuterStepChevron" .. route .. "_" .. step
+            addRouteChevron(decor, name, deck, platformIndex, forward, routeColor,
+                PERIMETER_STEP_CHEVRON, routeChevronProfile, forward * 2.4)
         end
 
         -- Three-part destination beacon on open FLOOR beside (never on)
@@ -3347,74 +4243,74 @@ function MapBuilder.buildArena(config, variantId, arenaVariants, themeProvider)
         local signX = lookout.offset.X >= 0 and 1 or -1
         local signZ = lookout.offset.Z >= 0 and 1 or -1
         local beaconPoint = config.ArenaCenter + Vector3.new(
-            lookout.offset.X + signX * 11,
+            math.clamp(lookout.offset.X + signX * 11, -halfX + 3, halfX - 3),
             variant.BaseSize.Y * 0.5 + 17,
-            lookout.offset.Z + signZ * 9
+            math.clamp(lookout.offset.Z + signZ * 9, -halfZ + 3, halfZ - 3)
         )
         local terminalIndex = #variant.Platforms + startIndex + perRoute
-        local mast = decorPart(
-            decor, "OuterRouteSignal" .. route,
-            Vector3.new(1.15, 34, 1.15), beaconPoint,
-            theme.Structure:Lerp(theme.Detail, 0.30), Enum.Material.Metal
-        )
+        local mast = fitDecorMesh(markerShaft, "OuterRouteSignal" .. route, CFrame.new(beaconPoint),
+            Vector3.new(1.55, 34, 1.55), theme.Structure:Lerp(theme.Detail, 0.30), Enum.Material.Metal)
         mast.Transparency = 0.12
-        mast.CastShadow = false
-        local lens = decorPart(
-            decor, "OuterRouteSignalLens" .. route,
+        local lens = fitDecorMesh(
+            orbitalLens, "OuterRouteSignalLens" .. route,
+            CFrame.new(beaconPoint + Vector3.new(0, 18.5, 0)),
             Vector3.new(3.8, 3.8, 3.8),
-            beaconPoint + Vector3.new(0, 18.5, 0),
             routeColor, Enum.Material.Glass
         )
-        lens.Shape = Enum.PartType.Ball
+        if lens:IsA("Part") then
+            lens.Shape = Enum.PartType.Ball
+        end
         lens.Transparency = 0.20
-        local crown = decorPart(
-            decor, "OuterRouteSignalCrown" .. route,
-            Vector3.new(5.0, 0.85, 5.0),
-            beaconPoint + Vector3.new(0, 15.9, 0),
-            theme.Detail, Enum.Material.Metal
-        )
+        local crown = fitDecorMesh(markerCap, "OuterRouteSignalCrown" .. route,
+            CFrame.new(beaconPoint + Vector3.new(0, 15.9, 0)), Vector3.new(5.0, 0.85, 5.0),
+            theme.Detail, Enum.Material.Metal)
         for _, piece in ipairs({mast, lens, crown}) do
             piece:SetAttribute("ChaosWayfinding", true)
             piece:SetAttribute("PerimeterPlatformIndex", terminalIndex)
-            piece.CastShadow = false
+            piece.Parent = decor
         end
     end
 
+    local pillarSize = Vector3.new(0.8, 7, 0.8)
+    local pillarY = (base.Size.Y + pillarSize.Y) * 0.5
     local beaconOffsets = {
-        Vector3.new(-halfX + 3, 4.5, -halfZ + 3),
-        Vector3.new(halfX - 3, 4.5, -halfZ + 3),
-        Vector3.new(-halfX + 3, 4.5, halfZ - 3),
-        Vector3.new(halfX - 3, 4.5, halfZ - 3),
+        Vector3.new(-halfX + 3, pillarY, -halfZ + 3),
+        Vector3.new(halfX - 3, pillarY, -halfZ + 3),
+        Vector3.new(-halfX + 3, pillarY, halfZ - 3),
+        Vector3.new(halfX - 3, pillarY, halfZ - 3),
     }
 
     for i, offset in ipairs(beaconOffsets) do
-        local pillar = decorPart(
-            decor,
+        local frame = base.CFrame * CFrame.new(offset)
+        local pillar = fitDecorMesh(
+            markerShaft,
             "EdgeBeacon" .. i,
-            Vector3.new(0.8, 7, 0.8),
-            config.ArenaCenter + offset,
+            frame,
+            pillarSize,
             theme.Structure:Lerp(Color3.new(1, 1, 1), 0.08),
             VisualTheme.Materials.Structure
         )
-        pillar.CanCollide = false
+        pillar.Parent = decor
 
-        local cap = decorPart(
-            decor,
+        local color = i % 2 == 0 and theme.Secondary or theme.Accent
+        local cap = fitDecorMesh(
+            markerCap,
             "EdgeBeaconGlow" .. i,
+            frame * CFrame.new(0, pillarSize.Y * 0.5 + 0.05, 0),
             Vector3.new(1.35, 0.36, 1.35),
-            pillar.Position + Vector3.new(0, 3.55, 0),
-            (i % 2 == 0) and theme.Secondary or theme.Accent,
+            color,
             VisualTheme.Materials.Glow
         )
         cap.Transparency = 0.10
 
         local capLight = Instance.new("PointLight")
         capLight.Name = "EdgeBeaconLight"
-        capLight.Color = (i % 2 == 0) and theme.Secondary or theme.Accent
+        capLight.Color = color
         capLight.Brightness = 0.55
         capLight.Range = 11
         capLight.Shadows = false
         capLight.Parent = cap
+        cap.Parent = decor
     end
 
     return arena

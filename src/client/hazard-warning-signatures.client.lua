@@ -10,6 +10,7 @@ local WARNING_TAG = "ChaosDisappearingWarning"
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local WarningRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -33,8 +34,8 @@ local function profile()
         UserInputService.TouchEnabled)
 end
 
-local function localPart(group, className, name, size, frame, color, transparency)
-    local part = Instance.new(className)
+local function localPart(group, className, name, size, frame, color, transparency, source)
+    local part = CelebrationMeshes.cloneProfile(source) or Instance.new(className)
     part.Name = name
     part.Size = size
     part.CFrame = frame
@@ -109,12 +110,15 @@ local function meteorSignature(warning, group, tierName, reduced, remaining, pro
     local duration = remaining
     local center = warning.Position
     local initialHeight = reduced and 21 or (18 + 10 * progress)
+    local sculpted = tierName ~= "Low" and not reduced
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local shaft = sculpted and CelebrationMeshes.readyProfile("pylon", pressure)
     local column = localPart(
         group, "Part", "MeteorIncomingColumn",
         Vector3.new(0.45 + 0.30 * progress, initialHeight, 0.45 + 0.30 * progress),
         CFrame.new(center + Vector3.new(0, initialHeight * 0.5, 0)),
         Color3.fromRGB(255, 145, 55),
-        reduced and 0.62 or (tierName == "Low" and 0.58 or 0.40)
+        reduced and 0.62 or (tierName == "Low" and 0.58 or 0.40), shaft
     )
     if not reduced then
         TweenService:Create(column,
@@ -127,15 +131,16 @@ local function meteorSignature(warning, group, tierName, reduced, remaining, pro
         ):Play()
     end
 
-    if tierName ~= "Low" and not reduced then
+    if sculpted then
+        local capSource = CelebrationMeshes.readyProfile("fragment", pressure)
         local startY = 17.5 + (3 - 17.5) * progress
         local cap = localPart(
             group, "Part", "MeteorIncomingCap",
             Vector3.new(2.4, 0.20, 2.4),
             CFrame.new(center + Vector3.new(0, startY, 0)),
-            Color3.fromRGB(255, 210, 100), 0.34 + 0.58 * progress
+            Color3.fromRGB(255, 210, 100), 0.34 + 0.58 * progress, capSource
         )
-        cap.Shape = Enum.PartType.Ball
+        if cap:IsA("Part") then cap.Shape = Enum.PartType.Ball end
         TweenService:Create(cap,
             TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
             {Position = center + Vector3.new(0, 3, 0), Transparency = 0.92}
@@ -144,6 +149,7 @@ local function meteorSignature(warning, group, tierName, reduced, remaining, pro
         -- Hand-authored angular incoming fracture fins: only High can
         -- afford both blades; never obscure the actual warning disc.
         if tierName == "High" then
+            local finSource = CelebrationMeshes.readyProfile("casting", pressure)
             for side = -1, 1, 2 do
                 local offset = Vector3.new(side * 1.35, 0, 0)
                 local blade = localPart(
@@ -151,7 +157,7 @@ local function meteorSignature(warning, group, tierName, reduced, remaining, pro
                     Vector3.new(0.18, 0.78, 2.0),
                     CFrame.new(center + offset + Vector3.new(0, startY + 1.2, 0))
                         * CFrame.Angles(math.rad(side * 30), math.rad(side * 25), math.rad(side * 20)),
-                    Color3.fromRGB(255, 179, 77), 0.46
+                    Color3.fromRGB(255, 179, 77), 0.46, finSource
                 )
                 TweenService:Create(blade,
                     TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
@@ -174,6 +180,9 @@ local function bombSignature(warning, group, tierName, reduced, remaining, progr
     local length = tierName == "Low" and 6.5 or 8.5
     local displayedLength = reduced and length or (length * (1 - 0.58 * progress))
     local axes = tierName == "Low" and not reduced and 1 or 2
+    local source = tierName ~= "Low" and not reduced and CelebrationMeshes.readyProfile(
+        "casting", player:GetAttribute("OptionalVfxPressure")
+    )
 
     for axis = 1, axes do
         local size = axis == 1
@@ -183,7 +192,7 @@ local function bombSignature(warning, group, tierName, reduced, remaining, progr
             group, "Part", axis == 1 and "BombCrossA" or "BombCrossB",
             size, CFrame.new(center + Vector3.new(0, 0.14, 0)),
             axis == 1 and Color3.fromRGB(255, 65, 65)
-                or Color3.fromRGB(255, 115, 80), reduced and 0.37 or 0.28
+                or Color3.fromRGB(255, 115, 80), reduced and 0.37 or 0.28, source
         )
         if not reduced then
             TweenService:Create(arm,

@@ -7,6 +7,9 @@ local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local Config = require(ReplicatedStorage.Shared.Config)
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
+local OrbitalReactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -42,6 +45,7 @@ local cachedLobbyCoreCenter = Config.LobbyCenter + Vector3.new(0, 6.65, 0)
 local cachedArenaBeacon = nil
 local secondaryLights = {}
 local refreshArenaHologramText = nil
+local refreshLobbySculpture
 
 local function quality()
     return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
@@ -115,6 +119,76 @@ local function makeSegment(name, position, size, color)
     segment.Position = position
     segment.Parent = localFolder
     return segment
+end
+
+local sculptRefreshPending = false
+local function scheduleLobbySculpture()
+    if sculptRefreshPending then return end
+    sculptRefreshPending = true
+    task.defer(function()
+        sculptRefreshPending = false
+        refreshLobbySculpture()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(scheduleLobbySculpture)
+
+local function fitLobbyPiece(part, profile)
+    local size = part:GetAttribute("LobbyProfileSize") or part.Size
+    local replacement = if profile then profile:Clone() else Instance.new("Part")
+    if not replacement then return part end
+    if profile then
+        replacement:ClearAllChildren()
+        replacement.TextureID = ""
+    elseif part:GetAttribute("CorePartIndex") == 0 then
+        replacement.Shape = Enum.PartType.Ball
+    end
+    local rotate = profile and (profile.Size.X > profile.Size.Z) ~= (size.X > size.Z)
+    replacement.PivotOffset = rotate and CFrame.Angles(0, -math.pi * 0.5, 0) or CFrame.new()
+    replacement.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
+    replacement:PivotTo(part:GetPivot())
+    replacement.Name = part.Name
+    replacement.Color = part.Color
+    replacement.Material = part.Material
+    replacement.Transparency = part.Transparency
+    replacement.LocalTransparencyModifier = part.LocalTransparencyModifier
+    replacement.Anchored = true
+    replacement.CanCollide = false
+    replacement.CanTouch = false
+    replacement.CanQuery = false
+    replacement.CastShadow = false
+    for name, value in pairs(part:GetAttributes()) do
+        replacement:SetAttribute(name, value)
+    end
+    replacement:SetAttribute("LobbyProfileSize", size)
+    local light = part:FindFirstChild("LobbyChaosCoreLight")
+    if light and light:IsA("PointLight") then
+        light.Parent = replacement
+    end
+    replacement.Parent = localFolder
+    part:Destroy()
+    return replacement
+end
+
+refreshLobbySculpture = function()
+    if #lobbySegments == 0 then return end
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    local eligible = quality().Name ~= "Low" and pressure < 1
+    local source = eligible and ForgedBridge.sweptProfile() or nil
+    local core = eligible and OrbitalReactor.coreProfile() or nil
+    if source and not geometryReady(source) then source = nil end
+    if core and not geometryReady(core) then core = nil end
+    for _, collection in ipairs({lobbyCoreParts, lobbySegments}) do
+        for i, part in ipairs(collection) do
+            if part.Parent == localFolder then
+                local profile = if part:GetAttribute("CorePartIndex") == 0 then core else source
+                local meshId = part:IsA("MeshPart") and part.MeshId or nil
+                if meshId ~= (profile and profile.MeshId) then
+                    collection[i] = fitLobbyPiece(part, profile)
+                end
+            end
+        end
+    end
 end
 
 local function decorateLobby(root)
@@ -392,6 +466,7 @@ local function rebuild(root)
     clearPolish()
     currentMap = root
     decorateLobby(root)
+    refreshLobbySculpture()
     decorateArena(root)
     collectSecondaryLights(root)
     applyLightBudget()
@@ -509,6 +584,7 @@ end
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     local tier = quality()
     applyLightBudget()
+    scheduleLobbySculpture()
 
     for _, attachment in ipairs(beaconEmitters) do
         local emitter = attachment and attachment:FindFirstChildOfClass("ParticleEmitter")
@@ -518,6 +594,19 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
         end
     end
 end)
+
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleLobbySculpture)
+local function lobbyProfileChanged(item)
+    local reactorHolder = ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
+    if item.Name == "ApprovedTowersSignatureBridgeTemplates"
+        or item.Name == "ForgedBridge" or item.Name == "SweptCrossbeam"
+        or item.Name == "ApprovedOrbitalReactorLandmarkTemplates"
+        or (reactorHolder and item:IsDescendantOf(reactorHolder)) then
+        scheduleLobbySculpture()
+    end
+end
+ReplicatedStorage.DescendantAdded:Connect(lobbyProfileChanged)
+ReplicatedStorage.DescendantRemoving:Connect(lobbyProfileChanged)
 
 stateEvent.OnClientEvent:Connect(function(state)
     previousPhase = phase
@@ -586,8 +675,8 @@ task.spawn(function()
                 end
             else
                 local angle = clock * (0.45 + index * 0.10) * motionScale + math.rad(index * 60)
-                corePart.CFrame = CFrame.new(coreCenter + Vector3.new(0, verticalWave, 0))
-                    * CFrame.Angles(math.rad(18), angle, math.rad(28 + index * 10))
+                corePart:PivotTo(CFrame.new(coreCenter + Vector3.new(0, verticalWave, 0))
+                    * CFrame.Angles(math.rad(18), angle, math.rad(28 + index * 10)))
                 corePart.Transparency = coreTier.Name == "Low" and 1 or 0.26
             end
         end
@@ -618,7 +707,7 @@ task.spawn(function()
 
                 local radius = 15.5
                 local position = center + Vector3.new(math.cos(angle) * radius, 1.0, math.sin(angle) * radius)
-                segment.CFrame = CFrame.new(position) * CFrame.Angles(0, -angle, 0)
+                segment:PivotTo(CFrame.new(position) * CFrame.Angles(0, -angle, 0))
                 local wave = (math.sin(clock * 2.8 + i * 0.7) + 1) * 0.5
                 segment.Transparency = 0.18 + wave * 0.34
             end

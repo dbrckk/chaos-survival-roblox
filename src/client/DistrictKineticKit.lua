@@ -57,7 +57,12 @@ function DistrictKineticKit.start(model, sector, tier, reducedMotion)
             local original = part[property]
             local target
             if spec.mode == "pan" then
-                target = original * CFrame.Angles(0, math.rad(spec.angle), 0)
+                local yaw = CFrame.Angles(0, math.rad(spec.angle), 0)
+                local basis = part:GetAttribute("DistrictPanBasis")
+                if typeof(basis) == "CFrame" then
+                    yaw = basis:Inverse() * yaw * basis
+                end
+                target = original * yaw
             else
                 target = spec.transparency
             end

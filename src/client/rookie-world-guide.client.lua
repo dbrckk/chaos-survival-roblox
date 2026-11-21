@@ -8,6 +8,7 @@ local FirstTimeExperience = require(ReplicatedStorage.Shared.FirstTimeExperience
 local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -26,6 +27,14 @@ local currentTarget = nil
 local highlight = nil
 local billboard = nil
 local worldAssets = {}
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+
+local function clearWorldAssets()
+    for _, instance in ipairs(worldAssets) do
+        instance:Destroy()
+    end
+    table.clear(worldAssets)
+end
 
 local function clearMarker()
     if highlight then
@@ -36,12 +45,7 @@ local function clearMarker()
         billboard:Destroy()
         billboard = nil
     end
-    for _, instance in ipairs(worldAssets) do
-        if instance and instance.Parent then
-            instance:Destroy()
-        end
-    end
-    table.clear(worldAssets)
+    clearWorldAssets()
     currentTarget = nil
 end
 
@@ -236,22 +240,22 @@ local function addWorldGuideAsset(instance)
     return instance
 end
 
-local function buildWorldBeacon(part, color)
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+local function buildWorldBeacon(part, color, animate)
+    local tier = VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    )
     if tier.Name == "Low" then
         return
     end
 
     local reducedMotion = player:GetAttribute("ReduceMotion") == true
-    local radius = math.clamp(math.max(part.Size.X, part.Size.Z) + 2.2, 4.8, 11.5)
+    local diameter = math.clamp(math.max(part.Size.X, part.Size.Z) + 2.2, 4.8, 11.5)
     local y = part.Position.Y + part.Size.Y * 0.5 + 0.10
 
-    local ring = Instance.new("Part")
+    local ringSource = not reducedMotion and CelebrationMeshes.readyProfile("ring", meshPressure)
+    local ring = CelebrationMeshes.disc(ringSource,
+        Vector3.new(part.Position.X, y, part.Position.Z), diameter, 0.055)
     ring.Name = "RookieGuideAnchorRing"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.055, radius, radius)
-    ring.CFrame = CFrame.new(part.Position.X, y, part.Position.Z)
-        * CFrame.Angles(0, 0, math.rad(90))
     ring.Anchored = true
     ring.CanCollide = false
     ring.CanTouch = false
@@ -259,13 +263,13 @@ local function buildWorldBeacon(part, color)
     ring.CastShadow = false
     ring.Material = Enum.Material.Neon
     ring.Color = color
-    ring.Transparency = reducedMotion and 0.66 or 0.42
+    ring.Transparency = reducedMotion and 0.66 or (animate and 0.42 or 0.64)
     ring.Parent = markerFolder
     addWorldGuideAsset(ring)
 
-    if not reducedMotion then
+    if animate and not reducedMotion then
         local targetSize = ring.Size
-        ring.Size = Vector3.new(0.055, radius * 0.56, radius * 0.56)
+        ring.Size = CelebrationMeshes.size(ring, diameter * 0.56, 0.055)
         TweenService:Create(
             ring,
             TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -276,7 +280,8 @@ local function buildWorldBeacon(part, color)
         ):Play()
     end
 
-    local beacon = Instance.new("Part")
+    local beaconSource = not reducedMotion and CelebrationMeshes.readyProfile("pylon", meshPressure)
+    local beacon = CelebrationMeshes.cloneProfile(beaconSource) or Instance.new("Part")
     beacon.Name = "RookieGuideBeacon"
     beacon.Size = Vector3.new(
         tier.Name == "High" and 0.22 or 0.16,
@@ -300,9 +305,10 @@ local function buildWorldBeacon(part, color)
     addWorldGuideAsset(beacon)
 
     if tier.Name == "High" then
-        local cap = Instance.new("Part")
+        local capSource = not reducedMotion and CelebrationMeshes.readyProfile("fragment", meshPressure)
+        local cap = CelebrationMeshes.cloneProfile(capSource) or Instance.new("Part")
         cap.Name = "RookieGuideBeaconCap"
-        cap.Shape = Enum.PartType.Ball
+        if cap:IsA("Part") then cap.Shape = Enum.PartType.Ball end
         cap.Size = Vector3.new(0.62, 0.62, 0.62)
         cap.CFrame = CFrame.new(
             part.Position.X,
@@ -345,7 +351,7 @@ local function mark(part, text, color)
     highlight.OutlineTransparency = 0.05
     highlight.Parent = markerFolder
 
-    buildWorldBeacon(part, color)
+    buildWorldBeacon(part, color, true)
 
     -- Mobile already shows the survival goal and imminent hazard in two
     -- existing HUD owners. A third AlwaysOnTop label obscures the avatar
@@ -584,6 +590,14 @@ end)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     clearMarker()
     refresh()
+end)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    local previous = meshPressure
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if (previous < 1) ~= (meshPressure < 1) and currentTarget and currentTarget.Parent and highlight then
+        clearWorldAssets()
+        buildWorldBeacon(currentTarget, highlight.FillColor, false)
+    end
 end)
 
 player.CharacterAdded:Connect(watchCharacter)

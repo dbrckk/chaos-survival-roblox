@@ -5,10 +5,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local OrbitalRouteSignKit = require(script.Parent.OrbitalRouteSignKit)
 local OrbitalRampRegistry = require(script.Parent.OrbitalRampRegistry)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local LocalizationService = game:GetService("LocalizationService")
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
@@ -20,6 +22,7 @@ folder.Parent = workspace
 local currentCircuit = nil
 local currentTier = nil
 local currentReduced = nil
+local currentMeshEligible = nil
 local runners = {}
 local routeSigns = {}
 local flowFolder = nil
@@ -31,6 +34,12 @@ local MASTER_GOLD = Color3.fromRGB(255, 246, 166)
 local ACTIVE_GOLD = Color3.fromRGB(255, 215, 102)
 local HELIX_MINT = Color3.fromRGB(121, 253, 209)
 local HELIX_CYAN = Color3.fromRGB(95, 201, 255)
+
+local function quality()
+    return VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    ).Name
+end
 
 local function resolveCircuit()
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -46,7 +55,7 @@ local function flowBurst(sensor)
     if not sensor or not sensor.Parent or player:GetAttribute("ReduceMotion") == true then
         return
     end
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    local tier = quality()
     if tier == "Low" then return end
     local camera = workspace.CurrentCamera
     if camera and (sensor.Position - camera.CFrame.Position).Magnitude > 100 then
@@ -58,13 +67,14 @@ local function flowBurst(sensor)
     local count = tier == "High" and (mastery == 3 and 12 or 8)
         or (mastery == 3 and 7 or 5)
     local origin = sensor.Position - Vector3.new(0, 1.6, 0)
+    local source = CelebrationMeshes.readyProfile("fragment", player:GetAttribute("OptionalVfxPressure"))
     for index = 1, count do
         local angle = (index - 1) * math.pi * 2 / count
         local radial = Vector3.new(math.cos(angle), 0, math.sin(angle))
         local tangent = Vector3.new(-radial.Z, 0, radial.X)
         local inner = origin + radial * 1.5
         local outer = origin + radial * 3.5
-        local piece = Instance.new("Part")
+        local piece = CelebrationMeshes.cloneProfile(source) or Instance.new("Part")
         piece.Name = "HelixFlowCelebrationFacet"
         piece.Size = Vector3.new(0.13, 0.075, 1.1)
         piece.CFrame = CFrame.lookAt(inner, inner + tangent)
@@ -170,12 +180,16 @@ local function reset()
     table.clear(runners)
 end
 
-local function createRunner(ramp, index, lane, tier)
-    local part = Instance.new("Part")
+local function createRunner(ramp, index, lane, tier, source)
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    local part = mesh or Instance.new("Part")
     part.Name = "HelixMotionGlyph"
-    part.Size = tier == "High"
+    local size = tier == "High"
         and Vector3.new(1.05, 0.075, 0.27)
         or Vector3.new(0.72, 0.07, 0.24)
+    local swapAxes = mesh and source.Size.Z > source.Size.X
+    local rotation = swapAxes and CFrame.Angles(0, math.pi * 0.5, 0) or CFrame.identity
+    part.Size = swapAxes and Vector3.new(size.Z, size.Y, size.X) or size
     part.Material = Enum.Material.Neon
     part.Color = lane % 2 == 0
         and Color3.fromRGB(121, 253, 209)
@@ -190,10 +204,25 @@ local function createRunner(ramp, index, lane, tier)
     table.insert(runners, {
         Part = part, Ramp = ramp, Lane = lane,
         Index = index, Count = tier == "High" and 3 or 1,
+        Rotation = rotation,
     })
 end
 
-local function rebuild(circuit, tier, reduced, ramps, access)
+local function rebuildRunners(tier, reduced, ramps, pressure)
+    for _, runner in ipairs(runners) do runner.Part:Destroy() end
+    table.clear(runners)
+    -- The static signs already provide the route in Low/ReduceMotion.
+    if reduced or tier == "Low" or #ramps == 0 then return end
+    local source = CelebrationMeshes.readyProfile("casting", pressure)
+    for index, ramp in ipairs(ramps) do
+        local n = tier == "High" and 3 or 1
+        for lane = 1, n do
+            createRunner(ramp, index, lane, tier, source)
+        end
+    end
+end
+
+local function rebuild(circuit, tier, reduced, ramps, access, pressure)
     reset()
     currentCircuit = circuit
     currentTier = tier
@@ -208,15 +237,7 @@ local function rebuild(circuit, tier, reduced, ramps, access)
         local sign = OrbitalRouteSignKit.create(ramp, ramp, tier, localeId)
         if sign then table.insert(routeSigns, sign) end
     end
-    -- Still track the actual eight ramp identities on Low/reduced motion.
-    -- Otherwise the controller rebuilds empty visual arrays every poll.
-    if reduced or tier == "Low" then return end
-    for index, ramp in ipairs(ramps) do
-        local n = tier == "High" and 3 or 1
-        for lane = 1, n do
-            createRunner(ramp, index, lane, tier)
-        end
-    end
+    rebuildRunners(tier, reduced, ramps, pressure)
 end
 
 local function draw(time)
@@ -238,7 +259,7 @@ local function draw(time)
                 or (runner.Lane - 2) * (ramp.Size.X * 0.26)
             runner.Part.CFrame = ramp.CFrame * CFrame.new(
                 x, ramp.Size.Y * 0.5 + 0.13, z
-            )
+            ) * runner.Rotation
             -- Reuse the existing 8/24 moving glyphs to signal which two
             -- routes are charged. Low/ReduceMotion see server gold rails.
             local charged = ramp:GetAttribute("HelixPulseActive") == true
@@ -261,15 +282,20 @@ task.spawn(function()
     local nextFlowCheck = 0
     while folder.Parent do
         local circuit = resolveCircuit()
-        local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+        local tier = quality()
         local reduced = player:GetAttribute("ReduceMotion") == true
+        local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+        local meshEligible = not reduced and tier ~= "Low" and pressure < 1
         local ramps, access, geometryChanged = rampRegistry:snapshot(circuit)
         local circuitChanged = circuit ~= currentCircuit
         if geometryChanged or circuitChanged
             or tier ~= currentTier or reduced ~= currentReduced
         then
-            rebuild(circuit, tier, reduced, ramps, access)
+            rebuild(circuit, tier, reduced, ramps, access, pressure)
+        elseif meshEligible ~= currentMeshEligible then
+            rebuildRunners(tier, reduced, ramps, pressure)
         end
+        currentMeshEligible = meshEligible
 
         local now = os.clock()
         -- The flow-sensor network can replicate after the circuit. Binding

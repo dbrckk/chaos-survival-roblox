@@ -1,8 +1,12 @@
 -- True creator-approved seven-MeshPart perimeter sculptures for real
 -- rectangular / long playable platforms. Replaces the FOUR server
--- WedgePart bevels only AFTER a complete authentic model is welded.
+-- Platform bevels only AFTER a complete authentic model is welded.
 -- NO new colliders, new update loop, fake MeshId or primitive fallback.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local lodRulesModule = script and shared and shared:FindFirstChild("PlatformIdentityLodRules")
+local PlatformIdentityLodRules = if lodRulesModule
+    then require(lodRulesModule) else require("../shared/PlatformIdentityLodRules")
 local LargeStructure = if script and script.Parent
     and script.Parent:FindFirstChild("PremiumLargeStructureMeshKit")
     then require(script.Parent.PremiumLargeStructureMeshKit)
@@ -13,6 +17,9 @@ local APPROVED = {
     Rect = 131482590870627,
     Long = 127617571835277,
 }
+-- Total horizontal allowance. The real wedges extend up to .50 studs
+-- per side at the authored size of these decks.
+local ELEVATED_RIM_OVERHANG = .94
 local DIMENSIONS = {
     Rect = {longMin=15.9,longMax=17.4,shortMin=9,shortMax=10.5},
     Long = {longMin=25,longMax=26.4,shortMin=7,shortMax=8.6},
@@ -66,23 +73,16 @@ local function nativeParts(decor,deck,original,scale)
         or underside:GetAttribute("PremiumArchitecturalSurface")~=true then
         return nil
     end
-    local function matches(part,size,offset)
-        local frame=deck.CFrame*offset
-        return (part.Size-size).Magnitude < .13
-            and (part.Position-frame.Position).Magnitude < .14
-            and part.CFrame.UpVector:Dot(frame.UpVector) > .999
-            and part.CFrame.LookVector:Dot(frame.LookVector) > .999
-    end
-    if original and not matches(underside,
-        Vector3.new(deck.Size.X+.5*scale,.42,deck.Size.Z+.5*scale),
-        CFrame.new(0,-deck.Size.Y*.5-.18,0)) then return nil end
+    if original and not PlatformIdentityLodRules.matchesUnderdeckFallback(underside,
+        deck.CFrame*CFrame.new(0,-deck.Size.Y*.5-.18,0),
+        Vector3.new(deck.Size.X+.5*scale,.42,deck.Size.Z+.5*scale), .13, .14) then return nil end
     local edges = {}
+    local harborLanding = PlatformIdentityLodRules.harborLandingWidth(deck) ~= nil
     for i=1,4 do
         local edge=decor:FindFirstChild("PlatformBevel"..id.."_"..i)
-        if not edge or not edge:IsA("WedgePart")
+        if not PlatformIdentityLodRules.isAuthoredPlatformBevel(edge)
             or edge.Parent~=decor or not edge.Anchored
-            or edge.CanCollide or edge.CanTouch or edge.CanQuery
-            or edge:GetAttribute("OriginalStructuralBevel")~=true then
+            or edge.CanCollide or edge.CanTouch or edge.CanQuery then
             return nil
         end
         if original then
@@ -94,8 +94,17 @@ local function nativeParts(decor,deck,original,scale)
             local yaw = alongX and (i==1 and 0 or math.pi)
                 or (i==3 and math.pi*.5 or -math.pi*.5)
             local span = (alongX and deck.Size.X or deck.Size.Z) + .12*scale
-            if not matches(edge,Vector3.new(span,.30,depth),
-                CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)) then
+            local assetId = edge:GetAttribute("Original3DAssetId")
+            local reserve = edge:GetAttribute("OriginalHarborLandingTrimReserve3D") == true
+            if reserve and not (harborLanding
+                and PlatformIdentityLodRules.isHarborLandingTrimReserve(edge)) then return nil end
+            local quarterTurn = edge:IsA("MeshPart") and edge.MeshId ~= ""
+                and ((assetId == 126298311664881
+                        and edge:GetAttribute("OriginalElevatedForgedBevel3D") == true)
+                    or (harborLanding and assetId == 94830155055482) or reserve)
+            local frame = deck.CFrame*CFrame.new(x,deck.Size.Y*.5-.20,z)*CFrame.Angles(0,yaw,0)
+            if not PlatformIdentityLodRules.matchesDeckTrimPose(
+                edge,frame,Vector3.new(span,.30,depth),.13,.14,quarterTurn) then
                 return nil
             end
         end
@@ -212,8 +221,12 @@ function Kit.fit(deck,bounds)
     local heightScale = math.clamp(math.sqrt(longScale*shortScale),.85,1.16)
     local sourceZ = bounds.Z>bounds.X
     local yaw = sourceZ == (original.Z>original.X) and 0 or math.pi*.5
-    local factors = Vector3.new((sourceZ and shortScale or longScale)*shrink,
-        heightScale,(sourceZ and longScale or shortScale)*shrink)
+    -- Size the visible outer face to the original bevel envelope. Use
+    -- the original proportions above to select the source and its relief.
+    local outerLong = (long+ELEVATED_RIM_OVERHANG)*shrink/srcLong
+    local outerShort = (short+ELEVATED_RIM_OVERHANG)*shrink/srcShort
+    local factors = Vector3.new(sourceZ and outerShort or outerLong,
+        heightScale,sourceZ and outerLong or outerShort)
     return factors,yaw,1-math.abs(math.log(longScale/shortScale))
 end
 
@@ -307,7 +320,7 @@ function Kit.selectVisibleDecks(ordered,tier,base,cameraPoint,pressure,
     -- distribute the SAME remaining approved 3D slots across authentic
     -- platforms in other visible sectors. Previously all eight High PC
     -- rims could crowd the same walkway while distant foreground-sized
-    -- WedgePart bevels stayed primitive. Touch and GPU-stressed profiles
+    -- bevels used the standalone server visuals. Touch and GPU-stressed profiles
     -- spend their slots on the best foreground candidates.
     if touch~=true and stress==0 and tier~="Low" and count>2 then
         local foreground=math.min(count,tier=="High" and 3 or 2)
@@ -372,12 +385,18 @@ function Kit.install(parent,deck,index,kind,decor)
     local stretch = if typeof(scale)=="Vector3" then scale else Vector3.one
     size *= stretch
     local ascension = isAscensionRoute(deck)
+    local elevated = isElevatedRoute(deck)
     local long,short = math.max(deck.Size.X,deck.Size.Z),math.min(deck.Size.X,deck.Size.Z)
     local longLimit,shortLimit = long*.971,short*.971
     if ascension then
         local _,shrink = ascensionDeckSize(deck)
         if not shrink then copy:Destroy();return nil end
         longLimit,shortLimit = long+.96*shrink,short+.96*shrink
+    elseif elevated then
+        local _,shrink = LargeStructure.routeDeckSize(deck)
+        if not shrink then copy:Destroy();return nil end
+        local allowance = (ELEVATED_RIM_OVERHANG+.02)*shrink
+        longLimit,shortLimit = long+allowance,short+allowance
     end
     if size.Y<=0 or size.Y>3.05
         or math.max(size.X,size.Z)>longLimit
@@ -386,7 +405,7 @@ function Kit.install(parent,deck,index,kind,decor)
         return nil
     end
     local target=deck.CFrame*CFrame.new(0,
-        deck.Size.Y*.5-(ascension and .09 or .17)-size.Y*.5,0)*CFrame.Angles(0,yaw,0)
+        deck.Size.Y*.5-((ascension or elevated) and .09 or .17)-size.Y*.5,0)*CFrame.Angles(0,yaw,0)
     local parts={}
     local resizable=tonumber(deck:GetAttribute("RouteTier"))~=nil
     for _,piece in ipairs(copy:GetDescendants()) do
@@ -422,7 +441,7 @@ function Kit.install(parent,deck,index,kind,decor)
             piece:SetAttribute("ChaosPlatformTrim",true)
             piece:SetAttribute("OriginalPlatformRimAxisSwap",
                 math.abs(deck.CFrame:VectorToObjectSpace(piece.CFrame.RightVector).Z)>.9999)
-            piece:SetAttribute("OriginalElevatedPlatformRim",isElevatedRoute(deck) or nil)
+            piece:SetAttribute("OriginalElevatedPlatformRim",elevated or nil)
             piece:SetAttribute("OriginalAscensionPlatformRim",ascension or nil)
             local joint=Instance.new(resizable and "Weld" or "WeldConstraint")
             joint.Name="ChaosPlatformTrimWeld"

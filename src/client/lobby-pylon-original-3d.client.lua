@@ -1,16 +1,18 @@
 -- Four genuine creator-approved 3D columns replace the lobby's faceted
 -- WedgePart corner pylons. Physical 2.2x10 pylons, player movement and
 -- their separately animated PylonGlow/PointLights remain server-owned.
--- No client asset requests, new lights, pathing, or RenderStepped loops.
+-- Preload geometry from authenticated templates before masking the fallback.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
+local PylonShell = require(script.Parent.ApprovedLobbyPylonShell)
 
 local player = Players.LocalPlayer
 local SOURCE_ID = 91626128452597 -- older genuine open-detail fallback
-local ENCLOSED_ID = 75945454705246 -- Approved source #41825253849
+local ENCLOSED_ID = PylonShell.AssetId
 
 local PYLON_OFFSETS = {
     Vector3.new(-31, 5, -31),
@@ -43,40 +45,6 @@ local function budget()
     return p < 2 and 4 or 2
 end
 
--- The new original source has a fully CLOSED 2.84 x 10.36 x 2.84
--- chamfered octagonal body, with a .16 bevel. Its smallest inner square
--- still encloses the ENTIRE 2.2x10x2.2 native rectangular collision box.
--- Exact creator-approved Model ID, safe server-sanitized template, bounding
--- and MeshPart checks are all REQUIRED before hiding native collision art.
-local function approvedShell()
-    local holder = ReplicatedStorage:FindFirstChild(
-        "ApprovedLobbyPylonShellTemplates")
-    if not holder or not holder:IsA("Folder")
-        or holder:GetAttribute("OwnerVerified") ~= true then return nil end
-    local model = holder:FindFirstChild("LobbyPylonShell")
-    if not model or not model:IsA("Model") or model.Parent ~= holder
-        or model:GetAttribute("OwnerVerified") ~= true
-        or model:GetAttribute("CosmeticOnly") ~= true
-        or model:GetAttribute("OriginalLobbyPylonShell3D") ~= true
-        or model:GetAttribute("EnclosesCollider") ~= true
-        or model:GetAttribute("Original3DAssetId") ~= ENCLOSED_ID then
-        return nil
-    end
-    local count = 0
-    for _, item in ipairs(model:GetDescendants()) do
-        if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") then return nil end
-            count += 1
-        elseif item:IsA("LuaSourceContainer") then return nil end
-    end
-    if count < 1 or count > 12 then return nil end
-    local _, size = model:GetBoundingBox()
-    if size.Y < 10.25 or size.Y > 10.75
-        or math.min(size.X, size.Z) < 3.40
-        or math.max(size.X, size.Z) > 4.05 then return nil end
-    return model, count, size
-end
-
 local function approved()
     local holder = ReplicatedStorage:FindFirstChild(
         "ApprovedLargeStructureTemplates")
@@ -91,7 +59,7 @@ local function approved()
     local count = 0
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") then
-            if not item:IsA("MeshPart") then return nil end
+            if not item:IsA("MeshPart") or item.MeshId == "" then return nil end
             count += 1
         elseif item:IsA("LuaSourceContainer") then return nil end
     end
@@ -148,6 +116,9 @@ local function restore()
         for item, alpha in pairs(active.hidden) do
             if item.Parent then item.LocalTransparencyModifier = alpha end
         end
+        for item, alpha in pairs(active.hiddenCladding) do
+            if item.Parent and item.Transparency == 1 then item.Transparency = alpha end
+        end
         active = nil
     end
     folder:ClearAllChildren()
@@ -166,6 +137,7 @@ end
 local function stageColumn(template, sourceSize, partCount,
     target, index, enclosed)
     local clone = template:Clone()
+    if not clone then return nil end
     local frame, bounds
     local stretchX, stretchZ = 1, 1
     local aim = target.native.CFrame
@@ -246,6 +218,8 @@ local function schedule()
     end)
 end
 
+local geometryReady = LobbyMeshPreload.new(schedule)
+
 local function watch(key, parent, relevant)
     if watched[key] == parent then return end
     for _, connection in ipairs(listeners[key] or {}) do
@@ -278,6 +252,10 @@ reconcile = function()
     watch("architecture", architecture, function(name)
         return name:match("^MachinedLobbyPylon%d+$") ~= nil
     end)
+    for i = 1, #PYLON_OFFSETS do
+        local cladding = architecture and architecture:FindFirstChild("MachinedLobbyPylon" .. i)
+        watch("cladding" .. i, cladding, function() return true end)
+    end
     local holder = ReplicatedStorage:FindFirstChild(
         "ApprovedLargeStructureTemplates")
     watch("templates", holder, function(name) return name == "Classic" end)
@@ -286,17 +264,25 @@ reconcile = function()
     watch("shellTemplates", shellHolder, function(name)
         return name == "LobbyPylonShell"
     end)
+    watch("shellParts", shellHolder and shellHolder:FindFirstChild("LobbyPylonShell"),
+        function() return true end)
+    watch("columnParts", holder and holder:FindFirstChild("Classic"),
+        function() return true end)
 
     local count = budget()
-    local template, partCount, sourceSize = approvedShell()
-    local enclosed = template ~= nil
-    if not template then
-        template, partCount, sourceSize = approved()
-    end
     local targets = count > 0 and validTargets(count) or nil
-    if count == 0 or not template or not targets then
+    if not targets then
         restore()
         return
+    end
+    local template, partCount, sourceSize = PylonShell.approved()
+    local enclosed = template ~= nil and geometryReady(template)
+    if not enclosed then
+        template, partCount, sourceSize = approved()
+        if not template or not geometryReady(template) then
+            restore()
+            return
+        end
     end
 
     -- No repeated cloning merely because the server sends an unrelated
@@ -313,6 +299,13 @@ reconcile = function()
                 unchanged = false
                 break
             end
+            for _, item in ipairs(targets[i].obsolete) do
+                if active.hiddenCladding[item] == nil then
+                    unchanged = false
+                    break
+                end
+            end
+            if not unchanged then break end
             local actualMeshes = 0
             for _, part in ipairs(active.models[i]:GetDescendants()) do
                 if part:IsA("MeshPart") then actualMeshes += 1 end
@@ -325,13 +318,13 @@ reconcile = function()
         if unchanged then return end
     end
 
-    restore()
     local staged = {}
     for i = 1, count do
         local model = stageColumn(template, sourceSize, partCount,
             targets[i], i, enclosed)
         if not model then
             for _, other in ipairs(staged) do other:Destroy() end
+            restore()
             return
         end
         staged[#staged + 1] = model
@@ -342,13 +335,17 @@ reconcile = function()
     -- (including four extreme rectangular corners), so its native core
     -- may finally be fully hidden client-side. Older open-column fallback
     -- keeps the core 50% visible: never create an invisible player blocker.
+    restore()
     local hidden = {}
+    local hiddenCladding = {}
     for i, model in ipairs(staged) do
         model.Parent = folder
         local target = targets[i]
         for _, item in ipairs(target.obsolete) do
-            hidden[item] = item.LocalTransparencyModifier
-            item.LocalTransparencyModifier = 1
+            -- The sculpted fallback owns LocalTransparencyModifier. Use
+            -- the base alpha so either layer can release independently.
+            hiddenCladding[item] = item.Transparency
+            item.Transparency = 1
         end
         hidden[target.native] = target.native.LocalTransparencyModifier
         target.native.LocalTransparencyModifier = enclosed and 1 or 0.50
@@ -362,7 +359,7 @@ reconcile = function()
     end
     active = {
         source = template, targets = records, models = staged,
-        hidden = hidden, count = count, enclosed = enclosed,
+        hidden = hidden, hiddenCladding = hiddenCladding, count = count, enclosed = enclosed,
     }
     player:SetAttribute("LocalOriginalLobbyPylon3DCount", count)
     player:SetAttribute("LocalOriginalLobbyPylonMeshPartCount",

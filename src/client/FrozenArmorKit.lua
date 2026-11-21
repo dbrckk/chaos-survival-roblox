@@ -1,5 +1,5 @@
 -- One-shot client-side frost armor when the local contestant is frozen.
--- Cosmetic wedges are welded to an existing torso; no physics, damage,
+-- Cosmetic plates are welded to an existing torso; no physics, damage,
 -- particles, lights, heartbeat/render loop or replicated instances.
 local FrozenArmorKit = {}
 
@@ -28,7 +28,7 @@ local COLORS = {
     Color3.fromRGB(149, 217, 246),
 }
 
-function FrozenArmorKit.build(character, tier, reducedMotion)
+function FrozenArmorKit.build(character, tier, reducedMotion, cloneShard)
     local pieces = {}
     if typeof(character) ~= "Instance" or not character:IsA("Model")
         or not character.Parent then
@@ -53,7 +53,7 @@ function FrozenArmorKit.build(character, tier, reducedMotion)
             math.rad(patch.pitch), math.rad(patch.yaw), math.rad(patch.roll)
         )
 
-        local shard = Instance.new("WedgePart")
+        local shard = (cloneShard and cloneShard()) or Instance.new("WedgePart")
         shard.Name = "LocalFreezeArmorFacet" .. index
         shard.Size = Vector3.new(width, height, depth)
         shard.CFrame = torso.CFrame * transform
@@ -67,13 +67,12 @@ function FrozenArmorKit.build(character, tier, reducedMotion)
         shard.CanTouch = false
         shard.CanQuery = false
         shard.CastShadow = false
-        shard.Parent = torso
-
         local weld = Instance.new("WeldConstraint")
         weld.Name = "LocalFreezeArmorWeld"
         weld.Part0 = torso
         weld.Part1 = shard
         weld.Parent = shard
+        shard.Parent = torso
         pieces[#pieces + 1] = shard
     end
     return pieces

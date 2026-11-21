@@ -4,7 +4,13 @@ local Players = game:GetService("Players")
 local movementModule = script and script.Parent:FindFirstChild("MovementSafety")
 local MovementSafety = if movementModule
     then require(movementModule) else require("./MovementSafety")
+local geometryModule = script and script.Parent:FindFirstChild("RouteSignalGeometry")
+local RouteSignalGeometry = if geometryModule
+    then require(geometryModule) else require("./RouteSignalGeometry")
 local OrbitalHelix = {}
+local ACCESS_CHASSIS_ASSET_ID = 106401955318567
+local GUIDE_ASSET_ID = 88962643359267
+local FORGED_BRIDGE_ASSET_ID = 126298311664881
 
 OrbitalHelix.Count = 8
 -- The ninth pre-existing observation access keeps its stable name/ID.
@@ -28,6 +34,28 @@ local function physicalPart(parent, name, size, cf, color, material, solid)
     p.BottomSurface = Enum.SurfaceType.Smooth
     p.Parent = parent
     return p
+end
+
+local function approvedProfile(part, assetId)
+    if not part or not part:IsA("MeshPart") or not part.Archivable or part.MeshId == "" then
+        return nil
+    end
+    return {part = part, assetId = assetId}
+end
+
+local function fittedTrim(folder, name, size, frame, color, material, profile, alongX)
+    local part = profile and RouteSignalGeometry.fit(profile.part, frame, size, nil, alongX)
+    if not part then
+        return physicalPart(folder, name, size, frame, color, material, false)
+    end
+    part.Name = name
+    part.Color = color
+    part.Material = material
+    part.DoubleSided = true
+    part:SetAttribute("Original3DAssetId", profile.assetId)
+    part:SetAttribute("OrbitalStructureAxisSwap", (profile.part.Size.X > profile.part.Size.Z) ~= alongX)
+    part.Parent = folder
+    return part
 end
 
 function OrbitalHelix.route(variant, center, index)
@@ -117,7 +145,7 @@ function OrbitalHelix.accessRoute(variant, center, index, kind)
     }
 end
 
-local function buildAccessRamp(folder, route, index, kind, theme)
+local function buildAccessRamp(folder, route, index, kind, theme, chassisProfile, guideProfile)
     if not route then return end
     local group = kind .. tostring(index)
     local entrance = kind == "Entry"
@@ -134,45 +162,53 @@ local function buildAccessRamp(folder, route, index, kind, theme)
     ramp:SetAttribute("OrbitalRouteTier", entrance and 1 or 4)
 
     for side = -1, 1, 2 do
-        local sideLine = physicalPart(
+        local sideLine = fittedTrim(
             folder, kind .. "Signal" .. index .. "_" .. tostring(side),
             Vector3.new(0.16, 0.07, route.Size.Z - 0.24),
             route.CFrame * CFrame.new(
                 side * (route.Size.X * 0.5 - 0.22), 0.49, 0
             ),
             side < 0 and theme.Accent or theme.Secondary,
-            Enum.Material.Neon, false
+            Enum.Material.Neon, guideProfile, false
         )
         sideLine.Transparency = entrance and 0.28 or 0.18
         sideLine:SetAttribute("OrbitRouteGroup", group)
     end
 
-    local spine = physicalPart(
+    local spine = fittedTrim(
         folder, kind .. "Spine" .. index,
         Vector3.new(0.26, 0.07, route.Size.Z - 0.35),
         route.CFrame * CFrame.new(0, 0.50, 0),
         entrance and theme.Accent or theme.Secondary,
-        Enum.Material.Neon, false
+        Enum.Material.Neon, guideProfile, false
     )
     spine.Transparency = 0.5
     spine:SetAttribute("OrbitRouteGroup", group)
 
-    local chassis = physicalPart(
-        folder, kind .. "Chassis" .. index,
+    -- The chassis spans ramp-local Z even on short access ramps.
+    local chassis = fittedTrim(folder, kind .. "Chassis" .. index,
         Vector3.new(route.Size.X - 0.38, 0.22, route.Size.Z - 0.45),
         route.CFrame * CFrame.new(0, -0.58, 0),
-        theme.Structure, Enum.Material.Metal, false
-    )
+        theme.Structure, Enum.Material.Metal, chassisProfile, false)
     chassis.Transparency = 0.14
     chassis:SetAttribute("OrbitRouteGroup", group)
 end
 
 
-function OrbitalHelix.build(arena, variant, center, theme)
+function OrbitalHelix.build(arena, variant, center, theme, templates)
     if not arena or not variant or variant.Id ~= "Orbital"
         or typeof(center) ~= "Vector3" or not theme then
         return nil
     end
+    templates = templates or {}
+    local forged = approvedProfile(templates.forged, FORGED_BRIDGE_ASSET_ID)
+    local spars = approvedProfile(templates.spars, ACCESS_CHASSIS_ASSET_ID)
+    local accessProfile = approvedProfile(templates.lattice, ACCESS_CHASSIS_ASSET_ID) or spars or forged
+    local chassisProfile = spars or forged
+    local guideProfile = approvedProfile(templates.casting, GUIDE_ASSET_ID)
+        or templates.floor and approvedProfile(templates.floor.part, templates.floor.assetId)
+        or forged
+
     local old = arena:FindFirstChild("HelixCircuit")
     if old then old:Destroy() end
 
@@ -201,33 +237,33 @@ function OrbitalHelix.build(arena, variant, center, theme)
             bridge:SetAttribute("HelixStart", route.Start)
             bridge:SetAttribute("HelixFinish", route.Finish)
 
-            local lip = physicalPart(
+            local lip = fittedTrim(
                 folder, "HelixCenterGrain" .. index,
                 Vector3.new(0.45, 0.06, route.Size.Z - 0.50),
                 route.CFrame * CFrame.new(0, 0.51, 0),
-                theme.Detail, Enum.Material.Metal, false
+                theme.Detail, Enum.Material.Metal, guideProfile, false
             )
             lip.Transparency = 0.38
             lip:SetAttribute("HelixLane", index)
             lip:SetAttribute("OrbitRouteGroup", group)
 
             for side = -1, 1, 2 do
-                local rail = physicalPart(
+                local rail = fittedTrim(
                     folder, "HelixEdgeSignal" .. index .. "_" .. side,
                     Vector3.new(0.14, 0.055, route.Size.Z - 0.35),
                     route.CFrame * CFrame.new(side * (route.Size.X * 0.5 - 0.21), 0.52, 0),
                     side < 0 and theme.Accent or theme.Secondary,
-                    Enum.Material.Neon, false
+                    Enum.Material.Neon, guideProfile, false
                 )
                 rail.Transparency = 0.22
                 rail:SetAttribute("HelixLane", index)
                 rail:SetAttribute("OrbitRouteGroup", group)
 
-                local frame = physicalPart(
+                local frame = fittedTrim(
                     folder, "HelixUnderframe" .. index .. "_" .. side,
                     Vector3.new(0.34, 0.26, route.Size.Z - 0.70),
                     route.CFrame * CFrame.new(side * (route.Size.X * 0.5 - 0.45), -0.65, 0),
-                    theme.Structure, Enum.Material.Metal, false
+                    theme.Structure, Enum.Material.Metal, chassisProfile, false
                 )
                 frame.Transparency = 0.08
                 frame:SetAttribute("HelixLane", index)
@@ -235,11 +271,11 @@ function OrbitalHelix.build(arena, variant, center, theme)
             end
 
             for braceIndex = -1, 1 do
-                local brace = physicalPart(
+                local brace = fittedTrim(
                     folder, "HelixSpineBrace" .. index .. "_" .. braceIndex,
                     Vector3.new(route.Size.X + 0.25, 0.23, 0.45),
                     route.CFrame * CFrame.new(0, -0.62, braceIndex * route.Size.Z * 0.28),
-                    theme.Detail, Enum.Material.Metal, false
+                    theme.Detail, Enum.Material.Metal, chassisProfile, true
                 )
                 brace.Transparency = 0.22
                 brace:SetAttribute("HelixLane", index)
@@ -254,13 +290,13 @@ function OrbitalHelix.build(arena, variant, center, theme)
     for index = 1, OrbitalHelix.Count do
         buildAccessRamp(folder,
             OrbitalHelix.accessRoute(variant, center, index, "Entry"),
-            index, "Entry", theme)
+            index, "Entry", theme, accessProfile, guideProfile)
         -- The previously certified HelixRamp9 already fills Core2.
         -- Preserve that route and its eight authored trims verbatim.
         if index ~= 2 then
             buildAccessRamp(folder,
                 OrbitalHelix.accessRoute(variant, center, index, "Core"),
-                index, "Core", theme)
+                index, "Core", theme, accessProfile, guideProfile)
         end
     end
 
@@ -300,10 +336,15 @@ function OrbitalHelix.capture(circuit)
                     if piece:IsA("BasePart") and piece ~= ramp
                         and piece:GetAttribute("OrbitRouteGroup") == group
                     then
+                        local swapXZ = piece:GetAttribute("OrbitalStructureAxisSwap")
+                        if swapXZ == nil then
+                            swapXZ = piece:GetAttribute("OrbitalAccessChassisAxisSwap")
+                        end
                         table.insert(entry.decorations, {
                             part = piece,
                             originalCFrame = piece.CFrame,
                             originalSize = piece.Size,
+                            swapXZ = swapXZ == true,
                             localCFrame = ramp.CFrame:ToObjectSpace(piece.CFrame),
                         })
                     end
@@ -346,17 +387,17 @@ function OrbitalHelix.scale(snapshot, center, amount)
                     d.part.CFrame = cf
                         * CFrame.new(p.X * lateralScale, p.Y, p.Z * (length / prior))
                         * rotationOnly
-                    local dz = d.originalSize.Z
+                    local size = d.originalSize
+                    local dx = if d.swapXZ then size.Z else size.X
+                    local dz = if d.swapXZ then size.X else size.Z
                     -- Rails and spines extend with the ramp; short transverse
                     -- braces keep their engineered dimensions unchanged.
                     if dz > 2 then
                         dz = math.max(0.25, dz + length - prior)
                     end
-                    d.part.Size = Vector3.new(
-                        d.originalSize.X > 1
-                            and d.originalSize.X * lateralScale or d.originalSize.X,
-                        d.originalSize.Y, dz
-                    )
+                    if dx > 1 then dx *= lateralScale end
+                    d.part.Size = if d.swapXZ then Vector3.new(dz, size.Y, dx)
+                        else Vector3.new(dx, size.Y, dz)
                 end
             end
         end

@@ -96,25 +96,23 @@ local function sourceFor(variant)
     return source,holder,spec
 end
 
+local function validSignal(part,decor,size)
+    return part and (part:IsA("Part") or part:IsA("MeshPart"))
+        and part.Parent==decor and (part.Size-size).Magnitude<=.12
+        and part.Anchored and not part.CanCollide and not part.CanTouch and not part.CanQuery
+end
+
 local function signalParts(decor,variant,index)
     local signals={}
     if variant=="Classic" then
         local crown=decor:FindFirstChild("GridMarkerGlow"..index)
-        if not crown or not crown:IsA("Part")
-            or crown.Parent~=decor
-            or (crown.Size-Vector3.new(3.8,.32,3.8)).Magnitude>.12
-            or not crown.Anchored or crown.CanCollide
-            or crown.CanTouch or crown.CanQuery then return nil end
+        if not validSignal(crown,decor,Vector3.new(3.8,.32,3.8)) then return nil end
         signals[1]=crown
     else
         for level=1,3 do
             local band=decor:FindFirstChild(
                 "TowerBand"..index.."_"..level)
-            if not band or not band:IsA("Part")
-                or band.Parent~=decor
-                or (band.Size-Vector3.new(4.4,.28,4.4)).Magnitude>.12
-                or not band.Anchored or band.CanCollide
-                or band.CanTouch or band.CanQuery then return nil end
+            if not validSignal(band,decor,Vector3.new(4.4,.28,4.4)) then return nil end
             signals[#signals+1]=band
         end
     end

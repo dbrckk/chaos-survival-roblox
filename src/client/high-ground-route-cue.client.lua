@@ -333,7 +333,7 @@ local function update()
     local target
     local isRamp = false
     local returnToRamp = false
-    if variant == "Orbital" then
+    if variant == "Orbital" and not JumpRouteCueRules.isOuterRoute(from) then
         target = orbitalNext(arena, from, root, safeLanding)
         local circuit = arena:FindFirstChild("HelixCircuit")
         isRamp = circuit ~= nil and target ~= nil
@@ -377,7 +377,7 @@ JumpRouteHazards.WarningsChanged:Connect(function()
     if not root or not root:IsA("BasePart") then return end
     local warnings, lava = JumpRouteHazards.read(currentArena)
     if not JumpRouteHazards.landingPathIsSafe(root.Position, target, warnings, lava, rampEntry(target)) then
-        hide()
+        update()
     end
 end)
 

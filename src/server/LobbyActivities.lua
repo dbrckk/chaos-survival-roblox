@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local MovementSafety = if script then require(script.Parent.MovementSafety) else require("./MovementSafety")
 
 local LobbyActivities = {}
@@ -57,6 +58,57 @@ local function createPad(folder, center, definition, index)
     pad.Transparency = 0.20
     pad:SetAttribute("LobbyPracticePad", true)
     pad.Parent = folder
+    -- Only the client-side appearance is replaced; this Part retains its
+    -- authoritative Touched connection and its original collision settings.
+    CollectionService:AddTag(pad, "LobbySculptedCasting")
+
+    -- Trim uses the same heading as the boost. The touch sensor stays in
+    -- its original frame and retains its light, label and hit settings.
+    local heading = Vector3.new(definition.impulse.X, 0, definition.impulse.Z)
+    local frame = CFrame.lookAt(pad.Position, pad.Position + heading)
+    local rimColor = pad.Color:Lerp(Color3.fromRGB(38, 48, 67), 0.70)
+    local function trim(name, size, offset, color, material, transparency, tag)
+        local piece = Instance.new("Part")
+        piece.Name = name
+        piece.Size = size
+        piece.CFrame = frame * offset
+        piece.Anchored = true
+        piece.CanCollide = false
+        piece.CanTouch = false
+        piece.CanQuery = false
+        piece.CastShadow = false
+        piece.Material = material
+        piece.Color = color
+        piece.Transparency = transparency
+        piece.Parent = folder
+        CollectionService:AddTag(piece, tag)
+    end
+
+    for side = 1, 4 do
+        local alongX = side <= 2
+        trim("PracticeCastRim" .. side,
+            alongX and Vector3.new(7.45, 0.16, 0.42) or Vector3.new(0.42, 0.16, 6.65),
+            CFrame.new(alongX and 0 or (side == 3 and -3.52 or 3.52), 0.10,
+                alongX and (side == 1 and -3.52 or 3.52) or 0),
+            rimColor, Enum.Material.Metal, 0.06, "LobbySculptedSwept")
+    end
+
+    local bossColor = rimColor:Lerp(pad.Color, 0.18)
+    for corner = 1, 4 do
+        trim("PracticeCornerBoss" .. corner, Vector3.new(0.62, 0.18, 0.62),
+            CFrame.new(corner % 2 == 0 and 3.12 or -3.12, 0.11, corner <= 2 and -3.12 or 3.12),
+            bossColor, Enum.Material.Metal, 0.06, "LobbySculptedCasting")
+    end
+
+    local guideColor = rimColor:Lerp(pad.Color, 0.46)
+    for side = -1, 1, 2 do
+        trim(side < 0 and "PracticeGuideVaneL" or "PracticeGuideVaneR", Vector3.new(0.34, 0.12, 3.15),
+            CFrame.new(side * 3.86, 0.08, 0), guideColor,
+            Enum.Material.SmoothPlastic, 0.08, "LobbySculptedEdgeBand")
+        trim(side < 0 and "PracticeGuideFinNear" or "PracticeGuideFinFar", Vector3.new(2.2, 0.20, 0.46),
+            CFrame.new(0, 0.10, side * 4.04), bossColor,
+            Enum.Material.Metal, 0.08, "LobbySculptedCasting")
+    end
 
     local light = Instance.new("PointLight")
     light.Name = "PracticePadLight"

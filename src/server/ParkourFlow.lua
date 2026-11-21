@@ -69,9 +69,6 @@ function ParkourFlow.legalJump(from, to, platforms, center, variant)
     if not JumpRouteCueRules.jumpable(from, to) then
         return false
     end
-    if JumpRouteCueRules.nextPhysical(from, parts, center, variant) == to then
-        return true
-    end
     if from:GetAttribute("PerimeterStep") == 5 then
         local first, flank = JumpRouteCueRules.forkOptions(from, parts)
         return to == first or to == flank
@@ -80,7 +77,7 @@ function ParkourFlow.legalJump(from, to, platforms, center, variant)
         local first, detour = JumpRouteCueRules.crosslinkOptions(from, parts)
         return to == first or to == detour
     end
-    return false
+    return JumpRouteCueRules.nextPhysical(from, parts, center, variant) == to
 end
 
 -- A valid Harbor skyway is walkable in BOTH directions for survival,

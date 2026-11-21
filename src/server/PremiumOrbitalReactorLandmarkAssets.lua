@@ -7,11 +7,32 @@ local OriginalMeshScenery=require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
 local Assets={}
+local NODE_ID=104654294187035
 local MODELS={
-    {name="Node",id=104654294187035,dims=Vector3.new(4.36,4.36,4.36)},
+    {name="Node",id=NODE_ID,dims=Vector3.new(4.36,4.36,4.36)},
     {name="Strut",id=138666009076890,dims=Vector3.new(8.46,1.24,1.10)},
 }
 local started=false
+
+function Assets.nodeProfile(expected)
+    local holder=ReplicatedStorage:FindFirstChild("ApprovedOrbitalReactorLandmarkTemplates")
+    if not holder or not holder:IsA("Folder")
+        or holder:GetAttribute("OwnerVerified")~=true then return nil end
+    local model=holder:FindFirstChild("Node")
+    if not model or not model:IsA("Model")
+        or model:GetAttribute("OwnerVerified")~=true
+        or model:GetAttribute("CosmeticOnly")~=true
+        or model:GetAttribute("OriginalOrbitalReactorLandmark3D")~=true
+        or model:GetAttribute("Original3DAssetId")~=NODE_ID then return nil end
+    local profile
+    for _, piece in ipairs(model:GetChildren()) do
+        if piece:IsA("MeshPart") and (piece.Size-expected).Magnitude<.075 then
+            if profile or not piece.Archivable or piece.MeshId=="" then return nil end
+            profile=piece
+        end
+    end
+    return profile
+end
 
 local function authentic(model,entry)
     local count=0

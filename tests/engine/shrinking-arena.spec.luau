@@ -9,6 +9,9 @@ local LargeStructure = require("../../src/client/PremiumLargeStructureMeshKit")
 local Remaining = require("../../src/client/ApprovedRemainingStructureMeshKit")
 local NativeTrim = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ShrinkingArena = require("../../src/server/Disasters/ShrinkingArena")
+local DisappearingPlatforms = require("../../src/server/Disasters/DisappearingPlatforms")
+local Rim = require("../../src/client/ApprovedPlatformRimMeshKit")
+local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local OrbitalHelix = require("../../src/server/OrbitalHelix")
 local ArenaMechanics = require("../../src/server/ArenaMechanics")
 
@@ -85,8 +88,8 @@ describe("Shrinking Arena mobility integration", function()
             expect(casing.PrimaryPart).toBe(foot)
             local toward = base.Position-foot.Position
             toward = Vector3.new(toward.X,0,toward.Z)
-            assert(front.CFrame.LookVector:Dot(toward.Unit)>.999,
-                "column front faces away from the arena: "..casing.Name)
+            assert((front.Position-foot.Position):Dot(toward.Unit)>1.6,
+                "front shell is outside the column: "..casing.Name)
             assert(foot.Position.Y-foot.Size.Y*.5>=base.Position.Y+base.Size.Y*.5,
                 "native casing foot is below the floor: "..casing.Name)
             columnParts[i] = {foot,core,light,casing:FindFirstChild("LandmarkNavigationHead")}
@@ -136,7 +139,7 @@ describe("Shrinking Arena mobility integration", function()
             expect(foot.LocalTransparencyModifier).toBe(1)
             expect(head.LocalTransparencyModifier).toBe(0)
             expect(mesh.LocalTransparencyModifier).toBe(0)
-            local widthAxis = owned.ArmoredFrontShell.CFrame.RightVector
+            local widthAxis = Vector3.yAxis:Cross(owned.ArmoredFrontShell.Position-foot.Position).Unit
             assert(math.abs(mesh.CFrame.LookVector:Dot(widthAxis))>.999,
                 "long-Z casing was not rotated onto the native fascia")
             local limits = {}
@@ -409,7 +412,7 @@ describe("Shrinking Arena mobility integration", function()
             {
                 id = "Crossroads",
                 names = {"ArenaDeckInset", "DeckLineSouth",
-                    "CrossroadLaneFill1", "FluxRouteChevron1_1_-1"},
+                    "CrossroadHubMark", "CrossroadLaneFill1", "FluxRouteChevron1_1_-1"},
             },
             {
                 id = "Orbital",
@@ -548,8 +551,128 @@ describe("Shrinking Arena mobility integration", function()
             generated:Destroy()
         end
     end)
+    local function shortChassisFixture(storage)
+        local holder=Instance.new("Folder")
+        holder.Name="ApprovedRemainingStructureTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="AccessChassis"
+        source:SetAttribute("Original3DAssetId",106401955318567)
+        for _,attribute in ipairs({"OwnerVerified","CosmeticOnly","P4OriginalRemainingStructure3D"}) do
+            source:SetAttribute(attribute,true)
+        end
+        for index=1,7 do
+            local piece=Instance.new("MeshPart")
+            if index==7 then
+                piece.Name="UnderdeckSignal"
+                piece.Size=Vector3.new(1.09,.05,12.15)
+            elseif index==6 then
+                piece.Name="UnderdeckLattice"
+                piece.Size=Vector3.new(4.492,.215,11.5957)
+            else
+                piece.Name="Region"..index
+                piece.Size=Vector3.new(5.17,.5065,12.8)
+            end
+            piece.Anchored=true
+            piece.Massless=true
+            piece.CanCollide=false
+            piece.CanTouch=false
+            piece.CanQuery=false
+            piece.Parent=source
+        end
+        source.Parent=holder
+        return holder
+    end
+
+    local function checkUnderdeckSignal(arena,deck)
+        local bridgeIndex=deck.Name:match("^Skybridge(%d+)$")
+        local index=assert(bridgeIndex or deck.Name:match("^Platform(%d+)$"))
+        local glow=arena.Decor:FindFirstChild("PlatformCoreGlow"..index)
+        assert(glow and glow:IsA("MeshPart") and glow.Material==Enum.Material.Neon)
+        assert(glow.Anchored and not glow.CanCollide and not glow.CanTouch and not glow.CanQuery)
+        assert(#glow:GetChildren()==0 and glow.Transparency<1)
+        local offset=deck.CFrame:ToObjectSpace(glow.CFrame)
+        local acrossX=math.abs(offset.LookVector.X)>.99
+        local extentX=acrossX and glow.Size.Z or glow.Size.X
+        local extentZ=acrossX and glow.Size.X or glow.Size.Z
+        local alongX=deck.Size.X>deck.Size.Z
+        local relativeWidth=bridgeIndex and .34 or .22
+        assert(math.abs(extentX-deck.Size.X*(alongX and .62 or relativeWidth))<.025)
+        assert(math.abs(extentZ-deck.Size.Z*(alongX and relativeWidth or .62))<.025)
+        assert(math.abs(offset.Y+deck.Size.Y*.5+.52)<.015)
+        assert(math.abs(glow.Size.Y-.30)<.01)
+        return glow
+    end
+
+    local function forgedSignalFixture(alongZ)
+        local holder = Instance.new("Folder")
+        holder.Name = "ApprovedTowersSignatureBridgeTemplates"
+        holder:SetAttribute("OwnerVerified", true)
+        local source = Instance.new("Model")
+        source.Name = "ForgedBridge"
+        source:SetAttribute("OwnerVerified", true)
+        source:SetAttribute("CosmeticOnly", true)
+        source:SetAttribute("OriginalTowersSignatureBridge3D", true)
+        source:SetAttribute("Original3DAssetId", 126298311664881)
+        source.Parent = holder
+        local beam = Instance.new("MeshPart")
+        beam.Name = "SweptCrossbeam"
+        beam.Size = alongZ and Vector3.new(5.96, 3.1108, 40.64)
+            or Vector3.new(40.64, 3.1108, 5.96)
+        beam.Anchored = true
+        beam.CanCollide = false
+        beam.CanTouch = false
+        beam.CanQuery = false
+        beam.Parent = source
+        local edgeBand = beam:Clone()
+        edgeBand.Name = "SculptedEdgeBand"
+        edgeBand.Size = alongZ and Vector3.new(5.43, .1625, 39.38)
+            or Vector3.new(39.38, .1625, 5.43)
+        edgeBand.Parent = source
+        return holder
+    end
+
+    local function checkRouteSignal(deck, piece, targetSize, targetOffset)
+        assert(piece:IsA("MeshPart") and piece.Material==Enum.Material.Neon)
+        assert(piece.Anchored and not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+        local frame = deck.CFrame:ToObjectSpace(piece.CFrame)
+        local x, y, z = frame.RightVector, frame.UpVector, frame.LookVector
+        local size = piece.Size
+        local extent = Vector3.new(
+            math.abs(x.X)*size.X+math.abs(y.X)*size.Y+math.abs(z.X)*size.Z,
+            math.abs(x.Y)*size.X+math.abs(y.Y)*size.Y+math.abs(z.Y)*size.Z,
+            math.abs(x.Z)*size.X+math.abs(y.Z)*size.Y+math.abs(z.Z)*size.Z
+        )
+        assert((extent-targetSize).Magnitude<.025)
+        assert((frame.Position-targetOffset).Magnitude<.025)
+    end
+
+    local function checkAerialBand(arena,deck,scale)
+        local index=assert(deck.Name:match("^Platform(%d+)$"))
+        local piece=arena.Decor["PlatformGlow"..index]
+        local alongX=deck.Size.X>deck.Size.Z
+        checkRouteSignal(deck,piece,deck.Size*Vector3.new(1,0,1)+Vector3.new(
+            (alongX and .28 or .96)*scale,.14,(alongX and .96 or .28)*scale),
+            Vector3.new(0,-deck.Size.Y*.5-.47,0))
+        return piece
+    end
+
     it("shrinks four Tower Run skybridge decks, rails and supports as one assembly", function()
-        local root = MapBuilder.build(Config, "Towers", ArenaVariants)
+        local storage = game:GetService("ReplicatedStorage")
+        local holder = forgedSignalFixture(false)
+        local previous = storage:FindFirstChild(holder.Name)
+        if previous then previous.Parent = nil end
+        holder.Parent = storage
+        local previousChassis = storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if previousChassis then previousChassis.Parent = nil end
+        local chassisHolder = shortChassisFixture(storage)
+        local built, root = pcall(MapBuilder.build, Config, "Towers", ArenaVariants)
+        holder:Destroy()
+        chassisHolder:Destroy()
+        if previous then previous.Parent = storage end
+        if previousChassis then previousChassis.Parent = storage end
+        if not built then error(root) end
         local arena = root:FindFirstChild("Arena")
         local platforms = arena:FindFirstChild("Platforms")
         local decor = arena:FindFirstChild("Decor")
@@ -602,6 +725,33 @@ describe("Shrinking Arena mobility integration", function()
         end
         towers.Parent = templates
         local bridge18 = platforms:FindFirstChild("Skybridge18")
+        local pressure = SkybridgePressure.snapshot(bridge18, decor)
+        local guardedRib = decor:FindFirstChild("SkybridgeRib18_0")
+        local guardedFrame = decor:FindFirstChild("PlatformUnderFrame18")
+        local guardedBevel = decor:FindFirstChild("PlatformBevel18_1")
+        local guardedGlow = checkUnderdeckSignal(arena, bridge18)
+        local guardedBand = decor:FindFirstChild("PlatformGlow18")
+        local surfaceRail = decor:FindFirstChild("SkybridgeRail18_1")
+        local railTransparency = surfaceRail.Transparency
+        SkybridgePressure.setPhase(pressure, "Warning", workspace:GetServerTimeNow())
+        expect(math.abs(guardedRib.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedFrame.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedBevel.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedGlow.Transparency - 0.65) < 0.001).toBe(true)
+        expect(math.abs(guardedBand.Transparency - 0.65) < 0.001).toBe(true)
+        SkybridgePressure.setPhase(pressure, "Gone")
+        expect(guardedRib.Transparency).toBe(1)
+        expect(guardedFrame.Transparency).toBe(1)
+        expect(guardedBevel.Transparency).toBe(1)
+        expect(guardedGlow.Transparency).toBe(1)
+        expect(guardedBand.Transparency).toBe(1)
+        SkybridgePressure.setPhase(pressure, nil)
+        expect(guardedRib.Transparency).toBe(0)
+        expect(math.abs(guardedFrame.Transparency - 0.04) < 0.001).toBe(true)
+        expect(math.abs(guardedBevel.Transparency - 0.08) < 0.001).toBe(true)
+        expect(math.abs(guardedGlow.Transparency - 0.56) < 0.001).toBe(true)
+        expect(math.abs(guardedBand.Transparency - 0.64) < 0.001).toBe(true)
+        expect(surfaceRail.Transparency).toBe(railTransparency)
         local pier2 = decor:FindFirstChild("PlatformSupport18_2")
         local visual = Instance.new("Folder")
         visual.Parent = root
@@ -633,19 +783,25 @@ describe("Shrinking Arena mobility integration", function()
             expect(bridge ~= nil).toBe(true)
             expect(bridge.CanCollide).toBe(true)
             expect(bridge:GetAttribute("ChaosSkybridge")).toBe(true)
+            checkUnderdeckSignal(arena, bridge)
             for side = 1, 2 do
                 local post = decor:FindFirstChild("PlatformSupport" .. index .. "_" .. side)
                 expect(LargeStructure.matchesSkybridgeSupport(post,bridge)).toBe(true)
             end
             local prefix = {
+                "SkybridgeRail" .. index .. "_-1",
                 "SkybridgeRail" .. index .. "_1",
+                "SkybridgeRib" .. index .. "_-1",
                 "SkybridgeRib" .. index .. "_0",
+                "SkybridgeRib" .. index .. "_1",
                 "PlatformGlow" .. index,
                 "PlatformPanel" .. index,
                 "PlatformUnderFrame" .. index,
                 "PlatformCoreGlow" .. index,
                 "PlatformSupport" .. index .. "_1",
                 "PlatformBevel" .. index .. "_1",
+                "PlatformBevel" .. index .. "_2",
+                "PlatformBevel" .. index .. "_3",
                 "PlatformBevel" .. index .. "_4",
             }
             originals[bridge] = {cf = bridge.CFrame, size = bridge.Size}
@@ -653,6 +809,52 @@ describe("Shrinking Arena mobility integration", function()
             for _, name in ipairs(prefix) do
                 local part = decor:FindFirstChild(name)
                 expect(part ~= nil).toBe(true)
+                local alongX = bridge.Size.X > bridge.Size.Z
+                local lateral = alongX and Vector3.zAxis or Vector3.xAxis
+                if name:match("^SkybridgeRail") then
+                    local longitudinal = alongX and Vector3.xAxis or Vector3.zAxis
+                    local offset = bridge.CFrame:PointToObjectSpace(part.Position)
+                    expect(part:IsA("MeshPart") and part.Material == Enum.Material.Neon).toBe(true)
+                    expect(part:GetAttribute("ChaosWayfinding")).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(longitudinal)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - 48.2) < 0.01).toBe(true)
+                    expect(math.abs(part.Size.Z - 0.18) < 0.01).toBe(true)
+                    expect(math.abs(offset:Dot(lateral)) > 1.95).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^PlatformUnderFrame") then
+                    local longitudinal = alongX and Vector3.xAxis or Vector3.zAxis
+                    local below = bridge.CFrame:PointToObjectSpace(part.Position).Y
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(math.abs(part.CFrame.LookVector:Dot(longitudinal)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - 4.5 * 0.93) < 0.01).toBe(true)
+                    expect(math.abs(part.Size.Z - 49 * 0.98) < 0.01).toBe(true)
+                    expect(below + part.Size.Y * 0.5 < 0).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^SkybridgeRib") then
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(lateral)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - math.min(bridge.Size.X, bridge.Size.Z) - 0.22) < 0.01).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^PlatformGlow") then
+                    local longitudinal = alongX and Vector3.xAxis or Vector3.zAxis
+                    local offset = bridge.CFrame:PointToObjectSpace(part.Position)
+                    expect(part:IsA("MeshPart") and part.Material == Enum.Material.Neon).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(longitudinal)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - 49.28) < 0.01).toBe(true)
+                    expect(math.abs(part.Size.Z - 4.92) < 0.01).toBe(true)
+                    expect(math.abs(offset.Y + bridge.Size.Y * 0.5 + 0.47) < 0.01).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                elseif name:match("^PlatformBevel") then
+                    local edge = tonumber(name:match("_(%d)$"))
+                    local edgeLength = edge <= 2 and bridge.Size.X or bridge.Size.Z
+                    local tangent = edge <= 2 and Vector3.xAxis or Vector3.zAxis
+                    local top = bridge.Position.Y + bridge.Size.Y * 0.5
+                    expect(part:IsA("MeshPart")).toBe(true)
+                    expect(math.abs(part.CFrame.RightVector:Dot(tangent)) > 0.999).toBe(true)
+                    expect(math.abs(part.Size.X - edgeLength - 0.12) < 0.01).toBe(true)
+                    expect(part.Position.Y + part.Size.Y * 0.5 < top).toBe(true)
+                    expect(part.CanTouch or part.CanQuery).toBe(false)
+                end
                 originals[part] = {cf = part.CFrame, size = part.Size}
                 table.insert(details[bridge], part)
             end
@@ -702,7 +904,33 @@ describe("Shrinking Arena mobility integration", function()
                     local prior = originals[detail]
                     local d0 = alongX and prior.size.X or prior.size.Z
                     local d1 = alongX and detail.Size.X or detail.Size.Z
-                    if d0 > 2.2 then
+                    if detail.Name:match("^SkybridgeRib") then
+                        local before = old.cf:PointToObjectSpace(prior.cf.Position)
+                        local after = bridge.CFrame:PointToObjectSpace(detail.Position)
+                        local ratio = shrunkSpan / originalSpan
+                        local target = alongX and Vector3.new(before.X * ratio, before.Y, before.Z)
+                            or Vector3.new(before.X, before.Y, before.Z * ratio)
+                        expect((after - target).Magnitude < 0.01).toBe(true)
+                        expect((detail.Size - prior.size).Magnitude < 0.01).toBe(true)
+                    elseif detail.Name:match("^PlatformUnderFrame") then
+                        expect(math.abs(detail.Size.Z - shrunkSpan * 0.98) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.X - prior.size.X) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Y - prior.size.Y) < 0.01).toBe(true)
+                    elseif detail.Name:match("^PlatformBevel") then
+                        local axis = alongX and Vector3.xAxis or Vector3.zAxis
+                        local followsSpan = math.abs(prior.cf.RightVector:Dot(axis)) > 0.999
+                        local expected = followsSpan and prior.size.X * shrunkSpan / originalSpan
+                            or prior.size.X
+                        expect(math.abs(detail.Size.X - expected) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
+                    elseif detail.Name:match("^PlatformCoreGlow") then
+                        checkUnderdeckSignal(arena, bridge)
+                    elseif detail.Name:match("^PlatformGlow")
+                        or detail.Name:match("^SkybridgeRail") then
+                        expect(math.abs(detail.Size.X - prior.size.X * shrunkSpan / originalSpan) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Z - prior.size.Z) < 0.01).toBe(true)
+                        expect(math.abs(detail.Size.Y - prior.size.Y) < 0.01).toBe(true)
+                    elseif d0 > 2.2 then
                         expect(d1 < d0).toBe(true)
                     end
                     expect(detail.CanCollide).toBe(false)
@@ -928,6 +1156,759 @@ describe("Shrinking Arena mobility integration", function()
             expect((part.Size - state.size).Magnitude < 0.001).toBe(true)
         end
         root:Destroy()
+    end)
+
+    it("fits the existing Harbor landing trims to all three real route families",function()
+        local storage=game:GetService("ReplicatedStorage")
+        local oldMap=workspace:FindFirstChild("GeneratedMap")
+        local oldChassis=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        local oldRelief=storage:FindFirstChild("ApprovedFloorReliefTemplates")
+        local signals=forgedSignalFixture(true)
+        local oldSignals=storage:FindFirstChild(signals.Name)
+        if oldMap then oldMap.Parent=nil end
+        if oldChassis then oldChassis.Parent=nil end
+        if oldSignals then oldSignals.Parent=nil end
+        if oldRelief then oldRelief.Parent=nil end
+        local chassis=shortChassisFixture(storage)
+        signals.Parent=storage
+        local generated
+        local active,callbacks=false,{}
+        local ok,why=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants)
+            generated=arena.Parent
+            local landings={}
+            local lookup={}
+            local counts={cargo=0,spoke=0,crossing=0}
+            for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                local cargo=deck:GetAttribute("HarborRoute")
+                local spoke=deck:GetAttribute("HarborSpokeRoute")
+                local crossing=deck:GetAttribute("HarborSkywayLane")
+                if cargo or spoke or crossing then
+                    local group=cargo and "cargo" or spoke and "spoke" or "crossing"
+                    counts[group]+=1
+                    local step=deck:GetAttribute("HarborStep") or deck:GetAttribute("HarborSpokeStep")
+                        or deck:GetAttribute("HarborSkywayStep")
+                    local key=group..tostring(cargo or spoke or crossing).."_"
+                    lookup[key..step]=deck
+                    landings[deck]={key=key, step=step, forward=step < (spoke and 4 or 7)}
+                end
+            end
+            assert(counts.cargo==28 and counts.spoke==16 and counts.crossing==14)
+            local function checkLanding(deck,data,scale)
+                local id=assert(deck.Name:match("^Platform(%d+)$"))
+                local band=arena.Decor["PlatformGlow"..id]
+                local lens=arena.Decor["PlatformCoreGlow"..id]
+                local frame=arena.Decor["PlatformUnderFrame"..id]
+                local alongX, lensAlongX=data.alongX, data.lensAlongX
+                local sx,sz,halfY=deck.Size.X,deck.Size.Z,deck.Size.Y*.5
+                checkRouteSignal(deck,band,Vector3.new(
+                    sx+(alongX and .28 or .96)*scale,.14,sz+(alongX and .96 or .28)*scale),
+                    Vector3.new(0,-halfY-.47,0))
+                checkRouteSignal(deck,lens,
+                    Vector3.new(sx*(lensAlongX and .62 or .22),.30,sz*(lensAlongX and .22 or .62)),
+                    Vector3.new(0,-halfY-.52,0))
+                local bandDirection=deck.CFrame:VectorToObjectSpace(band.CFrame.LookVector)
+                local lensDirection=deck.CFrame:VectorToObjectSpace(lens.CFrame.LookVector)
+                assert(math.abs(alongX and bandDirection.X or bandDirection.Z)>.999)
+                assert(math.abs(lensAlongX and lensDirection.X or lensDirection.Z)>.999)
+                local skywayStep=deck:GetAttribute("HarborSkywayStep")
+                local spokeStep=deck:GetAttribute("HarborSpokeStep")
+                local upperPier=spokeStep and spokeStep>=3
+                if data.turn or upperPier or (skywayStep and skywayStep>=2 and skywayStep<=6) then
+                    local count=if upperPier then (spokeStep==3 and 4 or 2) else 1
+                    local foot=arena.Base.Position.Y+arena.Base.Size.Y*.5-.08
+                    for corner=1,count do
+                        local post=assert(arena.Decor["PlatformSupport"..id.."_"..corner])
+                        assert(math.abs(post.Position.Y-post.Size.Y*.5-foot)<.02)
+                        assert(math.abs(post.Position.Y+post.Size.Y*.5-(deck.Position.Y-halfY))<.02)
+                        if upperPier then assert(math.abs(post.Size.X-data.size.X*.10*scale)<.02) end
+                    end
+                    if upperPier then
+                        assert(not arena.Decor:FindFirstChild("PlatformSupport"..id.."_"..(count+1)))
+                    end
+                end
+                local _,acceptedFrame=Rim.nativeParts(arena.Decor,deck,data.size,scale)
+                assert(acceptedFrame==frame and frame:IsA("MeshPart") and deck.CanCollide)
+                return band,lens,frame
+            end
+            for deck,data in pairs(landings) do
+                local nextStep=data.forward and data.step+1 or data.step-1
+                local neighbor=lookup[data.key..nextStep]
+                local delta=neighbor.Position-deck.Position
+                -- The four cargo summits turn onto their adjoining skyway.
+                local cargoStep=deck:GetAttribute("HarborStep")
+                data.alongX=cargoStep==7 or math.abs(delta.X)>math.abs(delta.Z)
+                data.turn=cargoStep and cargoStep>=2 and cargoStep<=6
+                data.lensAlongX=data.alongX
+                if data.turn then
+                    local prior=lookup[data.key..(data.step-1)]
+                    local arrival=deck.Position-prior.Position
+                    data.lensAlongX=math.abs(arrival.X)>math.abs(arrival.Z)
+                    assert(data.lensAlongX~=data.alongX)
+                end
+                data.size=deck.Size
+                checkLanding(deck,data,1)
+            end
+
+            local sample=lookup.crossing1_1
+            local band,lens,frame=checkLanding(sample,landings[sample],1)
+            local cosmetics=DisappearingPlatforms.cosmeticsForPlatform(arena.Decor,sample)
+            DisappearingPlatforms.setCosmeticsPhase(cosmetics,"Warning")
+            assert(band.Transparency>.59 and lens.Transparency>.59 and frame.Transparency>.59)
+            DisappearingPlatforms.setCosmeticsPhase(cosmetics,"Gone")
+            assert(band.Transparency==1 and lens.Transparency==1 and frame.Transparency==1)
+            DisappearingPlatforms.setCosmeticsPhase(cosmetics,"Safe")
+            assert(band.Transparency<.60 and lens.Transparency<.60 and frame.Transparency<.06)
+            active=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=callbacks,
+                Active=function() return active end})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+            active=false
+            task.wait()
+            assert(arena.Base.Size.X<=144.05)
+            for deck,data in pairs(landings) do checkLanding(deck,data,.45) end
+            cleanup(callbacks,{})
+            table.clear(callbacks)
+            for deck,data in pairs(landings) do checkLanding(deck,data,1) end
+
+            chassis.Parent=nil
+            signals.Parent=nil
+            local fallback=MapBuilder.buildArena(Config,"Harbor",ArenaVariants)
+            local fallbackDeck=fallback.Platforms[sample.Name]
+            local id=assert(fallbackDeck.Name:match("^Platform(%d+)$"))
+            for _,prefix in ipairs({"PlatformGlow","PlatformCoreGlow","PlatformUnderFrame"}) do
+                assert(fallback.Decor[prefix..id]:IsA("Part"))
+            end
+        end)
+        active=false
+        cleanup(callbacks,{})
+        if generated then generated:Destroy() end
+        chassis:Destroy()
+        signals:Destroy()
+        if oldMap then oldMap.Parent=workspace end
+        if oldChassis then oldChassis.Parent=storage end
+        if oldSignals then oldSignals.Parent=storage end
+        if oldRelief then oldRelief.Parent=storage end
+        if not ok then error(why) end
+    end)
+
+    local function checkLookoutLinks(arena, scale)
+        local decks=arena.Platforms:GetChildren()
+        local lookoutEntries={}
+        for _,deck in ipairs(decks) do
+            local step=deck:GetAttribute("PromenadeStep")
+            if step==1 or step==8 then
+                local west=(deck:GetAttribute("PromenadeLane")-1)*2+1
+                lookoutEntries[step==1 and west or west+1]=deck
+            end
+        end
+        local branches,crosslinks=0,0
+        for _,deck in ipairs(decks) do
+            local step=deck:GetAttribute("BranchStep")
+            local perimeterStep=deck:GetAttribute("PerimeterStep")
+            local crossingRoute=deck:GetAttribute("CrosslinkRoute")
+            local prefixes
+            if perimeterStep==5 then
+                prefixes={"RidgeForkArrow", "BranchForkArrow"}
+            elseif perimeterStep==6 then
+                prefixes={"RidgeCrosslinkArrow", "CrosslinkForkArrow"}
+            elseif crossingRoute then
+                prefixes={"CrosslinkExitArrow"}
+            end
+            if prefixes then
+                local id=assert(deck.Name:match("^Platform(%d+)$"))
+                local panel=arena.Decor["PlatformPanel"..id]
+                local route=crossingRoute or deck:GetAttribute("PerimeterRoute")
+                for _,prefix in ipairs(prefixes) do
+                    for _,side in ipairs({-1,1}) do
+                        local arm=arena.Decor[prefix..route.."_"..side]
+                        assert(arm:IsA("MeshPart") and arm:GetAttribute("ChaosWayfinding")==true)
+                        assert(arm:GetAttribute("PerimeterPlatformIndex")==tonumber(id))
+                        assert(arm.Position.Y-arm.Size.Y*.5>panel.Position.Y+panel.Size.Y*.5)
+                        local target=arena.Platforms:FindFirstChild("Platform"..arm:GetAttribute("PerimeterGuideTarget"))
+                        assert(target and target~=deck)
+                        local offset=deck.CFrame:PointToObjectSpace(arm.Position)
+                        assert(math.abs(offset.X)<deck.Size.X*.5 and math.abs(offset.Z)<deck.Size.Z*.5)
+                    end
+                end
+            end
+            if step or deck:GetAttribute("CrosslinkRoute") then
+                local id=assert(deck.Name:match("^Platform(%d+)$"))
+                local band=arena.Decor["PlatformGlow"..id]
+                local across=step==4
+                local size=deck.Size
+                checkRouteSignal(deck,band,Vector3.new(
+                    size.X+(across and .28 or .96)*scale,.14,
+                    size.Z+(across and .96 or .28)*scale
+                ),Vector3.new(0,size.Y*.5-1.02,0))
+                local axis=deck.CFrame:VectorToObjectSpace(band.CFrame.LookVector)
+                assert(math.abs(across and axis.X or axis.Z)>.999 and deck.CanCollide)
+                if not step then
+                    crosslinks+=1
+                    continue
+                end
+                branches+=1
+                local route=deck:GetAttribute("BranchRoute")
+                local forward=Vector3.new(0,0,deck.Position.Z>=arena.Base.Position.Z and 1 or -1)
+                if across then
+                    local delta=lookoutEntries[route].Position-deck.Position
+                    forward=Vector3.new(delta.X,0,delta.Z).Unit
+                    assert(deck:FindFirstChild("SideLookoutLabel"))
+                end
+                local point=deck.Position+Vector3.new(0,deck.Size.Y*.5+.155,0)
+                if across then
+                    local entry = lookoutEntries[route]
+                    local near = math.abs(entry.Position.X - deck.Position.X) - entry.Size.X * .5
+                    local seam = (near + deck.Size.X * .5) * .5
+                    point += forward * seam
+                end
+                local heading=CFrame.lookAt(point,point+forward)
+                local panel=arena.Decor["PlatformPanel"..id]
+                for _,side in ipairs({-1,1}) do
+                    local arm=arena.Decor["BranchStepArrow"..route.."_"..step.."_"..side]
+                    local pose=heading*CFrame.new(side*.48*scale,0,0)*CFrame.Angles(0,math.rad(side*34),0)
+                    assert(arm:IsA("MeshPart") and arm:GetAttribute("ChaosWayfinding")==true)
+                    assert(arm:GetAttribute("PerimeterPlatformIndex")==tonumber(id))
+                    assert(not arm.CanCollide and not arm.CanTouch and not arm.CanQuery)
+                    assert(arm.CFrame.LookVector:Dot(pose.LookVector)>.999)
+                    assert((arm.Position-pose.Position).Magnitude<.025)
+                    assert((arm.Size-Vector3.new(.25*scale,.065,2*scale)).Magnitude<.025)
+                    assert(arm.Position.Y-arm.Size.Y*.5>panel.Position.Y+panel.Size.Y*.5)
+                end
+            end
+        end
+        assert(branches==16 and crosslinks==4)
+    end
+
+    local function checkPromenadeChevrons(arena, scale)
+        local decks = arena.Platforms:GetChildren()
+        local endpoints = {}
+        for _, deck in ipairs(decks) do
+            local step = deck:GetAttribute("SkySpineStep")
+            if step == 1 or step == 10 then endpoints[step == 1 and 1 or 2] = deck end
+        end
+        local junctions = 0
+        for _, deck in ipairs(decks) do
+            local lane = deck:GetAttribute("PromenadeLane")
+            if not lane then continue end
+            local id = assert(deck.Name:match("^Platform(%d+)$"))
+            local prefix = "PromenadeJumpChevron" .. id .. "_"
+            local panel = arena.Decor["PlatformPanel" .. id]
+            local function checkChevron(name, forward, offset, width, alpha)
+                local point = deck.Position + Vector3.new(0, deck.Size.Y * .5 + .155, 0)
+                    + forward * offset
+                local look = CFrame.lookAt(point, point + forward)
+                for side = -1, 1, 2 do
+                    local part = arena.Decor[prefix .. name .. "_" .. side]
+                    local pose = look * CFrame.new(side * .62 * scale, 0, 0)
+                        * CFrame.Angles(0, math.rad(side * 35), 0)
+                    assert(part:IsA("MeshPart") and part.Material == Enum.Material.Neon)
+                    assert(part:GetAttribute("PerimeterPlatformIndex") == tonumber(id)
+                        and part:GetAttribute("ChaosWayfinding") == true)
+                    assert(not part.CanCollide and not part.CanTouch and not part.CanQuery)
+                    assert((part.Position - pose.Position).Magnitude < .025
+                        and part.CFrame.LookVector:Dot(pose.LookVector) > .999)
+                    assert((part.Size - Vector3.new(width * scale, .08, 2.55 * scale)).Magnitude < .025)
+                    assert(part.Position.Y - part.Size.Y * .5 > panel.Position.Y + panel.Size.Y * .5)
+                    assert(math.abs(part.Transparency - alpha) < .001)
+                end
+            end
+            local inset = math.min(5 * scale, deck.Size.X * .24)
+            checkChevron("-1", -Vector3.xAxis, inset, .30, .34)
+            checkChevron("1", Vector3.xAxis, inset, .30, .34)
+            if deck:GetAttribute("PromenadeStep") == 4 then
+                local toward = endpoints[lane].Position.Z > deck.Position.Z and 1 or -1
+                checkChevron("Spine", Vector3.zAxis * toward, deck.Size.Z * .25, .35, .24)
+                local spine = endpoints[lane]
+                local spineId = assert(spine.Name:match("^Platform(%d+)$"))
+                local spinePanel = arena.Decor["PlatformPanel" .. spineId]
+                for direction = -1, 1, 2 do
+                    for side = -1, 1, 2 do
+                        local arm = arena.Decor["SkySpine" .. spineId .. "_PromenadeChevron" .. direction .. "_" .. side]
+                        assert(arm:IsA("MeshPart") and arm.Material == Enum.Material.Neon)
+                        assert(arm:GetAttribute("ChaosWayfinding") == true
+                            and arm:GetAttribute("PerimeterPlatformIndex") == tonumber(spineId))
+                        assert(not arm.CanCollide and not arm.CanTouch and not arm.CanQuery)
+                        assert(arm.CFrame.LookVector.X * direction > .81)
+                        assert(arm.Position.Y - arm.Size.Y * .5
+                            > math.max(panel.Position.Y + panel.Size.Y * .5,
+                                spinePanel.Position.Y + spinePanel.Size.Y * .5))
+                        for x = -1, 1, 2 do
+                            for z = -1, 1, 2 do
+                                local corner = arm.CFrame:PointToWorldSpace(
+                                    Vector3.new(x * arm.Size.X * .5, 0, z * arm.Size.Z * .5))
+                                for _, owner in ipairs({spine, deck}) do
+                                    local point = owner.CFrame:PointToObjectSpace(corner)
+                                    assert(math.abs(point.X) < owner.Size.X * .5
+                                        and math.abs(point.Z) < owner.Size.Z * .5)
+                                end
+                            end
+                        end
+                    end
+                end
+                junctions += 1
+            else
+                assert(not arena.Decor:FindFirstChild(prefix .. "Spine_1"))
+            end
+        end
+        assert(junctions == 2)
+    end
+
+    local function checkSpawnGuides(arena, variant)
+        local base = arena.Base
+        local surface = base.Position.Y + base.Size.Y * .5
+        for index, offset in ipairs(ArenaVariants.get(variant).SpawnOffsets) do
+            local spawn = arena.Spawns["Spawn" .. index]
+            local expected = base.Position + Vector3.new(offset.X, base.Size.Y * .5 + .14, offset.Z)
+            assert((spawn.Position - expected).Magnitude < .02)
+            local glow = arena["SpawnGlow" .. index]
+            checkRouteSignal(spawn, glow, Vector3.new(5.2, .12, 5.2), Vector3.new(0, .107, 0))
+            assert(glow.Position.Y - glow.Size.Y * .5 > surface + .18)
+            for side = -1, 1, 2 do
+                local guide = arena.EntryGuides["EntryChevron" .. index .. "_" .. side]
+                assert(guide:IsA("MeshPart") and guide:GetAttribute("ChaosWayfinding") == true)
+                assert(guide.Anchored and not guide.CanCollide and not guide.CanTouch and not guide.CanQuery)
+                assert(guide.Position.Y - guide.Size.Y * .5 > surface + .18)
+                local pose = spawn.CFrame:ToObjectSpace(guide.CFrame)
+                assert((pose.Position - Vector3.new(side * .78, .107, -3)).Magnitude < .02)
+                local axis = guide.Size.X > guide.Size.Z and pose.RightVector or pose.LookVector
+                assert(side * axis.X * axis.Z > .45)
+            end
+        end
+    end
+
+    local function checkFloorPerimeter(arena, scale)
+        local base = arena.Base
+        assert(arena.Decor.DeckLineNorth:IsA("MeshPart") and arena.Decor.DeckLineEast:IsA("MeshPart"))
+        for _, rail in ipairs(arena.Decor.ArenaUndercarriage:GetChildren()) do
+            assert(rail:IsA("MeshPart") and not rail.CanCollide)
+            local span = rail.Name:find("FoundryX", 1, true) and base.Size.X or base.Size.Z
+            assert(math.abs(math.max(rail.Size.X, rail.Size.Z) - span + 6 * scale) < .02)
+        end
+        local girders, cladding = 0, 0
+        for _, piece in ipairs(arena.Decor:GetChildren()) do
+            if piece.Name:match("^PremiumGroundUndergirder") then
+                girders += 1
+                assert(piece:IsA("MeshPart") and piece.Anchored and not piece.CastShadow)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                local localFrame = base.CFrame:ToObjectSpace(piece.CFrame)
+                local axisX = piece.Name:match("^PremiumGroundUndergirder1_") ~= nil
+                local span = axisX and base.Size.X or base.Size.Z
+                local along = axisX and localFrame.Position.X or localFrame.Position.Z
+                local axis = axisX and Vector3.xAxis or Vector3.zAxis
+                local reach = piece.Size.X * math.abs(localFrame.RightVector:Dot(axis))
+                    + piece.Size.Z * math.abs(localFrame.LookVector:Dot(axis))
+                assert(math.abs(reach - 15 * scale) < .02)
+                assert(math.abs(span * .5 - math.abs(along) - reach * .5 - .15 * scale) < .02)
+                assert(math.abs(piece.Size.Y - 1.2) < .02)
+                assert(localFrame.Position.Y + piece.Size.Y * .5 < -base.Size.Y * .5)
+            elseif piece.Name:match("^PremiumGroundApron") or piece.Name:match("^PremiumGroundCorner") then
+                cladding += 1
+                assert(piece:IsA("MeshPart") and piece.Anchored and not piece.CastShadow)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                local pose = base.CFrame:ToObjectSpace(piece.CFrame)
+                local size = piece.Size
+                local x = math.abs(pose.RightVector.X) * size.X + math.abs(pose.LookVector.X) * size.Z
+                local z = math.abs(pose.RightVector.Z) * size.X + math.abs(pose.LookVector.Z) * size.Z
+                assert(math.abs(pose.Position.X) + x * .5 < base.Size.X * .5)
+                assert(math.abs(pose.Position.Z) + z * .5 < base.Size.Z * .5)
+                assert(math.abs(pose.Position.Y + size.Y * .5 - base.Size.Y * .5 - .1705) < .007)
+                assert(math.abs(math.min(x, z) - 9.52 * scale) < .02)
+                local length = if piece.Name:match("^PremiumGroundApronX") then base.Size.Z - 19.2 * scale
+                    elseif piece.Name:match("^PremiumGroundApronZ") then base.Size.X - 19.2 * scale
+                    else 9.52 * scale
+                assert(math.abs(math.max(x, z) - length) < .02)
+            end
+        end
+        assert(girders == 8 and cladding == 8)
+    end
+
+    local function checkPerimeterDecor(arena, scale)
+        local base = arena.Base
+        local edgeX, edgeZ = base.Size.X * .5 - .4 * scale, base.Size.Z * .5 - .4 * scale
+        local edgeY = base.Size.Y * .5 + .25
+        local sizeX = Vector3.new(base.Size.X, .45, .35)
+        local sizeZ = Vector3.new(.35, .45, base.Size.Z)
+        for _, side in ipairs({
+            {"EdgeNorth", sizeX, Vector3.new(0, edgeY, -edgeZ)},
+            {"EdgeSouth", sizeX, Vector3.new(0, edgeY, edgeZ)},
+            {"EdgeWest", sizeZ, Vector3.new(-edgeX, edgeY, 0)},
+            {"EdgeEast", sizeZ, Vector3.new(edgeX, edgeY, 0)},
+        }) do
+            local border = arena.Decor[side[1]]
+            checkRouteSignal(base, border, side[2], side[3])
+            assert(not border.CastShadow and border.Transparency == 0)
+        end
+        local center = arena.Decor.CenterBeacon
+        assert(center:IsA("MeshPart") and center.Material == Enum.Material.Neon)
+        assert(center.Anchored and not center.CastShadow)
+        assert(not center.CanCollide and not center.CanTouch and not center.CanQuery)
+        assert((center.Size - Vector3.new(1.4, 14, 1.4)).Magnitude < .02)
+        assert((base.CFrame:PointToObjectSpace(center.Position) - Vector3.new(0, 7, 0)).Magnitude < .02)
+        local centerLight = center:FindFirstChild("ArenaGlow")
+        assert(centerLight and centerLight:IsA("PointLight") and centerLight.Color == center.Color)
+        assert(centerLight.Range == 28 and math.abs(centerLight.Brightness - 1.2) < .01 and not centerLight.Shadows)
+        for route = 1, 4 do
+            local corner = arena.Decor["EdgeBeacon" .. route]
+            local glow = arena.Decor["EdgeBeaconGlow" .. route]
+            for _, piece in ipairs({corner, glow}) do
+                assert(piece:IsA("MeshPart") and piece.Anchored and not piece.CastShadow)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+            end
+            assert((corner.Size - Vector3.new(.8 * scale, 7, .8 * scale)).Magnitude < .02)
+            assert((glow.Size - Vector3.new(1.35 * scale, .36, 1.35 * scale)).Magnitude < .02)
+            local point = base.CFrame:PointToObjectSpace(corner.Position)
+            assert(math.abs(base.Size.X * .5 - math.abs(point.X) - 3 * scale) < .02)
+            assert(math.abs(base.Size.Z * .5 - math.abs(point.Z) - 3 * scale) < .02)
+            assert(math.abs(point.Y - (base.Size.Y + corner.Size.Y) * .5) < .02)
+            assert((glow.Position - corner.Position - Vector3.new(0, 3.55, 0)).Magnitude < .02)
+            local light = glow:FindFirstChild("EdgeBeaconLight")
+            assert(light and light:IsA("PointLight") and light.Color == glow.Color)
+            assert(light.Range == 11 and math.abs(light.Brightness - .55) < .01 and not light.Shadows)
+            local mast = arena.Decor["OuterRouteSignal" .. route]
+            local crown = arena.Decor["OuterRouteSignalCrown" .. route]
+            local lens = arena.Decor["OuterRouteSignalLens" .. route]
+            assert(mast:IsA("MeshPart") and crown:IsA("MeshPart"))
+            assert(lens:IsA("Part") and lens.Shape == Enum.PartType.Ball and lens.Material == Enum.Material.Glass)
+            assert((mast.Size - Vector3.new(1.55 * scale, 34, 1.55 * scale)).Magnitude < .03)
+            assert((crown.Size - Vector3.new(5 * scale, .85, 5 * scale)).Magnitude < .03)
+            assert((lens.Position - mast.Position - Vector3.new(0, 18.5, 0)).Magnitude < .03)
+            assert((crown.Position - mast.Position - Vector3.new(0, 15.9, 0)).Magnitude < .03)
+            local offset = base.CFrame:PointToObjectSpace(mast.Position)
+            assert(math.abs(offset.Y - mast.Size.Y * .5 - base.Size.Y * .5) < .02)
+            assert(math.abs(offset.X) + crown.Size.X * .5 <= base.Size.X * .5
+                and math.abs(offset.Z) + crown.Size.Z * .5 <= base.Size.Z * .5)
+            local owner = arena.Platforms["Platform" .. mast:GetAttribute("PerimeterPlatformIndex")]
+            assert(owner:GetAttribute("PerimeterStep") == ArenaVariants.PerimeterSteps)
+            assert(owner:GetAttribute("PerimeterRoute") == route)
+            local exitLens = arena.Decor["PerimeterExitLens" .. route]
+            assert(exitLens.Material == Enum.Material.Glass)
+            if exitLens:IsA("MeshPart") then
+                local assetId = exitLens:GetAttribute("Original3DAssetId")
+                assert(assetId == 126298311664881
+                    or (arena:GetAttribute("VariantId") == "Harbor"
+                        and (assetId == 94830155055482 or assetId == 102746904688141 or assetId == 104654294187035)))
+            else
+                assert(exitLens:IsA("Part"))
+            end
+            assert(exitLens:GetAttribute("PerimeterPlatformIndex") == mast:GetAttribute("PerimeterPlatformIndex"))
+            for _, fit in ipairs({
+                {"PerimeterExitRib" .. route .. "_-1", .88, .34},
+                {"PerimeterExitRib" .. route .. "_1", .88, .34},
+                {"PerimeterExitCrown" .. route, 8, 1},
+            }) do
+                local piece = arena.Decor[fit[1]]
+                assert(piece:IsA("MeshPart") and piece.Anchored and not piece.CastShadow)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+                assert(piece:GetAttribute("PerimeterPlatformIndex") == exitLens:GetAttribute("PerimeterPlatformIndex"))
+                assert(math.abs(math.max(piece.Size.X, piece.Size.Z) - fit[2] * scale) < .02)
+                assert(math.abs(math.min(piece.Size.X, piece.Size.Z) - fit[3] * scale) < .02)
+                local pose = owner.CFrame:PointToObjectSpace(piece.Position)
+                local depth = math.abs(piece.CFrame.RightVector.Z) * piece.Size.X
+                    + math.abs(piece.CFrame.LookVector.Z) * piece.Size.Z
+                assert(math.abs(pose.Z) - depth * .5 >= owner.Size.Z * .5 - .001)
+            end
+            for _, piece in ipairs({mast,crown,lens}) do
+                assert(piece:GetAttribute("PerimeterPlatformIndex") == mast:GetAttribute("PerimeterPlatformIndex"))
+                assert(piece:GetAttribute("ChaosWayfinding") == true)
+                assert(not piece.CanCollide and not piece.CanTouch and not piece.CanQuery)
+            end
+            for _, point in ipairs({"Entry","Lookout"}) do
+                local base = arena.Decor["DistrictWayfinder" .. route .. point]
+                local owner = arena.Platforms["Platform" .. base:GetAttribute("PerimeterPlatformIndex")]
+                local label = base.ObjectiveLabel
+                assert(owner:GetAttribute("PerimeterRoute") == route)
+                assert(owner:GetAttribute("PerimeterStep") == (point == "Entry" and 1 or 8))
+                assert(base:IsA("MeshPart") and base.Anchored
+                    and not base.CanCollide and not base.CanTouch and not base.CanQuery)
+                assert((base.Size - Vector3.new(1.6 * scale, .46, 1.8 * scale)).Magnitude < .02)
+                local pose = owner.CFrame:PointToObjectSpace(base.Position)
+                assert(math.abs(pose.X) < .01 and math.abs(pose.Z) < .01)
+                assert(math.abs(pose.Y - base.Size.Y * .5 - owner.Size.Y * .5 - .09) < .01)
+                assert(label.Adornee == base and label.Enabled and label.MaxDistance == 85)
+                assert(math.abs(pose.Y + label.StudsOffsetWorldSpace.Y - owner.Size.Y * .5 - 4.9) < .02)
+            end
+            for marker = 1, 5 do
+                for side = -1, 1, 2 do
+                    local arrow = arena.Decor["OuterRouteChevron" .. route .. "_" .. marker .. "_" .. side]
+                    assert(arrow:IsA("MeshPart") and arrow:GetAttribute("ChaosWayfinding") == true)
+                    assert((arrow.Size - Vector3.new(.28 * scale, .055, 2.5 * scale)).Magnitude < .02)
+                end
+            end
+            for step = 1, ArenaVariants.PerimeterSteps do
+                for side = -1, 1, 2 do
+                    local arrow = arena.Decor["OuterStepChevron" .. route .. "_" .. step .. "_" .. side]
+                    local id = arrow:GetAttribute("PerimeterPlatformIndex")
+                    local deck = arena.Platforms["Platform" .. id]
+                    local panel = arena.Decor["PlatformPanel" .. id]
+                    assert(arrow:IsA("MeshPart") and deck:GetAttribute("PerimeterStep") == step)
+                    assert((arrow.Size - Vector3.new(.26 * scale, .07, 1.8 * scale)).Magnitude < .02)
+                    assert(arrow.Position.Y - arrow.Size.Y * .5 > panel.Position.Y + panel.Size.Y * .5)
+                end
+            end
+            for marker = 1, 3 do
+                for side = -1, 1, 2 do
+                    local arrow = arena.Decor["DistrictArrow" .. route .. "_" .. marker .. "_" .. side]
+                    assert(arrow:IsA("MeshPart") and arrow:GetAttribute("ChaosWayfinding") == true)
+                    assert((arrow.Size - Vector3.new(.17 * scale, .055, 1.5 * scale)).Magnitude < .02)
+                end
+            end
+        end
+    end
+
+    it("fits the short approved chassis beneath every Promenade deck",function()
+        local storage=game:GetService("ReplicatedStorage")
+        local oldMap=workspace:FindFirstChild("GeneratedMap")
+        local oldSource=storage:FindFirstChild("ApprovedRemainingStructureTemplates")
+        if oldMap then oldMap.Parent=nil end
+        if oldSource then oldSource.Parent=nil end
+        local holder=shortChassisFixture(storage)
+        local signalHolder=forgedSignalFixture(true)
+        local oldSignalSource=storage:FindFirstChild(signalHolder.Name)
+        if oldSignalSource then oldSignalSource.Parent=nil end
+        signalHolder.Parent=storage
+        local oldArmor = storage:FindFirstChild("ApprovedPerimeterArmorTemplates")
+        if oldArmor then oldArmor.Parent = nil end
+        local armor = Instance.new("Folder")
+        armor.Name = "ApprovedPerimeterArmorTemplates"
+        armor:SetAttribute("OwnerVerified", true)
+        local cap = Instance.new("Model")
+        cap.Name = "Cap"
+        cap:SetAttribute("OwnerVerified", true)
+        cap:SetAttribute("CosmeticOnly", true)
+        cap:SetAttribute("OriginalPerimeterArmor3D", true)
+        cap:SetAttribute("Original3DAssetId", 88962643359267)
+        cap.Parent = armor
+        local baseMesh = Instance.new("MeshPart")
+        baseMesh.Name = "WayfinderBase"
+        baseMesh.Size = Vector3.new(2.34, 2.14, 2.76985)
+        baseMesh.Parent = cap
+        armor.Parent = storage
+
+        local oldColumns = storage:FindFirstChild("ApprovedLargeStructureTemplates")
+        if oldColumns then oldColumns.Parent = nil end
+        local columns = Instance.new("Folder")
+        columns.Name = "ApprovedLargeStructureTemplates"
+        columns:SetAttribute("OwnerVerified", true)
+        for name, id in pairs({Classic=91626128452597,Towers=107521411452905,
+            Crossroads=93993697329658,Orbital=119010829781313,Harbor=76194593490199}) do
+            local model = Instance.new("Model")
+            model.Name = name
+            model:SetAttribute("OwnerVerified", true)
+            model:SetAttribute("CosmeticOnly", true)
+            model:SetAttribute("OriginalLargeStructure3D", true)
+            model:SetAttribute("Original3DAssetId", id)
+            local shaft = Instance.new("MeshPart")
+            shaft.Name = "BeaconShaft"
+            shaft.Size = Vector3.new(1.48, 13.56, 1.43)
+            shaft.Parent = model
+            model.Parent = columns
+        end
+        columns.Parent = storage
+
+        local generated,context
+        local active,callbacks=false,{}
+        local okay,why=pcall(function()
+            local total=0
+            for _,variant in ipairs(ArenaVariants.Order) do
+                baseMesh.Size = variant == "Towers" and Vector3.new(2.76985, 2.14, 2.34)
+                    or Vector3.new(2.34, 2.14, 2.76985)
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants)
+                generated=arena.Parent
+                checkLookoutLinks(arena,1)
+                checkPromenadeChevrons(arena,1)
+                checkPerimeterDecor(arena,1)
+                checkSpawnGuides(arena,variant)
+                checkFloorPerimeter(arena,1)
+                for _, direction in ipairs({"North", "East", "South", "West"}) do
+                    local station = arena.Decor["PerimeterStation" .. direction]
+                    local plinth, marker = station.InlaidStationBase, station.WayfindingInset
+                    assert(plinth:IsA("MeshPart") and marker:IsA("MeshPart"))
+                    assert(plinth:GetAttribute("Original3DAssetId") == 88962643359267)
+                    assert(marker:GetAttribute("Original3DAssetId") == 126298311664881)
+                    local pose = plinth.CFrame
+                    if plinth:GetAttribute("StationDetailAxisSwap") then
+                        pose *= CFrame.Angles(0, -math.pi * .5, 0)
+                    end
+                    assert((pose:PointToObjectSpace(marker.Position)
+                        - Vector3.new(0, .075, -4.25)).Magnitude < .01)
+                    for _, name in ipairs({"LeftLightNotch", "RightLightNotch"}) do
+                        local signal = station[name]
+                        assert(signal:IsA("MeshPart") and signal.Material == Enum.Material.Neon)
+                        assert(signal:GetAttribute("RouteSignalHeightAxis") == "Z")
+                        assert(math.abs(signal.Size.Z - 1.8) < .01)
+                        assert(signal.Anchored and not signal.CanCollide and not signal.CanQuery)
+                    end
+                    local silhouette = arena.Decor["ExteriorSilhouette" .. direction]
+                    local canopy, band = silhouette.RoofCanopy, silhouette.SignalBand
+                    assert(#silhouette:GetChildren() == 6)
+                    assert(canopy:IsA("MeshPart") and canopy:GetAttribute("Original3DAssetId") == 88962643359267)
+                    assert(canopy:GetAttribute("ExteriorDetailAxisSwap") == (variant ~= "Towers" and true or nil))
+                    assert(band:IsA("MeshPart") and band.Material == Enum.Material.Neon)
+                    assert(silhouette.Antenna:IsA("MeshPart") and silhouette.LeftRib:IsA("MeshPart"))
+                    local radius = canopy.Size.Magnitude * .5
+                    local offset = canopy.Position - arena.Base.Position
+                    assert(math.max(math.abs(offset.X), math.abs(offset.Z)) - radius > 172)
+                end
+                for _, direction in ipairs({"NW", "NE", "SW", "SE"}) do
+                    local ridge = arena.Decor["ExteriorRidge" .. direction]
+                    assert(#ridge:GetChildren() == 3)
+                    for index = 1, 3 do
+                        local crest = ridge["Ridge" .. index]
+                        assert(crest:IsA("MeshPart") and crest:GetAttribute("OriginalExteriorDetail3D"))
+                        assert(crest.Anchored and not crest.CanCollide and not crest.CanQuery and not crest.CanTouch)
+                        local size = crest.Size
+                        if crest:GetAttribute("ExteriorDetailAxisSwap") then
+                            size = Vector3.new(size.Z, size.Y, size.X)
+                        end
+                        assert(math.abs(size.X - (11 + index * 3)) < .01)
+                        assert(math.abs(size.Z - (13 + index * 2)) < .01)
+                    end
+                end
+                local count,porticos,junctions=0,0,0
+                local finalDeck,finalFrame,finalTruss
+                local endpoints={}
+                local decks=arena.Platforms:GetChildren()
+                for _,deck in ipairs(decks) do
+                    local step=deck:GetAttribute("SkySpineStep")
+                    if step==1 or step==10 then endpoints[step==1 and 1 or 2]=deck end
+                end
+                for _,deck in ipairs(decks) do
+                    local step=deck:GetAttribute("PromenadeStep")
+                    if step then
+                        context=variant.." "..deck.Name
+                        local index=deck.Name:match("^Platform(%d+)$")
+                        local frame=arena.Decor["PlatformUnderFrame"..index]
+                        local truss=(step==2 or step==4 or step==7)
+                            and arena.Decor["Promenade"..index.."_UnderdeckTruss"]
+                        local name=step==4 and "JunctionUnderframe"
+                            or (truss and "PromenadeTruss" or "PromenadeUnderframe")
+                        frame.LocalTransparencyModifier=.19
+                        if truss then truss.LocalTransparencyModifier=.22 end
+                        Remaining.sync(nil,Vector3.zero,"Low",false)
+                        Remaining.sync(arena,deck.Position,"Low",true,nil,0,true)
+                        local bucket=workspace.ApprovedRemainingStructureMeshesLocal
+                        local model=bucket:FindFirstChild("ApprovedP4_"..name)
+                        assert(model and model:GetAttribute("OriginalP4OwnerPlatform")==deck.Name)
+                        assert(Remaining.count("junction",name)==1)
+                        assert(Remaining.nativeCount("junction")==(truss and 2 or 1))
+                        assert(frame.LocalTransparencyModifier==1 and deck.CanCollide)
+                        checkUnderdeckSignal(arena,deck)
+                        checkAerialBand(arena,deck,1)
+                        for _,piece in ipairs(model:GetChildren()) do
+                            local center=deck.CFrame:PointToObjectSpace(piece.Position)
+                            local bounds=deck.CFrame:ToObjectSpace(piece.CFrame)
+                            local halfX=(math.abs(bounds.RightVector.X)*piece.Size.X
+                                +math.abs(bounds.LookVector.X)*piece.Size.Z)*.5
+                            local halfZ=(math.abs(bounds.RightVector.Z)*piece.Size.X
+                                +math.abs(bounds.LookVector.Z)*piece.Size.Z)*.5
+                            assert(center.Y+piece.Size.Y*.5 < -deck.Size.Y*.5)
+                            assert(math.abs(center.X)+halfX < deck.Size.X*.5
+                                and math.abs(center.Z)+halfZ < deck.Size.Z*.5)
+                            assert(not piece.CanCollide and not piece.CanQuery)
+                        end
+                        if truss then
+                            assert(truss.LocalTransparencyModifier==1)
+                            if step==4 then
+                                local endpoint=endpoints[deck:GetAttribute("PromenadeLane")]
+                                local joined=endpoint.CFrame
+                                endpoint.CFrame=joined*CFrame.new(50,0,0)
+                                task.wait()
+                                assert(Remaining.count("junction",name)==0)
+                                assert(math.abs(frame.LocalTransparencyModifier-.19)<.01
+                                    and math.abs(truss.LocalTransparencyModifier-.22)<.01)
+                                endpoint.CFrame=joined
+                                task.wait()
+                                assert(Remaining.count("junction",name)==1)
+                                assert(frame.LocalTransparencyModifier==1 and truss.LocalTransparencyModifier==1)
+                                junctions+=1
+                                finalDeck,finalFrame,finalTruss=deck,frame,truss
+                            else
+                                porticos+=1
+                            end
+                        end
+                        count+=1
+                    end
+                end
+                assert(count==16 and porticos==4 and junctions==2,variant)
+                total+=count
+                if variant=="Harbor" then
+                    context="Harbor truss ownership and shrink"
+                    local wayfinder = arena.Decor.DistrictWayfinder1Lookout
+                    local lookout = arena.Platforms["Platform" .. wayfinder:GetAttribute("PerimeterPlatformIndex")]
+                    lookout:SetAttribute("CollapsePhase", "Warning")
+                    task.wait()
+                    assert(not wayfinder.ObjectiveLabel.Enabled)
+                    lookout:SetAttribute("CollapsePhase", nil)
+                    lookout.CanCollide = false
+                    task.wait()
+                    assert(not wayfinder.ObjectiveLabel.Enabled)
+                    lookout.CanCollide = true
+                    task.wait()
+                    assert(wayfinder.ObjectiveLabel.Enabled)
+                    Remaining.sync(nil,Vector3.zero,"Low",false)
+                    Remaining.sync(arena,finalDeck.Position,"Low",true,nil,0,true)
+                    local art=workspace.ApprovedRemainingStructureMeshesLocal.ApprovedP4_JunctionUnderframe
+                    local mesh=art:FindFirstChildWhichIsA("MeshPart")
+                    local width=mesh.Size.X
+                    local glow=checkUnderdeckSignal(arena,finalDeck)
+                    local originalGlowSize=glow.Size
+                    local band=checkAerialBand(arena,finalDeck,1)
+                    local originalBandSize=band.Size
+                    NativeTrim.setPromenadeStructureMask(finalTruss,true,true)
+                    assert(mesh.LocalTransparencyModifier==1 and finalTruss.LocalTransparencyModifier==1)
+                    assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
+                    NativeTrim.setPromenadeStructureMask(finalTruss,true,false)
+                    assert(mesh.LocalTransparencyModifier==0 and finalFrame.LocalTransparencyModifier==1)
+                    active=true
+                    ShrinkingArena.start({Config=Config,RoundSeconds=.12,OnCleanup=callbacks,
+                        Active=function() return active end})
+                    local deadline=os.clock()+1.5
+                    repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+                    active=false
+                    task.wait()
+                    assert(arena.Base.Size.X<=144.05 and math.abs(mesh.Size.X-width*.45)<.025)
+                    assert(checkUnderdeckSignal(arena,finalDeck)==glow)
+                    assert(checkAerialBand(arena,finalDeck,.45)==band)
+                    checkLookoutLinks(arena,.45)
+                    checkPromenadeChevrons(arena,.45)
+                    checkPerimeterDecor(arena,.45)
+                    checkSpawnGuides(arena,variant)
+                    checkFloorPerimeter(arena,.45)
+                    assert(finalTruss.LocalTransparencyModifier==1 and finalFrame.LocalTransparencyModifier==1)
+                    Remaining.sync(arena,finalDeck.Position,"Low",true,nil,1,true)
+                    assert(math.abs(finalFrame.LocalTransparencyModifier-.19)<.01)
+                    assert(math.abs(finalTruss.LocalTransparencyModifier-.22)<.01)
+                    cleanup(callbacks,{})
+                    assert((glow.Size-originalGlowSize).Magnitude<.01)
+                    assert((band.Size-originalBandSize).Magnitude<.01)
+                    checkLookoutLinks(arena,1)
+                    checkPromenadeChevrons(arena,1)
+                    checkPerimeterDecor(arena,1)
+                    checkFloorPerimeter(arena,1)
+                    table.clear(callbacks)
+                end
+                Remaining.sync(nil,Vector3.zero,"Low",false)
+                generated:Destroy()
+                generated=nil
+            end
+            expect(total).toBe(80)
+        end)
+        active=false
+        Remaining.sync(nil,Vector3.zero,"Low",false)
+        cleanup(callbacks,{})
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        signalHolder:Destroy()
+        armor:Destroy()
+        columns:Destroy()
+        if oldColumns then oldColumns.Parent = storage end
+        if oldArmor then oldArmor.Parent = storage end
+        if oldSignalSource then oldSignalSource.Parent=storage end
+        if oldSource then oldSource.Parent=storage end
+        if oldMap then oldMap.Parent=workspace end
+        if not okay then error(tostring(context)..": "..tostring(why)) end
     end)
 end)
 

@@ -2,6 +2,7 @@
 -- Replaces four nonphysical southern monument primitives, including
 -- two WedgePart crowns; never touches northern Towers or gameplay.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry=require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These southern monuments were authored at the ORIGINAL outer perimeter.
@@ -130,16 +131,13 @@ local function context(arena)
     local natives={}
     for i,name in ipairs(names) do
         local part=owner:FindFirstChild(name)
-        if not part or not part:IsA("BasePart") or part.Parent~=owner
-            or (i<=2 and not part:IsA("Part"))
-            or (i>2 and not part:IsA("WedgePart"))
-            or not part.Anchored or part.CanCollide
-            or part.CanTouch or part.CanQuery
-            or (part.Size-sizes[i]).Magnitude>.10
-            or (part.Position-(origin+offsets[i])).Magnitude>.16
-            or part.CFrame.LookVector:Dot(
+        local kind=if i<=2 then "Part" else "WedgePart"
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,kind)
+        if not size or (size-sizes[i]).Magnitude>.10
+            or (pose.Position-(origin+offsets[i])).Magnitude>.16
+            or pose.LookVector:Dot(
                 i==3 and Vector3.new(0,0,1) or Vector3.new(0,0,-1))<.999
-            or part.CFrame.UpVector:Dot(Vector3.new(0,1,0))<.999 then
+            or pose.UpVector:Dot(Vector3.new(0,1,0))<.999 then
             return nil
         end
         natives[i]=part

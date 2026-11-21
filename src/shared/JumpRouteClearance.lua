@@ -51,7 +51,7 @@ function Clearance.forArena(arena)
 
     -- floorPoint checks the approach from the arena floor. deckPoint checks
     -- the approach across a raised source deck to its usual takeoff edge.
-    return function(from,target,floorPoint,deckPoint)
+    local function linkClear(from,target,floorPoint,deckPoint)
         local shutter = target:GetAttribute("BridgeShutterPhase")
         if shutter and shutter ~= "Idle" then return false end
         local delta = target.Position-(floorPoint or from.Position)
@@ -96,6 +96,24 @@ function Clearance.forArena(arena)
         overlap.ExcludeInstances = exclusions
         return arcClear(start,finish,direction,math.abs(finish.Y-start.Y)*.5+1.25)
     end
+    -- Verify the floor-return corridor with the same R15 volume. The
+    -- destination is a point on the real base, not the centre of the map.
+    local function groundExitClear(from, base, destination, deckPoint)
+        local delta = destination - from.Position
+        local direction = Vector3.new(delta.X, 0, delta.Z).Unit
+        local lip = edge(from, direction, EDGE_INSET)
+        local bodyOffset = Vector3.yAxis * (BODY_BOTTOM + BODY.Y * .5)
+        cast.ExcludeInstances = {from, base}
+        overlap.ExcludeInstances = {from, base}
+        local approach = deckPoint + bodyOffset
+        local shift = lip - approach
+        local flat = Vector3.new(shift.X, 0, shift.Z)
+        if flat.Magnitude > .05 and not arcClear(approach, lip, flat.Unit, 0) then return false end
+        local release = edge(from, direction, -1.35)
+        return arcClear(lip, release, direction, 0)
+            and arcClear(release, destination + bodyOffset, direction, 0)
+    end
+    return linkClear, groundExitClear
 end
 
 return Clearance

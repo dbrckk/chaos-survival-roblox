@@ -9,6 +9,7 @@ local ImpactSetpieceRules = require(ReplicatedStorage.Shared.ImpactSetpieceRules
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local AftermathSurfaceKit = require(script.Parent.AftermathSurfaceKit)
 local ImpactSurfaceScarKit = require(script.Parent.ImpactSurfaceScarKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -104,8 +105,8 @@ local function flatCFrame(position, normal, yaw)
         * CFrame.Angles(0, math.rad(yaw or 0), 0)
 end
 
-local function makePart(name, size, cframe, color, material, transparency)
-    local part = Instance.new("Part")
+local function makePart(name, size, cframe, color, material, transparency, instance)
+    local part = instance or Instance.new("Part")
     part.Name = name
     part.Size = size
     part.CFrame = cframe
@@ -154,22 +155,69 @@ local function fadeLater(part, lifetime, settlement)
     Debris:AddItem(part, lifetime + 0.05)
 end
 
-local function makeDisc(name, position, diameter, profile, transparency, lifetime)
+local function discProfile(kind, quality)
+    if quality.Name == "Low" then return nil end
+    -- Open outlines read as craters and shockwaves. Ice and scorch
+    -- keep a filled footprint with a faceted edge.
+    local role = (kind == "crater" or kind == "shock") and "ring" or "core"
+    return CelebrationMeshes.readyProfile(role, player:GetAttribute("OptionalVfxPressure"))
+end
+
+local function makeDisc(name, position, diameter, profile, transparency, lifetime, source)
     local surface, normal = surfaceAt(position)
     if not surface then
         return
     end
 
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    local frame = flatCFrame(surface, normal, 0)
     local disc = makePart(
         name,
-        Vector3.new(0.035, diameter, diameter),
-        flatCFrame(surface, normal, 0) * CFrame.Angles(0, 0, math.rad(90)),
+        if mesh then Vector3.new(diameter, 0.035, diameter) else Vector3.new(0.035, diameter, diameter),
+        if mesh then frame else frame * CFrame.Angles(0, 0, math.pi * 0.5),
         profile.Color,
         profile.Material,
-        transparency
+        transparency,
+        mesh
     )
-    disc.Shape = Enum.PartType.Cylinder
+    if not mesh then disc.Shape = Enum.PartType.Cylinder end
     fadeLater(disc, lifetime)
+end
+
+local function fitCrack(source, size, frame)
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    if not mesh then return nil, size, frame end
+    -- Lay the vertical chamfered shaft along the wider ground axis.
+    if size.X > size.Z then
+        return mesh, Vector3.new(size.Y, size.X, size.Z),
+            frame * CFrame.Angles(0, 0, math.pi * 0.5)
+    end
+    return mesh, Vector3.new(size.X, size.Z, size.Y),
+        frame * CFrame.Angles(math.pi * 0.5, 0, 0)
+end
+
+local function motifFitter(id, quality)
+    if quality.Name == "Low" then return nil end
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local cut = CelebrationMeshes.readyProfile("pylon", pressure)
+    local fragment = CelebrationMeshes.readyProfile("fragment", pressure)
+    local casting = CelebrationMeshes.readyProfile("casting", pressure)
+    if not cut and not fragment and not casting then return nil end
+
+    return function(shape, size, frame)
+        if shape == "Ball" or (shape == "Wedge" and id == "Freeze") then
+            return CelebrationMeshes.cloneProfile(fragment), size, frame
+        end
+        if shape == "Wedge" or (size.X <= size.Z * 2 and size.Z <= size.X * 2) then
+            local mesh = CelebrationMeshes.cloneProfile(casting)
+            if mesh and (casting.Size.X > casting.Size.Z) ~= (size.X > size.Z) then
+                return mesh, Vector3.new(size.Z, size.Y, size.X),
+                    frame * CFrame.Angles(0, math.pi * 0.5, 0)
+            end
+            return mesh, size, frame
+        end
+        return fitCrack(cut, size, frame)
+    end
 end
 
 local function makeCracks(name, position, radius, profile, count, lifetime)
@@ -179,18 +227,20 @@ local function makeCracks(name, position, radius, profile, count, lifetime)
     end
 
     local base = flatCFrame(surface, normal, 0)
+    local source = CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
     for i = 1, count do
         local angle = ((i - 1) / count) * 360 + ((i * 31) % 17)
         local length = radius * (0.50 + ((i * 13) % 30) / 100)
+        local mesh, size, frame = fitCrack(source, Vector3.new(0.10, 0.028, length),
+            base * CFrame.Angles(0, math.rad(angle), 0) * CFrame.new(0, 0.01, -length * 0.42))
         local line = makePart(
             name .. i,
-            Vector3.new(0.10, 0.028, length),
-            base
-                * CFrame.Angles(0, math.rad(angle), 0)
-                * CFrame.new(0, 0.01, -length * 0.42),
+            size,
+            frame,
             profile.Color:Lerp(Color3.new(0, 0, 0), 0.22),
             profile.Material,
-            0.38
+            0.38,
+            mesh
         )
         fadeLater(line, lifetime)
     end
@@ -226,6 +276,7 @@ local function makeFragments(position, radius, profile, count, lifetime)
     end
 
     local base = flatCFrame(surface, normal, 0)
+    local source = CelebrationMeshes.readyProfile("fragment", player:GetAttribute("OptionalVfxPressure"))
     for i = 1, count do
         local angle = ((i - 1) / count) * math.pi * 2 + ((i * 17) % 13) * 0.04
         local distance = radius * (0.24 + ((i * 19) % 36) / 100)
@@ -250,7 +301,8 @@ local function makeFragments(position, radius, profile, count, lifetime)
                 ),
             profile.Color:Lerp(Color3.fromRGB(28, 30, 36), 0.52),
             profile.Material,
-            0.20
+            0.20,
+            CelebrationMeshes.cloneProfile(source)
         )
         fadeLater(shard, lifetime)
     end
@@ -293,10 +345,20 @@ local function impactResidue(payload)
     local frame = flatCFrame(surface, normal, 0)
     local radius = math.max(2, ImpactSetpieceRules.safeRadius(payload.radius))
     local reduced = player:GetAttribute("ReduceMotion") == true
-    trimBudget(ImpactSurfaceScarKit.partCount(quality.Name, reduced))
+    local pieceCount = ImpactSurfaceScarKit.partCount(quality.Name, reduced)
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local centerRole = kind == "Meteor" and "ring" or "casting"
+    local centerSource = quality.Name ~= "Low" and CelebrationMeshes.readyProfile(centerRole, pressure)
+    local source = pieceCount > 1
+        and CelebrationMeshes.readyProfile("pylon", pressure)
+    local fitImpactCrack = if source then function(size, crackFrame)
+        return fitCrack(source, size, crackFrame)
+    end else nil
+    trimBudget(pieceCount)
     local pieces = ImpactSurfaceScarKit.build(
         folder, frame, kind, quality.Name,
-        groundMaterial, groundColor, profile.Color, radius, reduced
+        groundMaterial, groundColor, profile.Color, radius, reduced, fitImpactCrack,
+        CelebrationMeshes.cloneProfile(centerSource)
     )
     local lifetime = DisasterResidue.impactLifetime(quality.Name)
     for _, piece in ipairs(pieces) do
@@ -348,7 +410,8 @@ local function warningResidue(instance)
             id == "Freeze" and 11 or 8,
             profile,
             quality.Name == "Low" and 0.80 or 0.68,
-            quality.Name == "Low" and 1.4 or 2.4
+            quality.Name == "Low" and 1.4 or 2.4,
+            discProfile(profile.Kind, quality)
         )
 
         if quality.Name == "High" then
@@ -377,6 +440,11 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
     local halfX = base.Size.X * 0.5
     local halfZ = base.Size.Z * 0.5
     local lifetime = quality.Name == "Low" and 2.2 or 3.8
+    local hasMotif = AftermathSurfaceKit.names(id) ~= nil
+    local fitMotif = hasMotif and motifFitter(id, quality) or nil
+    local isTrace = profile.Kind == "fracture" or profile.Kind == "scrape"
+        or profile.Kind == "streak" or profile.Kind == "edge"
+    local source = not hasMotif and not isTrace and discProfile(profile.Kind, quality)
 
     for i = 1, perDisaster do
         if remainingParts(partLimit) == 0 then return end
@@ -387,7 +455,7 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
         local position = base.CFrame:PointToWorldSpace(
             Vector3.new(x, base.Size.Y * 0.5 + 0.08, z))
 
-        if AftermathSurfaceKit.names(id) ~= nil then
+        if hasMotif then
             -- One motif is a coherent 2/3/4-piece silhouette. Do not
             -- construct and immediately evict its pieces above the cap.
             if remainingParts(partLimit) < AftermathSurfaceKit.count(quality.Name) then
@@ -401,7 +469,7 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
                     folder, id, quality.Name, frame, profile,
                     0.88 + (i % 3) * 0.09,
                     tostring(index) .. "_" .. tostring(i),
-                    VisualTheme.arena(variant))
+                    VisualTheme.arena(variant), fitMotif)
                 for _, piece in ipairs(pieces) do
                     piece:SetAttribute("ResidueCreatedAt", os.clock())
                     local settling = DisasterResidue.settlement(
@@ -411,22 +479,23 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
                     fadeLater(piece, lifetime, settling)
                 end
             end
-        elseif profile.Kind == "fracture"
-            or profile.Kind == "scrape"
-            or profile.Kind == "streak"
-            or profile.Kind == "edge"
-        then
+        elseif isTrace then
             local yaw = (seed * 47) % 180
             local surface, normal = surfaceAt(position)
             if surface then
                 local length = profile.Kind == "edge" and 7.5 or 5.5
+                local traceSource = quality.Name ~= "Low"
+                    and CelebrationMeshes.readyProfile("pylon", player:GetAttribute("OptionalVfxPressure"))
+                local mesh, size, frame = fitCrack(traceSource, Vector3.new(0.12, 0.025, length),
+                    flatCFrame(surface, normal, yaw))
                 local trace = makePart(
                     id .. "ResultTrace" .. i,
-                    Vector3.new(0.12, 0.025, length),
-                    flatCFrame(surface, normal, yaw),
+                    size,
+                    frame,
                     profile.Color,
                     profile.Material,
-                    quality.Name == "Low" and 0.76 or 0.62
+                    quality.Name == "Low" and 0.76 or 0.62,
+                    mesh
                 )
                 fadeLater(trace, lifetime)
             end
@@ -439,7 +508,8 @@ local function resultResidueFor(id, index, count, base, quality, partLimit)
                 diameter,
                 profile,
                 quality.Name == "Low" and 0.78 or 0.64,
-                lifetime
+                lifetime,
+                source
             )
 
             if quality.Name == "High"

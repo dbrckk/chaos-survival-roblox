@@ -7,6 +7,7 @@ local SceneRules = require(ReplicatedStorage.Shared.DisasterMotionSceneRules)
 local TornadoSpiralRules = require(ReplicatedStorage.Shared.TornadoSpiralRules)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local TornadoSpiralKit = require(script.Parent.TornadoSpiralKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -23,13 +24,20 @@ local shrinkBase = nil
 local shrinkPoseFrame = nil
 local shrinkPoseSize = nil
 local shrinkLastAlpha = nil
+local shrinkMeshEligible = nil
+local shrinkMeshLongX = nil
 local blackoutParts = {}
 local blackoutBase = nil
 local blackoutPoseFrame = nil
 local blackoutPoseSize = nil
 local blackoutLastTier = nil
 local blackoutLastReduced = nil
+local blackoutMeshEligible = nil
 local tornadoSpiral = {parts = {}}
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+end)
 local clock = 0
 local currentPhase = "waiting"
 local lastRoundNumber = nil
@@ -55,6 +63,8 @@ local function clearShrink()
     shrinkPoseFrame = nil
     shrinkPoseSize = nil
     shrinkLastAlpha = nil
+    shrinkMeshEligible = nil
+    shrinkMeshLongX = nil
     for _, instance in ipairs(shrinkParts) do
         if instance and instance.Parent then
             instance:Destroy()
@@ -69,6 +79,7 @@ local function clearBlackout()
     blackoutPoseSize = nil
     blackoutLastTier = nil
     blackoutLastReduced = nil
+    blackoutMeshEligible = nil
     for _, instance in ipairs(blackoutParts) do
         if instance and instance.Parent then
             instance:Destroy()
@@ -163,7 +174,16 @@ local function arenaBase()
     return base and base:IsA("BasePart") and base or nil
 end
 
-local function ensureShrinkVisuals()
+local function setScenePose(part, frame, size, meshLongX)
+    if meshLongX ~= nil and part:IsA("MeshPart") and meshLongX ~= (size.X > size.Z) then
+        frame = frame * CFrame.Angles(0, math.pi * 0.5, 0)
+        size = Vector3.new(size.Z, size.Y, size.X)
+    end
+    part.CFrame = frame
+    part.Size = size
+end
+
+local function ensureShrinkVisuals(meshEligible)
     if currentPhase ~= "round" or not has("ShrinkingArena") then
         if #shrinkParts > 0 then clearShrink() end
         return
@@ -173,13 +193,19 @@ local function ensureShrinkVisuals()
         if #shrinkParts > 0 then clearShrink() end
         return
     end
-    if not SceneRules.needsRebuild(shrinkBase, base, shrinkParts) then
+    if shrinkMeshEligible == meshEligible
+        and not SceneRules.needsRebuild(shrinkBase, base, shrinkParts) then
         return
     end
     clearShrink()
     shrinkBase = base
+    shrinkMeshEligible = meshEligible
+    local source = meshEligible and CelebrationMeshes.readyProfile("casting", meshPressure)
+    shrinkMeshLongX = if source then source.Size.X > source.Size.Z else nil
     for i = 1, 4 do
-        local p = Instance.new("Part")
+        local frame, size = SceneRules.pose(base, "shrink", i)
+        if not frame then return end
+        local p = CelebrationMeshes.cloneProfile(source) or Instance.new("Part")
         p.Name = "ShrinkPerimeterLocal" .. i
         p.Anchored = true
         p.CanCollide = false
@@ -190,9 +216,11 @@ local function ensureShrinkVisuals()
         p.Color = i % 2 == 0 and Color3.fromRGB(220, 85, 255)
             or Color3.fromRGB(255, 110, 195)
         p.Transparency = 0.28
+        setScenePose(p, frame, size, shrinkMeshLongX)
         p.Parent = worldEffects
         table.insert(shrinkParts, p)
     end
+    shrinkPoseFrame, shrinkPoseSize = base.CFrame, base.Size
 end
 
 local function updateShrink()
@@ -208,8 +236,7 @@ local function updateShrink()
         for i, part in ipairs(shrinkParts) do
             local frame, size = SceneRules.pose(base, "shrink", i)
             if frame then
-                part.CFrame = frame
-                part.Size = size
+                setScenePose(part, frame, size, shrinkMeshLongX)
             end
         end
         shrinkPoseFrame, shrinkPoseSize = base.CFrame, base.Size
@@ -226,7 +253,7 @@ local function updateShrink()
     end
 end
 
-local function ensureBlackoutVisuals()
+local function ensureBlackoutVisuals(meshEligible)
     if currentPhase ~= "round" or not has("Darkness") then
         if #blackoutParts > 0 then clearBlackout() end
         return
@@ -237,13 +264,18 @@ local function ensureBlackoutVisuals()
         return
     end
     -- An old set of emergency beacons must never stay on a replaced map.
-    if not SceneRules.needsRebuild(blackoutBase, base, blackoutParts) then
+    if blackoutMeshEligible == meshEligible
+        and not SceneRules.needsRebuild(blackoutBase, base, blackoutParts) then
         return
     end
     clearBlackout()
     blackoutBase = base
+    blackoutMeshEligible = meshEligible
+    local source = meshEligible and CelebrationMeshes.readyProfile("pylon", meshPressure)
     for i = 1, 4 do
-        local beacon = Instance.new("Part")
+        local frame, size = SceneRules.pose(base, "blackout", i)
+        if not frame then return end
+        local beacon = CelebrationMeshes.cloneProfile(source) or Instance.new("Part")
         beacon.Name = "BlackoutEmergencyBeacon" .. i
         beacon.Anchored = true
         beacon.CanCollide = false
@@ -254,9 +286,11 @@ local function ensureBlackoutVisuals()
         beacon.Color = i % 2 == 0 and Color3.fromRGB(115, 90, 220)
             or Color3.fromRGB(75, 120, 220)
         beacon.Transparency = 0.38
+        setScenePose(beacon, frame, size)
         beacon.Parent = worldEffects
         table.insert(blackoutParts, beacon)
     end
+    blackoutPoseFrame, blackoutPoseSize = base.CFrame, base.Size
 end
 
 local function updateBlackout(tier)
@@ -295,15 +329,28 @@ end
 
 -- Reuse the existing adaptive decorative clock for the tornado's outer
 -- flow ribbons. The authoritative wind force and danger zone are untouched.
+local function spiralMeshFactory()
+    local source = CelebrationMeshes.readyProfile("casting", meshPressure)
+    if not source then return nil end
+    return function() return CelebrationMeshes.cloneProfile(source) end
+end
+
 local function refreshTornado(tier)
     local active = currentPhase == "round" and has("Tornado")
     local model = active and workspace:FindFirstChild("RoundTornado")
     local lower = model and model:FindFirstChild("LowerFunnel")
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local meshFactory = not reduced and tier.Name ~= "Low" and meshPressure < 1
+        and spiralMeshFactory or nil
     TornadoSpiralKit.sync(
-        tornadoSpiral, lower, worldEffects, tier.Name,
-        player:GetAttribute("ReduceMotion") == true,
-        clock, TornadoSpiralRules, activeDisasterCount
+        tornadoSpiral, lower, worldEffects, tier.Name, reduced,
+        clock, TornadoSpiralRules, activeDisasterCount, meshFactory
     )
+end
+
+local function canUseSceneMeshes(tier)
+    return tier.Name ~= "Low" and meshPressure < 1
+        and player:GetAttribute("ReduceMotion") ~= true
 end
 
 local function applyState(state)
@@ -351,8 +398,10 @@ local function applyState(state)
         rebuildCharacterEffects()
     end
 
-    ensureShrinkVisuals()
-    ensureBlackoutVisuals()
+    local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+    local meshEligible = canUseSceneMeshes(tier)
+    ensureShrinkVisuals(meshEligible)
+    ensureBlackoutVisuals(meshEligible)
     -- Tear down local cyclone pieces as soon as the hazard ends; do not
     -- leave them visible during the result screen or next-round voting.
     if currentPhase ~= "round" or not has("Tornado") then
@@ -411,15 +460,16 @@ ensureRenderLoop = function()
             tornadoActive = has("Tornado")
             clock += dt
 
+    local meshEligible = canUseSceneMeshes(tier)
     if shrinkActive then
-        ensureShrinkVisuals()
+        ensureShrinkVisuals(meshEligible)
         updateShrink()
     elseif #shrinkParts > 0 then
         clearShrink()
     end
 
     if blackoutActive then
-        ensureBlackoutVisuals()
+        ensureBlackoutVisuals(meshEligible)
         updateBlackout(tier)
     elseif #blackoutParts > 0 then
         clearBlackout()

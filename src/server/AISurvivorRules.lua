@@ -960,7 +960,7 @@ end
 
 function AISurvivorRules.skyGapJumpReady(
     grounded, heightAboveBase, horizontalDistance,
-    originFloorY, gapIsSupported, landingFloorY)
+    originFloorY, gapIsSupported, landingFloorY, confirmedDrop)
     if grounded ~= true or gapIsSupported ~= false then return false end
     if type(heightAboveBase) ~= "number"
         or type(horizontalDistance) ~= "number"
@@ -971,10 +971,12 @@ function AISurvivorRules.skyGapJumpReady(
     }) do
         if value ~= value or math.abs(value) == math.huge then return false end
     end
+    local rise = landingFloorY - originFloorY
+    local maxDrop = if type(confirmedDrop) == "number" and confirmedDrop > 2 then math.min(confirmedDrop, 4.05) else 2
     return heightAboveBase >= 7
         and horizontalDistance >= 4.2
         and horizontalDistance <= 34
-        and math.abs(landingFloorY - originFloorY) <= 2.0
+        and rise <= 2 and rise >= -maxDrop
 end
 
 -- Bot-to-bot separation can displace a center waypoint by several
@@ -1146,48 +1148,6 @@ function AISurvivorRules.skybridgeEscapeTarget(position, bridgeFrame, size, velo
     return bridgeFrame:PointToWorldSpace(
         alongX and Vector3.new(finish, height, 0)
             or Vector3.new(0, height, finish))
-end
-
--- Timed metal shutters are NOT collapsing bridges. On the same physical
--- elevated deck, a surviving bot retreats toward the nearest supported
--- endpoint; at the center of the rising sill it waits rather than crossing
--- a collision that may close during its run. No extra jump power, warp or
--- path through open air. The server supplies the REAL bridge and gate phase.
-function AISurvivorRules.skybridgeShutterEscapeTarget(
-    position, bridgeFrame, size, phase
-)
-    if phase ~= "Warning" and phase ~= "Raising"
-        and phase ~= "Raised" then
-        return nil
-    end
-    if typeof(position) ~= "Vector3"
-        or typeof(bridgeFrame) ~= "CFrame"
-        or typeof(size) ~= "Vector3" then
-        return nil
-    end
-    local alongX = size.X > size.Z
-    local span = math.max(size.X, size.Z)
-    local width = math.min(size.X, size.Z)
-    if span < 16 or width < 4 then return nil end
-    local localPosition = bridgeFrame:PointToObjectSpace(position)
-    local distance = alongX and localPosition.X or localPosition.Z
-    local lateral = alongX and localPosition.Z or localPosition.X
-    local expectedHeight = size.Y * 0.5 + 2.4
-    if math.abs(lateral) > width * 0.5 + 1.6
-        or math.abs(localPosition.Y - expectedHeight) > 3.2
-        or math.abs(distance) > span * 0.5 + 1.5 then
-        return nil
-    end
-
-    -- Stopping inside the centerline is safer than forcing a runner
-    -- through the blocker. The gate's server occupancy test will refuse
-    -- to activate collision over an avatar already here.
-    if math.abs(distance) < 3.2 then return position end
-    local retreat = (distance < 0 and -1 or 1) * (span * 0.5 + 2.8)
-    return bridgeFrame:PointToWorldSpace(
-        alongX and Vector3.new(retreat, expectedHeight, 0)
-            or Vector3.new(0, expectedHeight, retreat)
-    )
 end
 
 function AISurvivorRules.skyrailCrossingTarget(root, bridgeFrame, size)

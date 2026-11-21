@@ -5,6 +5,7 @@
 -- cargo route remains safe. Players and R15 bots use the SAME check.
 -- Four anchored, non-colliding bands; no damage, RemoteEvents, physics
 -- constraints, RenderStepped or new per-frame client work.
+local SweepBorderArt = require("./SweepBorderArt")
 local movementModule = script and script.Parent:FindFirstChild("MovementSafety")
 local MovementSafety = if movementModule
     then require(movementModule) else require("./MovementSafety")
@@ -66,8 +67,9 @@ function HarborCargoSweep.inside(position, band)
     if typeof(position) ~= "Vector3" or not band
         or not band:IsA("BasePart") then return false end
     local localPoint = band.CFrame:PointToObjectSpace(position)
-    return math.abs(localPoint.X) <= band.Size.X * 0.5 + 0.3
-        and math.abs(localPoint.Z) <= band.Size.Z * 0.5 + 0.3
+    local halfX, halfZ = SweepBorderArt.halfExtents(band)
+    return math.abs(localPoint.X) <= halfX
+        and math.abs(localPoint.Z) <= halfZ
         and localPoint.Y >= 1 and localPoint.Y <= 5.1
 end
 
@@ -145,7 +147,7 @@ function HarborCargoSweep.apply(ctx, band, subject, hitOnce, center)
     return true
 end
 
-local function createBand(folder, base, index)
+local function createBand(folder, base, index, profile)
     local alongX = index == 1 or index == 2
     local offset = index == 1 and -32
         or (index == 2 and 32 or (index == 3 and -32 or 32))
@@ -172,6 +174,7 @@ local function createBand(folder, base, index)
     -- that gate the server's phase transitions. No guessed durations.
     p:SetAttribute("HarborSweepWarningSeconds", HarborCargoSweep.WarningSeconds)
     p:SetAttribute("HarborSweepPulseSeconds", HarborCargoSweep.PulseSeconds)
+    SweepBorderArt.create(p, profile)
     p:AddTag("ChaosHarborSweepLane")
     p.Parent = folder
 
@@ -233,6 +236,7 @@ function HarborCargoSweep.setPhase(band, marker, label, phase, now)
         band:SetAttribute("HarborSweepPulseAt", nil)
         marker.Enabled = false
     end
+    SweepBorderArt.paint(band, phase)
     band:SetAttribute("HarborSweepPhase", phase or "Idle")
 end
 
@@ -249,8 +253,9 @@ function HarborCargoSweep.start(ctx, arena)
     folder.Name = "HarborCargoSweep"
     folder.Parent = mechanics
     local lanes = {}
+    local profile = SweepBorderArt.profile("Harbor")
     for i = 1, 4 do
-        local band, marker, label = createBand(folder, base, i)
+        local band, marker, label = createBand(folder, base, i, profile)
         lanes[i] = {band = band, marker = marker, label = label}
     end
 

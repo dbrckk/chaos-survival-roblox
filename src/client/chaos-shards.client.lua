@@ -9,10 +9,20 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local french = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
 local event = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChaosShardCollected")
+local worldEffects = Instance.new("Folder")
+worldEffects.Name = "ChaosShardVfxLocal"
+worldEffects.Parent = workspace
+
+local function quality()
+    return VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    )
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "ChaosShardFeedback"
@@ -108,7 +118,7 @@ local function worldBurst(position, reward, source)
         return
     end
 
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = quality()
     local golden = (tonumber(reward) or 1) >= 3
     local signal = source == "DistrictSignal"
     local supply = source == "DistrictCache"
@@ -127,11 +137,14 @@ local function worldBurst(position, reward, source)
         or (cargo and Color3.fromRGB(82, 188, 227))
         or (golden and Color3.fromRGB(255, 145, 45) or UITheme.Colors.Violet)
 
-    local core = Instance.new("Part")
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local sculpted = tier.Name ~= "Low" and not reduced
+    local fragment = sculpted and CelebrationMeshes.readyProfile("fragment", pressure)
+    local core = CelebrationMeshes.cloneProfile(fragment) or Instance.new("Part")
     core.Name = "ShardPickupCoreLocal"
-    core.Shape = Enum.PartType.Ball
+    if core:IsA("Part") then core.Shape = Enum.PartType.Ball end
     core.Size = Vector3.new(0.8, 0.8, 0.8)
-    core.Position = position
+    core.CFrame = CFrame.new(position)
     core.Anchored = true
     core.CanCollide = false
     core.CanTouch = false
@@ -140,17 +153,17 @@ local function worldBurst(position, reward, source)
     core.Material = Enum.Material.Neon
     core.Color = primary
     core.Transparency = 0.04
-    core.Parent = workspace
+    core.Parent = worldEffects
 
-    local ring = Instance.new("Part")
+    local ringSource = sculpted and CelebrationMeshes.readyProfile("ring", pressure)
+    local ring = CelebrationMeshes.disc(ringSource, position, 1.2, 0.10)
     ring.Name = "ShardPickupRingLocal"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.10, 1.2, 1.2)
     -- Live signals project a vertical radio-wave ring; supply crates and
     -- collectible shards retain their familiar horizontal pickup rings.
-    ring.CFrame = CFrame.new(position) * (signal
-        and CFrame.Angles(0, math.rad(45), 0)
-        or CFrame.Angles(0, 0, math.rad(90)))
+    if signal then
+        ring.CFrame = CFrame.new(position) * CFrame.Angles(0, math.rad(45), 0)
+            * (ring:IsA("MeshPart") and CFrame.Angles(0, 0, math.pi * 0.5) or CFrame.identity)
+    end
     ring.Anchored = true
     ring.CanCollide = false
     ring.CanTouch = false
@@ -159,7 +172,7 @@ local function worldBurst(position, reward, source)
     ring.Material = Enum.Material.Neon
     ring.Color = secondary
     ring.Transparency = 0.16
-    ring.Parent = workspace
+    ring.Parent = worldEffects
 
     TweenService:Create(
         core,
@@ -177,10 +190,8 @@ local function worldBurst(position, reward, source)
         ring,
         TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size = reduced and Vector3.new(0.10, 4.0, 4.0)
-                or ((signal or supply or cargo) and Vector3.new(0.10, 12.0, 12.0)
-                    or (golden and Vector3.new(0.10, 11.5, 11.5)
-                        or Vector3.new(0.10, 8.5, 8.5))),
+            Size = CelebrationMeshes.size(ring, reduced and 4.0
+                or ((signal or supply or cargo) and 12.0 or (golden and 11.5 or 8.5)), 0.10),
             Transparency = 1,
         }
     ):Play()
@@ -368,10 +379,6 @@ end)
 local shardVisuals = {}
 local pulseClock = 0
 
-local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier"))
-end
-
 -- The server creates modest decorative emitters/lights for the REAL
 -- coin shards. The existing local facet LOD only scaled local cosmetics,
 -- so all Android tiers were still drawing identical replicated particles.
@@ -414,84 +421,125 @@ local function adaptReplicatedShardEffects(shardPart)
     end
 end
 
-local function retuneVisibleShards()
-    for shardPart in pairs(shardVisuals) do
-        if shardPart.Parent then
-            adaptReplicatedShardEffects(shardPart)
-        end
+local function unmountCore(shardPart, entry)
+    if entry.originalMask ~= nil and shardPart.LocalTransparencyModifier == 1 then
+        shardPart.LocalTransparencyModifier = entry.originalMask
     end
+    entry.originalMask = nil
+    entry.highlight.Adornee = shardPart
+    entry.ring.Adornee = shardPart
+    if entry.core then entry.core:Destroy() end
+    if entry.halo then entry.halo:Destroy() end
+    entry.core, entry.halo = nil, nil
+    entry.coreSource, entry.haloSource = nil, nil
+    entry.coreMeshId, entry.haloMeshId = nil, nil
 end
 
 local function removeVisual(shardPart)
     local visual = shardVisuals[shardPart]
     if visual then
         shardVisuals[shardPart] = nil
-        if visual.Parent then
-            visual:Destroy()
-        end
+        unmountCore(shardPart, visual)
+        visual.folder:Destroy()
     end
+end
+
+local function shardKind(shardPart)
+    if shardPart:GetAttribute("ChaosShardGolden") == true then return "golden" end
+    if shardPart:GetAttribute("ChaosShardCargo") == true then return "cargo" end
+    return "ordinary"
 end
 
 local function attachVisual(shardPart)
     if not shardPart:IsA("BasePart")
         or shardPart:GetAttribute("ChaosShard") ~= true
-        or shardVisuals[shardPart]
-    then
-        return
-    end
+        or shardVisuals[shardPart] then return end
 
-    local golden = shardPart:GetAttribute("ChaosShardGolden") == true
-
+    local parent = shardPart.Parent
+    if not parent or parent.Name ~= "RoundChaosShards" or parent.Parent ~= workspace then return end
+    local kind = shardKind(shardPart)
+    local golden, cargo = kind == "golden", kind == "cargo"
     local folder = Instance.new("Folder")
     folder.Name = "LocalShardPolish"
-    folder.Parent = shardPart
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "ShardHighlight"
     highlight.Adornee = shardPart
-    highlight.FillColor = golden and Color3.fromRGB(255, 215, 80) or Color3.fromRGB(90, 210, 255)
+    highlight.FillColor = shardPart.Color
     highlight.FillTransparency = 0.68
-    highlight.OutlineColor = golden and Color3.fromRGB(255, 245, 175) or Color3.fromRGB(210, 160, 255)
+    highlight.OutlineColor = golden and Color3.fromRGB(255, 245, 175)
+        or (cargo and Color3.fromRGB(162, 255, 207) or Color3.fromRGB(210, 160, 255))
     highlight.OutlineTransparency = 0.18
     highlight.DepthMode = Enum.HighlightDepthMode.Occluded
     highlight.Parent = folder
 
-    local facets = {}
-    for i = 1, 3 do
-        local facet = Instance.new("Part")
-        facet.Name = "ShardFacet" .. i
-        facet.Anchored = true
-        facet.CanCollide = false
-        facet.CanTouch = false
-        facet.CanQuery = false
-        facet.CastShadow = false
-        facet.Material = Enum.Material.Neon
-        facet.Color = golden
-            and (i == 2 and Color3.fromRGB(255, 155, 45) or Color3.fromRGB(255, 225, 95))
-            or (i == 2 and Color3.fromRGB(165, 105, 255) or Color3.fromRGB(90, 215, 255))
-        facet.Size = Vector3.new(0.28, 2.15, 0.56)
-        facet.Transparency = quality().Name == "Low" and 1 or 0.24
-        facet.CFrame = shardPart.CFrame
-            * CFrame.Angles(0, math.rad((i - 1) * 60), math.rad(22))
-        facet.Parent = folder
-        table.insert(facets, facet)
-    end
-
     local ring = Instance.new("SelectionSphere")
     ring.Name = "ShardRing"
     ring.Adornee = shardPart
-    ring.Color3 = golden and Color3.fromRGB(255, 225, 105) or Color3.fromRGB(130, 225, 255)
-    ring.SurfaceColor3 = golden and Color3.fromRGB(255, 145, 45) or Color3.fromRGB(145, 105, 255)
-    ring.Transparency = 0.72
+    ring.Color3 = highlight.OutlineColor
     ring.SurfaceTransparency = 1
+    ring.Transparency = 0.72
     ring.Parent = folder
 
-    folder:SetAttribute("HasCrystalFacets", true)
-    shardVisuals[shardPart] = folder
+    folder.Parent = worldEffects
+    shardVisuals[shardPart] = {folder = folder, highlight = highlight, ring = ring, kind = kind}
     adaptReplicatedShardEffects(shardPart)
 end
 
+local function meshPiece(source, name, frame, size, color, material, alpha)
+    local part = CelebrationMeshes.cloneProfile(source)
+    if not part then return nil end
+    part.Name = name
+    part.MaterialVariant = ""
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.CastShadow = false
+    part.LocalTransparencyModifier = 0
+    part.Size = size
+    part.CFrame = frame
+    part.Color = color
+    part.Material = material
+    part.Transparency = alpha
+    return part
+end
+
+local function syncSculpt(shardPart, entry, profile, haloProfile)
+    if entry.coreSource == profile and entry.haloSource == haloProfile
+        and entry.coreMeshId == (profile and profile.MeshId)
+        and entry.haloMeshId == (haloProfile and haloProfile.MeshId) then return end
+    unmountCore(shardPart, entry)
+    if not profile then return end
+
+    local cargo, golden = entry.kind == "cargo", entry.kind == "golden"
+    local size = cargo and Vector3.new(1.50, 0.90, 1.20)
+        or (golden and Vector3.new(1.42, 1.32, 1.42) or Vector3.new(0.98, 1.60, 0.98))
+    local offset = cargo and CFrame.Angles(0, math.pi * 0.25, 0) or CFrame.identity
+    if cargo and profile.Size.Z > profile.Size.X then
+        size = Vector3.new(size.Z, size.Y, size.X)
+        offset *= CFrame.Angles(0, math.pi * 0.5, 0)
+    end
+    local core = meshPiece(profile, "SculptedShardCore", shardPart.CFrame * offset,
+        size, shardPart.Color, cargo and Enum.Material.SmoothPlastic or Enum.Material.Neon,
+        shardPart.Transparency)
+    if not core then return end
+    local halo = meshPiece(haloProfile, "SculptedGoldHalo", shardPart.CFrame,
+        Vector3.new(1.92, 0.12, 1.92), Color3.fromRGB(255, 221, 116), Enum.Material.Neon, 0.22)
+    core.Parent = entry.folder
+    if halo then halo.Parent = entry.folder end
+    entry.core, entry.halo, entry.coreOffset = core, halo, offset
+    entry.coreSource, entry.haloSource = profile, halo and haloProfile or nil
+    entry.coreMeshId = profile.MeshId
+    entry.haloMeshId = halo and haloProfile.MeshId or nil
+    entry.highlight.Adornee = core
+    entry.ring.Adornee = nil
+    entry.originalMask = shardPart.LocalTransparencyModifier
+    shardPart.LocalTransparencyModifier = 1
+end
+
 local function scanShards(root)
+    if not root then return end
     for _, descendant in ipairs(root:GetDescendants()) do
         if descendant:IsA("BasePart") and descendant:GetAttribute("ChaosShard") == true then
             attachVisual(descendant)
@@ -511,6 +559,7 @@ workspace.DescendantAdded:Connect(function(descendant)
         local shardPart = parent and parent:IsA("Attachment") and parent.Parent
             or parent
         if shardPart and shardPart:IsA("BasePart") then
+            attachVisual(shardPart)
             adaptReplicatedShardEffects(shardPart)
         end
     end
@@ -522,10 +571,27 @@ workspace.DescendantRemoving:Connect(function(descendant)
     end
 end)
 
-scanShards(workspace)
+scanShards(workspace:FindFirstChild("RoundChaosShards"))
 
-player:GetAttributeChangedSignal("VfxQualityTier"):Connect(retuneVisibleShards)
-player:GetAttributeChangedSignal("ReduceMotion"):Connect(retuneVisibleShards)
+local nextSourceCheck = 0
+local function refreshVisibleShards()
+    nextSourceCheck = 0
+    local pressured = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1
+    for shardPart, entry in pairs(shardVisuals) do
+        adaptReplicatedShardEffects(shardPart)
+        if pressured then unmountCore(shardPart, entry) end
+    end
+end
+player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshVisibleShards)
+player:GetAttributeChangedSignal("ReduceMotion"):Connect(refreshVisibleShards)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(refreshVisibleShards)
+
+local function readySource(profiles, role, pressure)
+    if profiles[role] == nil then
+        profiles[role] = CelebrationMeshes.readyProfile(role, pressure) or false
+    end
+    return profiles[role] or nil
+end
 
 task.spawn(function()
     while true do
@@ -536,10 +602,8 @@ task.spawn(function()
 
         local tier = quality()
         local reduced = player:GetAttribute("ReduceMotion") == true
-        -- Decorative facets must not consume a 30Hz task on low-end
-        -- Android when they are entirely invisible. High keeps the
-        -- original 30Hz polish; Medium 15Hz, Low 5Hz, reduced motion 5Hz.
-        -- This is the existing single shard scheduler, not a new loop.
+        -- Keep the existing single scheduler. Static Low and reduced
+        -- motion markers only need a slower visibility update.
         local interval = tier.Name == "High" and (1 / 30)
             or (tier.Name == "Medium" and (1 / 15) or 0.20)
         if reduced then interval = math.max(interval, 0.20) end
@@ -548,25 +612,48 @@ task.spawn(function()
 
         local character = player.Character
         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local profiles
+        if pulseClock >= nextSourceCheck then
+            profiles = {}
+            nextSourceCheck = pulseClock + 0.8
+        end
+        local pressure = profiles and player:GetAttribute("OptionalVfxPressure")
 
-        for shardPart, folder in pairs(shardVisuals) do
-            if not shardPart.Parent or not folder.Parent then
+        for shardPart, entry in pairs(shardVisuals) do
+            local folder = entry.folder
+            if not shardPart:IsDescendantOf(workspace) then
                 removeVisual(shardPart)
+            elseif not folder.Parent then
+                removeVisual(shardPart)
+                attachVisual(shardPart)
             else
+                if (entry.core and entry.core.Parent ~= folder)
+                    or (entry.halo and entry.halo.Parent ~= folder) then
+                    unmountCore(shardPart, entry)
+                    -- Keep the gameplay marker visible until the next
+                    -- scheduled source check can rebuild the assembly.
+                    continue
+                end
+                if profiles then
+                    local core = readySource(profiles, entry.kind == "cargo" and "casting" or "core", pressure)
+                    local halo = core and entry.kind == "golden" and tier.Name ~= "Low"
+                        and readySource(profiles, "ring", pressure) or nil
+                    syncSculpt(shardPart, entry, core, halo)
+                end
                 local distance = rootPart
                     and (rootPart.Position - shardPart.Position).Magnitude
                     or 999
                 local closeDistance = 24 * tier.Scale
                 local close = distance <= closeDistance
-                local golden = shardPart:GetAttribute("ChaosShardGolden") == true
+                local golden = entry.kind == "golden"
                 local pulseSpeed = golden
                     and (close and 8.2 or 5.2)
                     or (close and 6.5 or 3.8)
                 local pulse = reduced and 0.5
                     or (math.sin(pulseClock * pulseSpeed) + 1) * 0.5
 
-                local highlight = folder:FindFirstChild("ShardHighlight")
-                if highlight and highlight:IsA("Highlight") then
+                local highlight = entry.highlight
+                if highlight.Parent == folder then
                     local detailScale = tier.Scale
                     highlight.FillTransparency = math.clamp(
                         (close and 0.42 or 0.66)
@@ -583,36 +670,20 @@ task.spawn(function()
                     )
                 end
 
-                local ring = folder:FindFirstChild("ShardRing")
-                if ring and ring:IsA("SelectionSphere") then
+                local ring = entry.ring
+                if ring.Adornee and ring.Parent == folder then
                     ring.Transparency = (close and 0.46 or 0.68) + pulse * 0.12
                 end
 
-                for i = 1, 3 do
-                    local facet = folder:FindFirstChild("ShardFacet" .. i)
-                    if facet and facet:IsA("BasePart") then
-                        if tier.Name == "Low" then
-                            -- Three faceted parts already exist so users
-                            -- can upgrade quality mid-round, but there is
-                            -- no reason to rotate invisible geometry.
-                            facet.Transparency = 1
-                        else
-                            -- Far-away shards keep a static silhouette.
-                            -- Only nearby ones spend CFrame updates on
-                            -- orbiting crystal facets.
-                            if close and not reduced then
-                                local angle = pulseClock
-                                    * (golden and 1.85 or 1.45)
-                                    + math.rad((i - 1) * 60)
-                                facet.CFrame = shardPart.CFrame
-                                    * CFrame.Angles(0, angle,
-                                        math.rad(22
-                                            + math.sin(pulseClock * 2 + i) * 4))
-                            end
-                            facet.Transparency = (close and 0.12 or 0.36)
-                                + pulse * 0.08
-                        end
-                    end
+                if entry.core then
+                    local frame = shardPart.CFrame * entry.coreOffset
+                    if entry.core.CFrame ~= frame then entry.core.CFrame = frame end
+                    entry.core.Transparency = shardPart.Transparency
+                end
+                if entry.halo then
+                    local tilt = close and not reduced and (0.16 + pulse * 0.08) or 0.16
+                    entry.halo.CFrame = shardPart.CFrame * CFrame.Angles(tilt, 0, tilt)
+                    entry.halo.Transparency = math.max(shardPart.Transparency, 0.22)
                 end
             end
         end

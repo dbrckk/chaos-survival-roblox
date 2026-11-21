@@ -20,6 +20,16 @@
 - La copie locale écoute les arrivées/suppressions du map streaming et de l'asset approuvé : aucun nouveau `RenderStepped`, `Heartbeat`, `while`, `RemoteEvent` ou Tween. La source ne déplace pas le portail natif.
 - Sur Android Low comme High : un seul portique de **sept MeshParts maximum attendu** (vérification de sécurité 1–12), inclus dans le recensement mobile `VisualBudgetRules.LocalFolders`; fallback natif si absent ou refusé. Attribut de diagnostic `LocalOriginalLobbyGateMeshCount`.
 
+## Finitions du portique de secours
+
+La traverse extérieure, les deux jambes inclinées et les deux haubans peuvent reprendre le profil forgé ou le fût approuvé de Tower Run. Le modèle complet prend la priorité sur ces cinq pièces. Si une pièce du modèle local disparaît, le client libère le carénage de secours et réévalue le montage. Lorsque le modèle complet et les profils sont indisponibles, les pièces natives assurent le secours.
+
+La traverse centrale peut elle aussi recevoir le profil forgé. Son panneau d’état conserve la face et les dimensions d’origine sur un support transparent et sans collision. Le même contrôleur continue de mettre à jour le texte et les avertissements.
+
+Le carénage reste affiché tant que la géométrie du modèle complet n’est pas prête sur le client. Le portique et les pylônes utilisent le même code de préchargement. Les identifiants sont dédupliqués pour chaque contrôleur et un maillage en échec fait l’objet d’une seconde tentative après vingt secondes.
+
+Les deux ailettes, les deux bras du chevron de départ et les deux repères d’approche peuvent afficher le profil forgé approuvé. Ils gardent leurs limites de deux, quatre ou six repères selon la qualité et reprennent les couleurs, rotations et fondus de la phase en cours. Les formes natives restent disponibles au chargement et sous pression graphique. Si le portail ou l’allée est remplacé, les repères sont reconstruits sur les nouveaux ancrages.
+
 ## Conditions de sortie / limites
 
 Après fusion, **ne pas prétendre le résultat public** avant la validation du SHA final par Build Validation, les cinq suites Roblox Open Cloud et la publication contrôlée sur l'univers `10771083668` / lieu `95351659174730`.

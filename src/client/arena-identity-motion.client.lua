@@ -314,7 +314,11 @@ task.spawn(function()
                     currentVariant, part.Name, now, item.index, scale
                 )
                 if offset then
-                    part.CFrame = item.baseCFrame * offset
+                    if currentVariant == "Crossroads" and item.index <= 4 then
+                        part.CFrame = item.baseCFrame + offset.Position
+                    else
+                        part.CFrame = item.baseCFrame * offset
+                    end
                 end
             end
         end

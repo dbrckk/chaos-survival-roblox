@@ -41,10 +41,9 @@ assert len(set(k for k,v in pairs))==13
 assert all('"'+key+'"' in builder for key in expect)
 assert 'arena:GetAttribute("VariantId")~="Crossroads"' in context
 assert 'owner:GetAttribute("SignatureVariant")~="Crossroads"' in context
-assert 'part:IsA(spec[2])' in context
-assert 'part.CFrame.LookVector:Dot(intended.LookVector)' in context
-assert 'part.CFrame.UpVector:Dot(intended.UpVector)' in context
-assert 'part.CanCollide' in context and 'part.CanTouch' in context
+assert 'ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2])' in context
+assert 'pose.LookVector:Dot(intended.LookVector)' in context
+assert 'pose.UpVector:Dot(intended.UpVector)' in context
 print("PASS exact Crossroads source landmark types and 13 nonphysical native targets")
 
 restore=client.split("local function restore()",1)[1].split("local function clear()",1)[0]

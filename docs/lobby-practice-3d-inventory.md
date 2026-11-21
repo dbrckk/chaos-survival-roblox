@@ -1,0 +1,171 @@
+# Inventaire 3D — stations d'entraînement du lobby
+
+État de la branche `art/tower-skybridge-treads` au 19 novembre 2026. Inventaire **statique et limité** à `src/server/LobbyActivities.lua` et `src/client/lobby-sculpted-finish.client.lua`. Ne pas extrapoler au lobby entier ni aux cinq arènes.
+
+## Objets créés par une génération des quatre stations
+
+| Objet | Par station | Total | Rôle | Habillage 3D |
+| --- | ---: | ---: | --- | --- |
+| PracticeBoostPad | 1 | 4 | Déclencheur tactile | LobbySculptedCasting |
+| PracticeCastRim | 4 | 16 | Bordures cosmétiques | LobbySculptedCasting |
+| PracticeCornerBoss | 4 | 16 | Angles cosmétiques | LobbySculptedCasting |
+| PracticeGuideVane | 2 | 8 | Guides latéraux | LobbySculptedSwept |
+| PracticeGuideFin | 2 | 8 | Embouts extérieurs | LobbySculptedSwept |
+| **Total** | **13** | **52** | | **52 candidats** |
+
+Ces 52 objets sont encore créés comme `Part` côté serveur. Le client leur substitue une apparence `MeshPart` **uniquement** lorsque le maillage approuvé est disponible, que le joueur est dans le lobby et que le budget d'effets le permet. Le `Part` tactile du boost doit rester présent pour son fonctionnement. En l'absence du maillage, la primitive reste visible.
+
+Les finitions utilisent le même préchargement que le portique, les pylônes et les dalles. Chaque finition attend le maillage précis dont elle a besoin. Un profil en échec est retenté une fois après vingt secondes, pendant que sa pièce de secours reste visible.
+
+**Taux de couverture du lot : 52/52 candidats marqués pour habillage conditionnel (100 % des stations, pas 100 % de remplacement effectivement visible).** Aucun taux global du jeu n'est établi : il faut inventorier les constructeurs indirects, les clones, les modèles Roblox et les états LOD des autres scripts.
+
+## Priorités suivantes
+
+1. Inventorier les grandes surfaces visibles de `MapBuilder.lua`, les constructions du lobby et les décorations générées indirectement ; distinguer colliders nécessaires et primitives purement visuelles.
+2. Remplacer les grandes silhouettes visibles avant d'ajouter d'autres petits ornements ; réutiliser les maillages approuvés et garder un fallback.
+3. Contrôler le rendu réel, la première minute mobile et les performances lors du prochain jalon de validation demandé ; ne pas déclarer ces contrôles réussis avant exécution.
+
+## Audit complémentaire : `MapBuilder.lua` (statique)
+
+Le relevé statique du constructeur couvre les pièces directement identifiables du lobby. Les boucles du générateur et les contrôleurs clients déterminent le nombre d’objets présents selon la qualité, la pression graphique et la disponibilité des maillages.
+
+### Contraintes et priorités vérifiées dans le code
+
+- `Lobby.Floor` et `Arena.Base` sont des surfaces de gameplay : **conserver les collisions serveur**, traiter uniquement leur apparence.
+- `Arena.KillPlane` est un déclencheur invisible létal : **ne jamais le remplacer par une pièce décorative**.
+- `LobbyFloorInset` et `ArenaDeckInset` sont de grandes surfaces visibles : étudier un habillage premium adapté à la lisibilité des dangers et aux appareils mobiles, plutôt qu'un maillage décoratif épais.
+- Les trois `LobbyLoopPanel`, les quatre `LobbyIdentityPanel` et `ChaosSign` utilisent huit supports de texte transparents et sans collision. Leurs plaques sont éligibles à l’habillage sculpté après chargement du maillage approuvé. Le client ignore les autres plaques qui portent encore un `SurfaceGui` direct.
+- Les appels `fitDecorMesh` utilisent déjà des maillages approuvés avec secours en primitives ; ne pas les comptabiliser comme « primitifs restants » sans vérifier le chargement effectif.
+
+**Pourcentage global du jeu : non déterminé.** Il faudrait un inventaire à l'exécution par arène, catégorie et niveau de détail, ainsi qu'une vérification des chargements de maillages, avant de publier une métrique crédible.
+
+## Grandes formes visibles du lobby
+
+| Ensemble | Quantité observée dans le code | État |
+| --- | ---: | --- |
+| Lames du noyau et segments orbitaux | 3 + 12 | Le profil forgé approuvé remplace chaque pièce en Medium et High quand le maillage est prêt et la pression graphique normale. Chaque emplacement conserve un seul objet animé. |
+| Sphère du noyau | 1 | Maillage sphérique facetté du réacteur Orbital approuvé, ajusté au volume de 3,6 studs en Medium et High. La sphère native prend le relais sous pression graphique ou pendant le chargement. Le même point lumineux suit les deux formes. |
+| Fragments du noyau | 3 / 5 / 7 selon la qualité | Le même profil Orbital habille en Medium et High la coque vitrée et le cœur lumineux des fragments. Le rendu de secours prend le relais sous pression graphique. Les orbites et la cadence restent celles du contrôleur existant. |
+| Balises du parcours d’entraînement | 4 | Plaques moulées approuvées dans le gabarit des disques de 8,5 studs. Les disques prennent le relais tant que le maillage est indisponible ou sous pression graphique. Les étiquettes et la détection à 5,4 studs gardent les mêmes ancrages. |
+| Plateau et dalles physiques | 2 | Colliders natifs avec habillage sculpté conditionnel. |
+
+Ce relevé compte les emplacements définis dans le code. Il reste à mesurer les maillages affichés sur un appareil mobile avant d’établir un taux de remplacement pour le lobby.
+
+## Décompte des formes simples restantes
+
+Relevé du 20 novembre 2026. Le tableau compte les pièces produites par chaque constructeur. Les lignes dépendent de phases et de conditions graphiques différentes. Leur somme ne représente donc pas une scène vue par le joueur.
+
+| Ensemble | Low | Medium | High | Condition |
+| --- | ---: | ---: | ---: | --- |
+| Accessoires de Chaos Showtime | 37 | 56 | 86 | Enceintes, console, structure, couronne et égaliseur pendant la phase Showtime. |
+| Tablier, dalles, bordures et pylônes de Showtime | 18 | 25 | 34 | Autour de la piste de 13,8 × 13,8 studs. |
+| Danseurs holographiques de Showtime | 0 | 8 | 20 | Un danseur à huit pièces en Medium, deux à dix pièces en High. |
+| **Total visuel potentiel de Showtime** | **55** | **89** | **140** | Hors ancrages transparents, interfaces et effets. |
+| Bras des chevrons des stations d’entraînement | 8 | 16 | 24 | Emplacements éligibles au profil forgé approuvé. Deux bras par chevron, avec secours natif pendant le chargement et sous pression graphique. |
+| Orbites et noyau avec tous les maillages prêts | 16 | 0 | 0 | En Low, douze segments, une sphère et trois fragments utilisent les primitives par choix de qualité. |
+| Joints, trappes et inserts de secours du vestibule | 8 | 12 | 24 | Nombre maximal lorsqu’aucune dalle 3D ne couvre le vestibule. |
+
+Le plateau principal et l’estrade, les quatre pylônes et les trois pièces physiques du portail totalisent neuf ancres de gameplay côté serveur. Leur présence dans l’arborescence est indépendante du remplacement de leur apparence.
+
+Le secteur Showtime concentre le plus de formes simples dans les constructeurs examinés. Les premiers remplacements à forte visibilité sont le tablier, les deux enceintes, la console, les trois éléments du portique et le cristal suspendu. Les chevrons d’entraînement constituent le suivant : chaque bras peut garder son empreinte et utiliser le profil forgé existant, sans ajouter de pièce visible.
+
+Le lot Showtime rend ces huit emplacements éligibles aux profils approuvés. Le tablier, les enceintes et la console reprennent le moulage du périmètre, le portique le profil forgé de Tower Run et le cristal le cœur facetté d’Orbital. Chaque emplacement garde une seule pièce. Le tablier conserve ses ancrages audio et ses effets. Les formes de secours restent visibles jusqu’au chargement et reviennent sous pression graphique.
+
+Les arcs acoustiques et la couronne de Showtime ajoutent 13, 21 ou 43 emplacements éligibles selon la qualité. Les nervures, les ailes, leurs liserés et les segments tournants utilisent le profil forgé de Tower Run. Le cœur et les attaches de la couronne reprennent le profil d’Orbital. Les segments gardent leur pivot tangent et le sens de rotation des deux anneaux quelle que soit l’orientation d’import.
+
+La piste peut afficher des profils approuvés sur ses 9, 16 ou 25 dalles, ses quatre bordures et ses quatre pylônes. Les dalles reprennent le profil moulé sans modifier les joints du quadrillage ni les décalages de pulsation. Les bordures utilisent le profil forgé dans les deux axes. Les pylônes reprennent les facettes d’Orbital et conservent les lumières existantes. Chaque emplacement garde une pièce de secours aux mêmes dimensions.
+
+Les enceintes et le pupitre ajoutent neuf emplacements sculptés en Low et dix-huit en Medium et High. Les cônes, caches et disques utilisent les facettes d’Orbital, le plateau utilise le moulage du périmètre et les garnitures et curseurs le profil forgé. Le secours cylindrique suit le même plan que le maillage, face au public pour les enceintes et à plat sur le pupitre.
+
+Les 3, 5 ou 8 barres de l’égaliseur utilisent le profil forgé lorsque le maillage est prêt. La base des barres reste à la même hauteur pendant les variations et la réduction des animations conserve la hauteur fixe d’origine. Le passage au maillage ou au secours conserve la hauteur courante et le pivot de chaque barre.
+
+Les danseurs holographiques peuvent utiliser des profils approuvés sur leurs huit pièces en Medium et leurs vingt pièces en High. Le torse et les renforts reprennent le moulage du périmètre, la tête les facettes d’Orbital, et les membres et visières le profil forgé. La chorégraphie et les détails utilisent les mêmes pivots avec les maillages et leurs formes de secours.
+
+Les trois façades imprimées, les deux lampes du portique et ses cinq accents réservés au High complètent le lot. Le même `SurfaceGui` suit la façade sur sa face orientée vers le public, y compris avec un maillage importé sur l’autre axe. Les 55, 89 et 140 emplacements visuels recensés de Showtime disposent ainsi d’un profil de remplacement, avec les mêmes formes de secours.
+
+Les halos de victoire, les socles des survivants et l’impulsion de retour peuvent utiliser un anneau creux approuvé d’Orbital. Le centre de la constellation utilise la région facettée du même modèle. Les dimensions, durées et options de réduction des animations suivent le code existant. Un effet qui démarre avant le chargement garde son disque de secours jusqu’à sa fin.
+
+Les pylônes de victoire en qualité moyenne et haute reprennent le profil octogonal de la colonne du lobby pour le corps, la vitre et l’insert lumineux. Leur coiffe reprend le profil facetté d’Orbital. Chaque pylône conserve quatre pièces et sa montée en cascade. Les formes simples servent de secours si les maillages sont indisponibles ou si la pression graphique augmente avant l’apparition des pylônes.
+
+Le balayage doré au départ reprend la traverse forgée de Tower Run, ajustée à 80 % de la largeur de la piste. Il suit la même trajectoire au-dessus du revêtement, y compris si le maillage importé présente son axe long sur Z. La barre plate sert de secours au démarrage et sous pression graphique. Chaque balayage garde sa géométrie jusqu’à la fin du fondu.
+
+Les trois balises d’orientation du lobby peuvent afficher le mât polygonal approuvé de Tower Run. La tige de secours reste visible tant que le maillage charge ou sous pression graphique. Les mâts disparaissent avec les balises pendant la manche et restent masqués en qualité basse. Les panneaux conservent leurs ancrages.
+
+Les anneaux personnels de victoire, de défaite et de médaille peuvent utiliser un seul maillage creux d’Orbital à la place de six ou huit segments. Les couleurs, la durée et les options de réduction des animations suivent le résultat reçu. Les segments existants servent de secours en qualité basse, au chargement et sous pression graphique.
+
+Les traces circulaires de catastrophe utilisent en qualité moyenne et haute un profil approuvé d’Orbital. Les cratères de météores et les ondes de saut adoptent un anneau creux. Le givre et les brûlures de bombes reprennent le noyau facetté aplati. Chaque trace garde une pièce alignée sur la surface et sa durée d’origine. Le disque simple prend le relais en qualité basse, sous pression graphique ou si le maillage est indisponible.
+
+Les fissures d’impact, les lignes résiduelles et les éclats peuvent reprendre deux maillages approuvés. Le profil octogonal du lobby suit l’axe des fissures. La tête forgée à douze facettes fournit le relief des éclats. Chaque élément garde une pièce, son emprise au sol et son fondu. Les formes simples servent de secours au chargement et sous pression graphique.
+
+Les neuf motifs au sol de fin de manche peuvent utiliser des maillages approuvés en qualité moyenne et haute. Les coulées de lave mêlent plaques moulées et rainures, les aiguilles de givre sont facettées et les traces de vent gardent leurs trois obliques biseautées. Chaque motif conserve ses repères au sol et ses deux à quatre pièces selon la qualité. Les formes simples servent de secours en qualité basse, au chargement ou sous pression graphique.
+
+Pendant la manche, les impacts de météores peuvent laisser un cratère ouvert issu de l’anneau d’Orbital. Les bombes utilisent une plaque pleine issue du moulage du périmètre. Les deux marques reprennent la teinte du sol et s’alignent sur sa normale. Le centre occupe une seule pièce dans le budget de l’impact. Les formes simples servent de secours en qualité basse, au chargement et sous pression graphique.
+
+Pour les impacts proches en qualité moyenne et haute, la tête forgée à douze facettes habille les éclats et le rebord temporaire du cratère. Les arcs de pression des bombes reprennent le moulage du périmètre et les volumes lumineux adoptent le noyau facetté d’Orbital. Le nombre de pièces, les trajectoires et les durées restent les mêmes. Les formes simples s’affichent en qualité basse, à distance, sous pression graphique ou pendant le chargement.
+
+Les onze effets 3D de la phase finale peuvent utiliser des profils approuvés. Les aiguilles de givre et les projectiles de météores sont facettés. Les pointes de lave et les volets d’éclipse reprennent la colonne octogonale. Les sillages, les ondes et les limites reprennent le moulage du périmètre. Chaque effet garde sa trajectoire, son enveloppe et le plafond de pièces affichées simultanément. En qualité basse, sous pression graphique ou au chargement, les formes simples prennent le relais.
+
+Les chevrons des quatre stations reprennent le profil forgé de Tower Run. Chaque bras conserve sa largeur, sa hauteur et sa position au-dessus du pad. Le montage normalise les deux orientations d’import et suit le repère du pad sans changer sa zone tactile.
+
+Les impulsions du départ et du sprint final peuvent utiliser le profil du périmètre pour leurs segments fins et espacés. Les impulsions centrées sur le joueur peuvent utiliser un anneau creux d’Orbital. Les repères, les durées et la réduction des animations conservent leurs réglages. Les segments simples servent de secours en qualité basse, sous pression graphique ou au chargement.
+
+Les ondes de choc des impacts proches peuvent afficher des segments facettés pour les météores et des segments moulés pour les bombes. Les deux conservent leur centre dégagé, leur expansion et le plafond d’ondes simultanées. Le rendu simple reste disponible à distance, en qualité basse, en mode animations réduites, au chargement ou sous pression graphique.
+
+Les avertissements de météores peuvent afficher une colonne octogonale, une tête facettée et deux ailettes moulées en qualité haute. Les croix au sol des bombes reprennent le moulage du périmètre. Les formes restent dans les emprises existantes et suivent le temps restant de l’avertissement serveur. Les formes simples servent de secours en qualité basse, en mode animations réduites, au chargement ou sous pression graphique.
+
+Les segments de l’avertissement de décharge au sol reprennent le moulage du périmètre. Ils suivent le diamètre calculé d’après le temps serveur en conservant leur emprise et leur nombre. Si le maillage n’est pas prêt, les segments simples restent visibles pour cet avertissement. Ils servent aussi de secours en qualité basse, sous pression graphique et en mode animations réduites.
+
+Les charges de bombe en descente peuvent afficher un corps facetté d’Orbital, des ailettes moulées et deux accents forgés. Les cinq emplacements suivent le même compte à rebours serveur. La qualité moyenne conserve trois pièces et le mode animations réduites garde une seule forme fixe. Les formes simples s’affichent au chargement, en qualité basse et sous pression graphique.
+
+Le contour du gel peut afficher des aiguilles à douze facettes. Elles suivent le temps serveur dès leur première image, y compris lorsque l’avertissement arrive en cours d’animation. Le voile au sol reste visible dans toute l’arène. Les aiguilles simples prennent le relais en qualité basse, en mode animations réduites, sous pression graphique ou si le maillage manque.
+
+Les rubans de la tornade peuvent utiliser le moulage du périmètre sur leurs deux spirales. Les débris reprennent une forme facettée dans quatre arènes et un profil de planche à Storm Harbor, avec les matériaux de chaque décor. Les plafonds et la limite ambrée suivent les règles existantes. Les formes simples servent de secours en qualité basse, en mode animations réduites, au chargement et sous pression graphique.
+
+Les quatre balises d’obscurité peuvent afficher un profil octogonal. Les quatre repères de rétrécissement reprennent le moulage du périmètre et suivent les bords de la dalle sur les deux axes. Les pièces sont positionnées dès leur première image. Les formes simples prennent le relais en qualité basse, en mode animations réduites, sous pression graphique ou au chargement.
+
+La lave montante peut afficher une croûte à pans inclinés issue du moulage du périmètre, avec le matériau fissuré existant. Le revêtement suit la hauteur et les dimensions de la lave serveur et garde une seule pièce. En qualité basse, en mode animations réduites ou sous pression graphique, la surface plane sert de secours. Les braises et la lumière restent en place quand le revêtement change.
+
+Les météores en chute peuvent porter des plaques de basalte moulées et un insert incandescent à douze facettes. L’insert se trouve à la surface du projectile. Les plaques suivent la rotation via leurs attaches existantes. Le nombre de pièces et la règle de proximité restent les mêmes. Les plaques simples servent de secours en qualité basse, au chargement ou sous pression graphique.
+
+Le givre du personnage local utilise des plaques à douze facettes soudées au torse R6 ou R15. Si le torse arrive après l’état de gel, les plaques s’attachent dès sa réplication. Les formes simples servent de secours au chargement, en qualité basse, sous pression graphique et en mode animations réduites. Le dégel retire les plaques avec le reste de l’effet.
+
+Le Phase Dash peut afficher un anneau cyan moulé près du joueur et un anneau violet à douze facettes en qualité haute. Les anneaux restent creux et suivent la direction du dash. Les segments simples servent de secours à distance, en qualité basse, en mode animations réduites, sous pression graphique et au chargement.
+
+La prévisualisation d’atterrissage peut afficher des repères moulés sur la surface prédite. Les crochets et le X rouge suivent les mêmes points de contact et conservent leurs dimensions. Quatre pièces réutilisables suffisent dans les deux cas. Les formes simples prennent le relais en qualité basse, en mode animations réduites, au chargement ou sous pression graphique.
+
+Les repères des nouveaux joueurs peuvent afficher un anneau creux d’Orbital, une balise octogonale et une coiffe facettée. Le choix des destinations et les aides à l’écran suivent les mêmes règles. Quand la pression graphique change, seules les pièces 3D sont remplacées et l’animation d’apparition ne redémarre pas.
+
+Les glyphes mobiles d’Orbital Helix peuvent reprendre le moulage du périmètre et les éclats de réussite un profil à douze facettes. Les glyphes suivent les rampes et les couleurs des voies chargées. Un changement de pression graphique remplace seulement les glyphes mobiles et les prochaines célébrations utilisent le profil disponible. Les panneaux fixes restent visibles en qualité basse et en mode animations réduites.
+
+Les arches du Flux Relay peuvent afficher des montants octogonaux, des chevrons moulés et des prismes facettés. Les éclats de réussite utilisent le même profil facetté. Les éléments réagissent aux couleurs de charge et suivent les déclencheurs pendant le rétrécissement. Les formes simples restent disponibles en qualité basse, au chargement ou sous pression graphique.
+
+Le Skyrail peut afficher des montants octogonaux, des traverses moulées et des éclats facettés. Les glyphes mobiles suivent le sens du trajet indiqué par le serveur sur les deux orientations de passerelle. L’avertissement ambré reste prioritaire pendant une fermeture. Sous pression graphique, seules les structures permanentes sont remplacées sur place. Les éclats suivants utilisent le profil disponible sans interrompre ceux déjà lancés.
+
+Les éclats de Chaos peuvent afficher un noyau facetté d’Orbital à la place de la sphère visible. Le noyau reprend la couleur de l’éclat serveur et partage le plafond de trois pièces locales avec les facettes. Le signal de collecte utilise un anneau creux. Les formes de secours reprennent la place au chargement et sous pression graphique. La zone tactile et la remise des récompenses restent gérées par le serveur.
+
+Les stations de signal peuvent afficher des arcs et des montants octogonaux, une traverse moulée et une lentille facettée. La luminosité suit les états actif, suivant et réclamé. Les caches réutilisent le moulage approuvé pour leurs huit pièces, y compris le couvercle qui porte l’invite d’interaction. Les caches et leurs invites restent attachés à leur plateforme. Les formes simples sont utilisées si le modèle manque lors de la création.
+
+Les stations de signal serveur peuvent aussi reprendre le noyau facetté d’Orbital et le moulage du périmètre pour le boîtier, les panneaux et les flèches au sol. La parabole de Classic peut utiliser l’anneau creux d’Orbital. Les positions du noyau, de l’invite et du texte restent les mêmes. Chaque pièce simple sert de secours quand le maillage correspondant manque à la création de la station.
+
+## P4 — Toitures des monuments de secteur
+
+Les coiffes météo de Classic, les capots de levage de Tower Run, les auvents de Crossroads, les ailettes d’Orbital et les capots portuaires de Storm Harbor peuvent reprendre le moulage incliné approuvé du périmètre. Chaque paire conserve ses deux pentes opposées, son gabarit et son matériau. La mise à jour remplace uniquement les huit pièces de toiture de l’arène, en qualité moyenne ou haute. Les formes simples reprennent leur place au chargement ou sous pression graphique.
+
+Les quatre monuments peuvent aussi afficher deux blindages octogonaux par socle et deux têtes de fixation à douze facettes tournées vers l’avant. Ces seize pièces réutilisent la coque approuvée du pylône du lobby et la fixation approuvée du sol de l’arène. Elles occupent leurs volumes existants en qualité moyenne ou haute, avec une forme de secours indépendante pour chaque source.
+
+Les antennes radar peuvent utiliser l’anneau creux approuvé d’Orbital, avec une seconde bague en qualité haute. L’œil de l’observatoire, le signal du réacteur et la balise du relais en qualité basse, ainsi que les deux récepteurs directionnels en qualité haute, peuvent reprendre son noyau facetté. En qualité basse, chaque monument garde ses cinq pièces. Le radar garde son axe de balayage en qualité moyenne et haute. Ses pièces et les optiques retrouvent leurs formes simples au chargement ou sous pression graphique.
+
+Les mâts de l’observatoire et du relais, les volumes du réacteur et du dépôt, le palan et la traverse du portique peuvent utiliser les maillages approuvés du pylône du lobby et du pont forgé de Tower Run. En qualité basse, six pièces existantes par arène peuvent être sculptées. En qualité moyenne et haute, les mâts, la traverse et les supports du portique utilisent les mêmes sources. La traverse garde sa portée et les deux sources reviennent indépendamment à leurs formes simples au besoin.
+
+Les panneaux de signal peuvent afficher les deux coques profilées du modèle Classic dans un seul maillage. Les colliers translucides du réacteur et du relais reprennent le moulage octogonal. En qualité haute, les huit segments du réacteur peuvent reprendre le moulage incliné du périmètre. En qualité basse, le panneau du relais et le collier du réacteur gardent chacun une pièce. Le balayage et les variations de transparence reprennent sur les maillages ou leurs formes de secours à partir des réglages d’origine.
+
+Les quatre socles de secteur peuvent reprendre le caisson étagé approuvé de Harbor. Les quatre plaques d’identité utilisent le profil moulé du pylône du lobby. Chaque remplacement occupe une seule pièce et conserve le gabarit de sa forme de secours. Les textes existants restent à la même position sur la plaque et retrouvent leur support lorsque la pression graphique augmente.
+
+Les modules de fret peuvent reprendre la coque chanfreinée de la charge approuvée de Harbor. Les boîtiers du réacteur, du relais et de l’observatoire, ainsi que le contrepoids et les protections de conduites, réutilisent le moulage octogonal. L’empilement du dépôt utilise une seule pièce en qualité basse. Les marquages restent sur leurs faces et la bascule des coques ne relance pas le clignotement des bandes du dépôt.
+
+En qualité haute, les conduites, tirants et renforts peuvent reprendre l’arbre polygonal et le profil forgé de Tower Run. Les loquets et les hublots de service réutilisent la fixation et le noyau approuvés. Les tirants restent centrés entre leurs points d’appui. Les cylindres de secours des conduites sont alignés verticalement comme leurs maillages.
+
+Chaque arène peut maintenant sculpter ses deux volumes de structure par monument en qualité moyenne, puis sa tête de scanner ou sa traverse supplémentaire en qualité haute. Classic reprend un mât polygonal et un noyau facetté. Crossroads utilise le profil supérieur de son propre portique et conserve le béton sur sa pile. Tower Run, Orbital et Storm Harbor gardent les orientations et gabarits propres à leurs guides, ailettes, pieds et traverses.
+
+Les bandes peintes et le capot du dépôt, les ailettes et la coiffe du réacteur, l’éclairage et la bague de l’observatoire ainsi que la balise du relais peuvent reprendre les maillages approuvés déjà chargés. Les animations repartent des valeurs d’origine quand leur pièce change de support. Chaque pièce visible des quatre monuments de secteur a maintenant un profil sculpté associé, avec un secours indépendant sous pression graphique ou au chargement.
+Avec toutes les sources disponibles, la recette locale remplace 20 pièces en qualité basse, 56 en moyenne et 106 en haute par arène.

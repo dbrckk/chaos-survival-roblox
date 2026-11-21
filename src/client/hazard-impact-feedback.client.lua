@@ -8,6 +8,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local ImpactSetpiece = require(script.Parent.ImpactSetpiece)
 local ImpactSetpieceRules = require(ReplicatedStorage.Shared.ImpactSetpieceRules)
 local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local ImpactPulseRules = require(ReplicatedStorage.Shared.ImpactPulseRules)
 local ImpactMaterialRules = require(ReplicatedStorage.Shared.ImpactMaterialRules)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
@@ -89,7 +90,7 @@ local function sampleGround(position, color, kind, profile, reduced)
     return style, frame
 end
 
-local function makeAftermath(kind, profile, style, frame, radius)
+local function makeAftermath(kind, style, frame, radius, source)
     -- The persistent crater/scorch is owned by disaster-residue.client.lua.
     -- This uses the *existing* six/three temporary airborne pieces only,
     -- now shaded/oriented by the raycast material and surface normal.
@@ -100,7 +101,8 @@ local function makeAftermath(kind, profile, style, frame, radius)
         )
         if fragment then
             local meteor = kind == "Meteor"
-            local shard = meteor and Instance.new("WedgePart") or Instance.new("Part")
+            local mesh = CelebrationMeshes.cloneProfile(source)
+            local shard = mesh or Instance.new(meteor and "WedgePart" or "Part")
             shard.Name = meteor and "LocalMeteorSurfaceFragment" or "LocalBombSurfaceFragment"
             shard.Size = fragment.Size
             shard.CFrame = fragment.Start
@@ -123,6 +125,14 @@ local function makeAftermath(kind, profile, style, frame, radius)
             Debris:AddItem(shard, duration + 0.14)
         end
     end
+end
+
+local function lightVolume(source)
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    if mesh then return mesh end
+    local sphere = Instance.new("Part")
+    sphere.Shape = Enum.PartType.Ball
+    return sphere
 end
 
 local function renderBurst(payload)
@@ -223,6 +233,19 @@ local function renderBurst(payload)
             profile.Name, reduced, viewerDistance, activeBursts
         )
     end
+    local fragmentSource, coreSource, cloneGeometry
+    if richDetail then
+        local pressure = player:GetAttribute("OptionalVfxPressure")
+        fragmentSource = CelebrationMeshes.readyProfile("fragment", pressure)
+        coreSource = CelebrationMeshes.readyProfile("core", pressure)
+        local pressureSource = kind == "Bomb" and CelebrationMeshes.readyProfile("casting", pressure)
+        if fragmentSource or pressureSource then
+            cloneGeometry = function(role)
+                local source = if role == "pressure" then pressureSource else fragmentSource
+                return CelebrationMeshes.cloneProfile(source)
+            end
+        end
+    end
     local duration = reduced and 0.12 or (profile.Name == "Low" and 0.18 or 0.24)
     local targetDiameter = radius * 2
         * (reduced and 0.72 or (0.85 + (0.15 * profile.Scale)))
@@ -230,12 +253,18 @@ local function renderBurst(payload)
         profile.Name, reduced, viewerDistance, activeBursts, kind
     )
     if pulseRecipe then
+        local cloneArc
+        if cloneGeometry then
+            local role = kind == "Meteor" and "fragment" or "pressure"
+            cloneArc = function() return cloneGeometry(role) end
+        end
         CinematicPulseRingKit.emit(
             setpieceFolder, pulseRecipe.Name,
             CFrame.new(position + Vector3.new(0, 0.16, 0)),
             color, math.max(1, targetDiameter * 0.15),
             targetDiameter * pulseRecipe.Scale,
-            pulseRecipe.Duration, profile.Name, reduced, pulseRecipe.Alpha
+            pulseRecipe.Duration, profile.Name, reduced, pulseRecipe.Alpha,
+            nil, cloneArc
         )
     end
 
@@ -252,14 +281,13 @@ local function renderBurst(payload)
             surfaceFrame = groundFrame,
             surfaceColor = materialStyle.Color,
             surfaceMaterial = materialStyle.Material,
-        }, richDetail and profile.Name or "Low", reduced)
+        }, richDetail and profile.Name or "Low", reduced, ImpactSetpieceRules, cloneGeometry)
     end
 
-    local burst = Instance.new("Part")
+    local burst = lightVolume(coreSource)
     burst.Name = "LocalHazardImpactBurst"
-    burst.Shape = Enum.PartType.Ball
     burst.Size = Vector3.new(1, 1, 1)
-    burst.Position = position
+    burst.CFrame = CFrame.new(position)
     burst.Anchored = true
     burst.CanCollide = false
     burst.CanTouch = false
@@ -353,11 +381,10 @@ local function renderBurst(payload)
 
     local core = nil
     if richDetail then
-        core = Instance.new("Part")
+        core = lightVolume(coreSource)
         core.Name = "LocalHazardImpactCore"
-        core.Shape = Enum.PartType.Ball
         core.Size = Vector3.new(1.2, 1.2, 1.2)
-        core.Position = position
+        core.CFrame = CFrame.new(position)
         core.Anchored = true
         core.CanCollide = false
         core.CanTouch = false
@@ -481,7 +508,7 @@ local function renderBurst(payload)
     end
 
     if decorate then
-        makeAftermath(kind, profile, materialStyle, groundFrame, radius)
+        makeAftermath(kind, materialStyle, groundFrame, radius, fragmentSource)
     end
 
     local lifetime = duration * 1.35 + 0.08

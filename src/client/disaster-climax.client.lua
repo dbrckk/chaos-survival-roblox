@@ -6,6 +6,7 @@ local DisasterClimax = require(ReplicatedStorage.Shared.DisasterClimax)
 local DisasterClimaxSignatureKit = require(script.Parent.DisasterClimaxSignatureKit)
 local DisasterBoundaryClimaxKit = require(script.Parent.DisasterBoundaryClimaxKit)
 local DisasterClimaxElementKit = require(script.Parent.DisasterClimaxElementKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 
 local player = Players.LocalPlayer
@@ -30,115 +31,23 @@ local function arenaBase()
     return base and base:IsA("BasePart") and base or nil
 end
 
--- Original 3D silhouettes replace flat lava bars and meteor streaks.
--- Count stays within 2/4/6 pieces, or one static reduced-motion wedge.
-local function playLava(profile, base, stage, tier, reduced)
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    DisasterClimaxElementKit.emit(folder, "lava", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced)
-end
+local ELEMENT = DisasterClimaxElementKit.emit
+local SIGNATURE = DisasterClimaxSignatureKit.emit
+local BOUNDARY = DisasterBoundaryClimaxKit.emit
 
-local function playMeteor(profile, base, stage, tier, reduced)
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    DisasterClimaxElementKit.emit(folder, "meteor", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced)
-end
-
--- Each effect uses an arena-local authored 3D silhouette, not a plain bar.
--- No new emitters, lights or server-side movement; same bounded part caps.
-local function playGravity(profile, base, stage, tier, reduced)
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    DisasterClimaxElementKit.emit(folder, "gravity", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced)
-end
-
-local function playFracture(profile, base, stage, tier, reduced)
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
-    DisasterClimaxElementKit.emit(folder, "fracture", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced)
-end
-
-local function playTornado(profile, base, stage, tier, reduced)
-    -- Arena-local helix rather than long rectangular world-axis streaks.
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.20, 0)
-    DisasterClimaxElementKit.emit(folder, "tornado", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced)
-end
-
-local function playFreeze(profile, base, stage, tier, reduced)
-    -- Angle-breaking ice needles replace the old large opaque cylinder.
-    -- The whole silhouette inherits the rotated/pitched arena frame.
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.12, 0)
-    DisasterClimaxSignatureKit.emit(
-        folder, "freeze", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced
-    )
-end
-
-local function playBomb(profile, base, stage, tier, reduced)
-    -- Separated impulse fins show pressure direction without covering the
-    -- playing field with a second opaque circular cylinder.
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    DisasterBoundaryClimaxKit.emit(
-        folder, "blast", deck, base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced
-    )
-end
-
-local function playSpeed(profile, base, stage, tier, reduced)
-    -- Swept chevrons in the deck's local basis, bounded on every tier.
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.10, 0)
-    DisasterClimaxElementKit.emit(folder, "speed", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced)
-end
-
-local function playDarkness(profile, base, stage, tier, reduced)
-    -- Folded eclipse shutters replace the arena-wide neon cylinder.
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    DisasterClimaxElementKit.emit(folder, "darkness", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced)
-end
-
-local function playShrink(profile, base, stage, tier, reduced)
-    -- Short rectangular perimeter segments visibly close in. The persistent
-    -- shrinking boundary is drawn elsewhere; these are transient accents.
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.13, 0)
-    DisasterBoundaryClimaxKit.emit(
-        folder, "shrink", deck, base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced
-    )
-end
-
-local function playShock(profile, base, stage, tier, reduced)
-    -- Staggered zig-zag discharge strokes, not two full-floor discs.
-    local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.14, 0)
-    DisasterClimaxSignatureKit.emit(
-        folder, "shock", deck,
-        base.Size, stage,
-        profile.Color, profile.Secondary, tier.Name, reduced
-    )
-end
-
-local PLAYERS = {
-    lava = playLava,
-    meteor = playMeteor,
-    gravity = playGravity,
-    fracture = playFracture,
-    tornado = playTornado,
-    freeze = playFreeze,
-    bomb = playBomb,
-    speed = playSpeed,
-    darkness = playDarkness,
-    shrink = playShrink,
-    shock = playShock,
+-- Keep each silhouette's existing deck offset and trajectory recipe.
+local PRESENTATIONS = {
+    lava = {emit = ELEMENT, lift = 0.12, mesh = "pylon"},
+    meteor = {emit = ELEMENT, lift = 0.12, mesh = "fragment"},
+    gravity = {emit = ELEMENT, lift = 0.12, mesh = "casting"},
+    fracture = {emit = ELEMENT, lift = 0.10, mesh = "casting"},
+    tornado = {emit = ELEMENT, lift = 0.20, mesh = "casting"},
+    freeze = {emit = SIGNATURE, lift = 0.12, mesh = "fragment"},
+    bomb = {emit = BOUNDARY, lift = 0.13, mesh = "casting", pattern = "blast"},
+    speed = {emit = ELEMENT, lift = 0.10, mesh = "casting"},
+    darkness = {emit = ELEMENT, lift = 0.13, mesh = "pylon"},
+    shrink = {emit = BOUNDARY, lift = 0.13, mesh = "casting"},
+    shock = {emit = SIGNATURE, lift = 0.14, mesh = "casting"},
 }
 
 -- Oldest-first eviction keeps the transient-only folder bounded across
@@ -155,8 +64,8 @@ end
 
 local function playClimax(id, stage, base, delaySeconds, currentToken, currentGeneration, burstCount)
     local profile = DisasterClimax.get(id)
-    local play = profile and PLAYERS[profile.Kind]
-    if not profile or not play then
+    local presentation = profile and PRESENTATIONS[profile.Kind]
+    if not presentation then
         return
     end
 
@@ -176,14 +85,21 @@ local function playClimax(id, stage, base, delaySeconds, currentToken, currentGe
             player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
         ).Name
         local tierName = DisasterClimax.burstTier(selectedTier, burstCount)
-        local tier = VfxQuality.get(tierName)
         local reduced = player:GetAttribute("ReduceMotion") == true
         local incoming = DisasterClimax.burstPieceCount(tierName, reduced)
         local limit = DisasterClimax.burstPartLimit(
             selectedTier, burstCount, reduced
         )
         reserveClimaxPieces(incoming, limit)
-        play(profile, base, stage, tier, reduced)
+        local source = tierName ~= "Low" and CelebrationMeshes.readyProfile(
+            presentation.mesh, player:GetAttribute("OptionalVfxPressure")
+        )
+        local clonePiece = if source then function()
+            return CelebrationMeshes.cloneProfile(source)
+        end else nil
+        local deck = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + presentation.lift, 0)
+        presentation.emit(folder, presentation.pattern or profile.Kind, deck,
+            base.Size, stage, profile.Color, profile.Secondary, tierName, reduced, clonePiece)
     end)
 end
 

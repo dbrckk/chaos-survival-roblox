@@ -2,6 +2,7 @@
 -- Six nonphysical shapes: foundation, floor, supports, real sphere and clamp.
 -- Separate approved southern 14-arc torus remains a distinct LOD kit.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry=require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These southern monuments were authored at the ORIGINAL outer perimeter.
@@ -133,13 +134,11 @@ local function context(arena)
         local expected=origin*spec[3]
         local desiredShape=index==5 and Enum.PartType.Ball
             or Enum.PartType.Block
-        if not part or not part:IsA("Part") or part.Parent~=owner
-            or part.Shape~=desiredShape or not part.Anchored
-            or part.CanCollide or part.CanTouch or part.CanQuery
-            or (part.Size-spec[2]).Magnitude>.10
-            or (part.Position-expected.Position).Magnitude>.16
-            or part.CFrame.LookVector:Dot(expected.LookVector)<.999
-            or part.CFrame.UpVector:Dot(expected.UpVector)<.999 then
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,"Part",desiredShape)
+        if not size or (size-spec[2]).Magnitude>.10
+            or (pose.Position-expected.Position).Magnitude>.16
+            or pose.LookVector:Dot(expected.LookVector)<.999
+            or pose.UpVector:Dot(expected.UpVector)<.999 then
             return nil
         end
         natives[index]=part
@@ -150,10 +149,8 @@ local function context(arena)
     local chord=2*radius*math.sin(math.pi/14)+.08
     for i=1,14 do
         local part=owner:FindFirstChild("ObservationArc"..i)
-        if not part or not part:IsA("Part") or part.Parent~=owner
-            or part.Shape~=Enum.PartType.Block or not part.Anchored
-            or part.CanCollide or part.CanTouch or part.CanQuery
-            or (part.Size-Vector3.new(chord,1.6,1.85)).Magnitude>.12 then
+        local size=ExteriorDetailGeometry.monumentFootprint(part,owner,"Part")
+        if not size or (size-Vector3.new(chord,1.6,1.85)).Magnitude>.12 then
             return nil
         end
     end

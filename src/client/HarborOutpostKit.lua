@@ -3,9 +3,12 @@
 -- shrink/collapse lifecycle; never starts a new heartbeat or render loop.
 -- No collision, touch/query, lights or new asset imports.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PlatformFinishKit = if script and script.Parent
+    then require(script.Parent.PlatformFinishKit) else require("./PlatformFinishKit")
 local HarborOutpostKit = {}
 local WIDTH = 10.5
 local FRAME_MODULES = 3
+local INSTRUMENT_QUARTER_TURN = CFrame.Angles(0, math.pi * 0.5, 0)
 
 -- Roblox may import the truss along either horizontal axis. The sources
 -- are two approved, seven-material packs with axis-aligned material meshes.
@@ -206,6 +209,18 @@ function HarborOutpostKit.applyInstrumentPose(pivotWeld, meshes)
     end
 end
 
+local function instrumentMeshRotation(pivot)
+    return if pivot:GetAttribute("PlatformTrimAxisSwap") == true
+        then INSTRUMENT_QUARTER_TURN else CFrame.identity
+end
+
+-- The fitted roller may turn relative to its socket. Express the same
+-- socket motion in the mesh weld's axes before starting the tween.
+function HarborOutpostKit.instrumentMotionGoal(pivot, goal)
+    local rotation = instrumentMeshRotation(pivot)
+    return rotation:Inverse() * goal * rotation
+end
+
 function HarborOutpostKit.mountInstrument(makePart, platform, pivot, onLost)
     local spec = INSTRUMENTS[platform:GetAttribute("HarborSpokeRoute")]
     local pivotWeld = pivot and pivot:FindFirstChild("PlatformIdentityWeld")
@@ -215,7 +230,7 @@ function HarborOutpostKit.mountInstrument(makePart, platform, pivot, onLost)
     local source, frame, box, selected = instrumentSource(spec)
     if not source then return nil end
     local scale = platform.Size.X/WIDTH
-    local target = platform.CFrame*pivotWeld.C1
+    local target = platform.CFrame*pivotWeld.C1*instrumentMeshRotation(pivot):Inverse()
     target = CFrame.new(target.Position-Vector3.new(0,spec.drop,0))*target.Rotation
     local size = spec.size*Vector3.new(scale,1,scale)
     local pieces = stage(source,frame,box,target,size,spec.role ~= nil,
@@ -350,7 +365,7 @@ HarborOutpostKit.frameModules = FRAME_MODULES
 -- with the real platform, assigns ChaosBaseTransparency and creates an
 -- adjustable PlatformIdentityWeld. The owner then applies one shared
 -- shrink-footprint and CollapsePhase policy to ALL of these pieces.
-function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources, onLost)
+function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources, onLost, art)
     if type(makePart) ~= "function" or not platform
         or not platform:IsA("BasePart") or not theme then
         return 0
@@ -387,7 +402,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
         [3] = Color3.fromRGB(171, 174, 148),
         [4] = Color3.fromRGB(149, 174, 197),
     })[route]
-    local made = 0
+    local made, fittedCount = 0, 0
     local meshes, fallback = {}, {}
     local legFrames = {
         CFrame.new(-spread, top+mastHeight*.5, rear),
@@ -423,16 +438,21 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
             end
         end
     end
-    local function add(suffix, size, localFrame, color, material, alpha, shape, replaced)
+    local function add(suffix, size, localFrame, color, material, alpha, shape, replaced, artwork, alongX)
         local masked = forged and replaced
-        local part = makePart(
-            "Harbor" .. profile.name .. suffix .. tostring(index),
-            size*horizontal, fitFrame(localFrame), color, material, masked and 1 or alpha, platform
-        )
-        if masked and part then fallback[part] = alpha end
-        if part and shape then
-            part.Shape = shape
+        local pose, dimensions = fitFrame(localFrame), size * horizontal
+        local mesh
+        local source = artwork and artwork.part
+        if source and source.MeshId ~= "" and source.Archivable then
+            local spanX = if alongX == nil then source.Size.X > source.Size.Z else alongX
+            mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(
+                source, pose, dimensions, spanX, artwork.assetId)
         end
+        local part = makePart("Harbor" .. profile.name .. suffix .. tostring(index),
+            dimensions, pose, color, material, masked and 1 or alpha, platform, mesh)
+        if masked and part then fallback[part] = alpha end
+        if part and shape and part:IsA("Part") then part.Shape = shape end
+        if mesh then fittedCount += 1 end
         made += 1
         return part
     end
@@ -440,25 +460,37 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
     -- Medium: exactly five pieces per outpost; 20 across Harbor.
     local keel = add("Keel", Vector3.new(profile.span + 0.35, 0.44, 1.05),
         CFrame.new(0, -top - 0.38, rear),
-        muted, Enum.Material.CorrodedMetal, 0.08)
+        muted, Enum.Material.CorrodedMetal, 0.08, nil, nil, art and art.beam, true)
     for i, leg in ipairs(legFrames) do
         add(i == 1 and "PortLeg" or "StarboardLeg",
             Vector3.new(0.65, mastHeight, 0.65), leg,
-            steel, Enum.Material.Metal, 0.06, nil, true)
+            steel, Enum.Material.Metal, 0.06, nil, true, art and art.shaft)
     end
     add("Gantry", Vector3.new(profile.span, 0.48, 0.84),
-        gantryFrame, trim, Enum.Material.CorrodedMetal, 0.05, nil, true)
+        gantryFrame, trim, Enum.Material.CorrodedMetal, 0.05, nil, true, art and art.beam, true)
 
     local instrumentSize = route == 3
         and Vector3.new(1.75, 1.75, 1.75)
         or (route == 2 and Vector3.new(1.30, 1.85, 1.85)
             or Vector3.new(0.85, 2.15, 2.15))
+    -- Prefer the roller for cylindrical heads, regardless of its import
+    -- axis. The beacon uses the lens. A forged head covers either slot
+    -- until its dedicated region arrives.
+    local instrumentArt
+    local roller = art and art.roller
+    local lens = art and art.lens
+    local useRoller = route ~= 3 and roller and roller.part
+    if useRoller then
+        instrumentArt = roller
+    else
+        instrumentArt = if lens and lens.part then lens else art and art.instrumentHead
+    end
     local instrument = add("Instrument", instrumentSize,
         CFrame.new(0, top + mastHeight - 0.15, rear - 0.15)
             * CFrame.Angles(0, 0, route == 4 and math.rad(20) or 0),
         signature, route == 3 and Enum.Material.Slate
             or Enum.Material.CorrodedMetal,
-        0.10, profile.shape)
+        0.10, profile.shape, nil, instrumentArt, useRoller and true or nil)
 
     local wingNatives = {}
     if tier == "High" then
@@ -469,7 +501,7 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
                 Vector3.new(0.28, 2.25, 0.43),
                 CFrame.new(side * (spread - 0.55), top + 1.1, rear)
                     * CFrame.Angles(0, 0, side * math.rad(32)),
-                muted, Enum.Material.Metal, 0.12, nil, true)
+                muted, Enum.Material.Metal, 0.12, nil, true, art and art.shaft)
         end
         for _, side in ipairs({-1, 1}) do
             wingNatives[#wingNatives+1] = add(side < 0 and "PortVane" or "StarboardVane",
@@ -477,11 +509,11 @@ function HarborOutpostKit.build(makePart, platform, index, theme, tier, sources,
                 CFrame.new(side * (spread * 0.5), top + mastHeight + 0.55, rear - 0.45)
                     * CFrame.Angles(0, side * math.rad(16), 0),
                 signature:Lerp(steel, 0.55),
-                Enum.Material.CorrodedMetal, 0.16)
+                Enum.Material.CorrodedMetal, 0.16, nil, nil, art and art.cast)
         end
     end
     local disconnect = forged and HarborOutpostKit.bindWeldedReplacement(platform,meshes,fallback,onLost) or nil
-    return made,instrument,disconnect,{Keel={keel},Wing=wingNatives}
+    return made,instrument,disconnect,{Keel={keel},Wing=wingNatives},fittedCount
 end
 
 -- A server-authored round contains at most two disaster IDs. Reduce the

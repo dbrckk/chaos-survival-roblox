@@ -27,11 +27,11 @@ local cradleClaims = {}
 local rimClaims = {}
 local harborDockClaims = {}
 local nativeBaselines = {}
-local crownPylons = {}
+local primaryPylons = {}
 local routeUnderdecks = {}
-local harborTrusses = {}
-local junctionTrusses = {}
-local junctionObservers = {}
+local harborPortalClaims = {}
+local detailStructureClaims = {}
+local structureObservers = {}
 local crownTrim = {}
 local commandTrim = {}
 local pylonPieces = {}
@@ -55,26 +55,26 @@ local watchedOwners = {}
 local verifiedSupportIndices = {}
 local promenadePylonsByDeck = {}
 
-function Kit.hasPrimaryJunctionTruss(part)
+function Kit.hasPrimaryStructure(part)
     return saved[part] == true or routeUnderdecks[part] == true
-        or harborTrusses[part] == true or cradleClaims[part] == true
+        or harborPortalClaims[part] == true or cradleClaims[part] == true
 end
 
-function Kit.observePrimaryJunctionTruss(part,callback)
-    junctionObservers[part] = callback
+function Kit.observePrimaryStructure(part,callback)
+    structureObservers[part] = callback
     return function()
-        if junctionObservers[part] == callback then junctionObservers[part] = nil end
+        if structureObservers[part] == callback then structureObservers[part] = nil end
     end
 end
 
 local function setNativeMask(part, claims, masked)
-    local observer = claims ~= junctionTrusses and junctionObservers[part]
-    local wasPrimary = observer and Kit.hasPrimaryJunctionTruss(part)
+    local observer = claims ~= detailStructureClaims and structureObservers[part]
+    local wasPrimary = observer and Kit.hasPrimaryStructure(part)
     claims[part] = masked and true or nil
     local original = nativeBaselines[part]
-    if saved[part] or crownPylons[part] or routeUnderdecks[part]
+    if saved[part] or primaryPylons[part] or routeUnderdecks[part]
         or crownTrim[part] or commandTrim[part] or cradleClaims[part]
-        or harborTrusses[part] or junctionTrusses[part] or rimClaims[part]
+        or harborPortalClaims[part] or detailStructureClaims[part] or rimClaims[part]
         or harborDockClaims[part] then
         if original == nil then
             nativeBaselines[part] = part.LocalTransparencyModifier
@@ -84,7 +84,7 @@ local function setNativeMask(part, claims, masked)
         part.LocalTransparencyModifier = original
         nativeBaselines[part] = nil
     end
-    if observer and Kit.hasPrimaryJunctionTruss(part) ~= wasPrimary then observer() end
+    if observer and Kit.hasPrimaryStructure(part) ~= wasPrimary then observer() end
 end
 
 function Kit.setHarborDockMask(part, masked)
@@ -98,8 +98,9 @@ function Kit.setRouteUnderdeckMask(part, masked)
     setNativeMask(part, routeUnderdecks, masked)
 end
 
-function Kit.setJunctionTrussMask(part,isHarbor,masked)
-    local claims = isHarbor and harborTrusses or junctionTrusses
+-- Portico details and full gantries can cover the same native brace.
+function Kit.setPromenadeStructureMask(part,isGantry,masked)
+    local claims = isGantry and harborPortalClaims or detailStructureClaims
     if (claims[part] == true) ~= masked then setNativeMask(part,claims,masked) end
 end
 
@@ -120,7 +121,7 @@ local function refreshPylon(part)
     local visible = saved[part] == true
         and verifiedSupports[part] == true
         and part.Parent == activeDecor
-        and not crownPylons[part]
+        and not primaryPylons[part]
     for piece in pairs(pieces) do
         piece.LocalTransparencyModifier = visible and 0 or 1
     end
@@ -139,11 +140,11 @@ local function report()
     if notify then notify(count) end
 end
 
--- Both approved models claim the same native pylon. The crown has visual
--- priority; the column stays ready to take over if the crown disappears.
-function Kit.setCrownPylonMask(part, masked)
-    if (crownPylons[part] == true) == masked then return end
-    setNativeMask(part, crownPylons, masked)
+-- The crown and the Harbor gantry take priority over individual
+-- columns. Keep the native baseline until the last claim is released.
+function Kit.setPrimaryPylonMask(part, masked)
+    if (primaryPylons[part] == true) == masked then return end
+    setNativeMask(part, primaryPylons, masked)
     refreshPylon(part)
     if saved[part] then
         count += masked and -1 or 1
@@ -155,7 +156,7 @@ local function restore()
     for part in pairs(saved) do
         setNativeMask(part, saved, false)
         refreshPylon(part)
-        if not crownPylons[part] then count -= 1 end
+        if not primaryPylons[part] then count -= 1 end
     end
     report()
 end
@@ -262,7 +263,18 @@ local function bindCradle(arena,deck,folder,pieces)
     for _,native in ipairs(natives or {}) do
         watch(native.AncestryChanged,evict)
         properties(native,{"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery",
-            "Shape","Name","Transparency"})
+            "Name","Transparency"})
+        if native:IsA("Part") then
+            watch(native:GetPropertyChangedSignal("Shape"))
+        else
+            watch(native:GetAttributeChangedSignal("OriginalPlatformUnderFrame3D"))
+            local meshTag = native.Name:match("^SkySpine") and "OriginalSkySpineUnderdeck3D"
+                or native.Name:match("^Promenade") and "OriginalPromenadeUnderdeck3D"
+            if meshTag then
+                watch(native:GetPropertyChangedSignal("MeshId"))
+                attributes(native,{meshTag,"Original3DAssetId"})
+            end
+        end
         attributes(native,{"SkySpineDecor","PromenadeVisualOnly","PerimeterPlatformIndex","PremiumArchitecturalSurface"})
     end
     if source then
@@ -373,6 +385,7 @@ local function bindRouteRim(arena,deck,folder,pieces)
             watch(native.AncestryChanged,evict)
             properties(native,{"CFrame","Size","Anchored","CanCollide","CanTouch","CanQuery","Name"})
             watch(native:GetAttributeChangedSignal("OriginalStructuralBevel"))
+            watch(native:GetAttributeChangedSignal("OriginalPlatformBevel3D"))
             watch(native:GetAttributeChangedSignal("PremiumArchitecturalSurface"))
         end
     end
@@ -479,10 +492,7 @@ local function eligible(part)
     end
     local id = name:match("^PlatformBevel(%d+)_[1-4]$")
     if id and (active[id] == "carapace" or active[id] == "rim") then
-        -- Sloped WedgePart server edge, now replaced by a real sculpted
-        -- SIDE face, not a gameplay warning or a walkable landing.
-        return part:IsA("WedgePart")
-            and part:GetAttribute("OriginalStructuralBevel") == true
+        return PlatformIdentityLodRules.isAuthoredPlatformBevel(part)
     end
     id = name:match("^PlatformUnderFrame(%d+)$")
     if id and (active[id] == "carapace" or active[id] == "cradle") then
@@ -595,6 +605,9 @@ local function physicalSafe(native)
         return ownerSafe(owner, activePlatforms)
             and PlatformIdentityLodRules.matchesPromenadePylon(native, owner)
     end
+    if native:IsA("MeshPart") and Kit.isSkySpinePylon(native) then
+        return ownerSafe(owner, activePlatforms) and LargeStructure.validNativeSkyPylon(native)
+    end
     if owner and native.Name:match("^PlatformSupport%d+_%d+$")
         and (owner:GetAttribute("PromenadeStep") ~= nil
             or owner:GetAttribute("SkySpineInterchange") == true
@@ -611,14 +624,14 @@ local function tryMask(part)
         or saved[part] ~= nil or not physicalSafe(part) then return end
     setNativeMask(part, saved, true)
     refreshPylon(part)
-    if not crownPylons[part] then count += 1 end
+    if not primaryPylons[part] then count += 1 end
     return true
 end
 
 local function unmask(part)
     setNativeMask(part, saved, false)
     refreshPylon(part)
-    if not crownPylons[part] then count -= 1 end
+    if not primaryPylons[part] then count -= 1 end
 end
 
 local function reconcilePylon(part)
@@ -851,18 +864,35 @@ function Kit.bind(arena, replacements, onChange, supports, meshFolder)
                     and (deck:GetAttribute("PromenadeStep") ~= nil
                         or deck:GetAttribute("SkySpineInterchange") == true
                         or PlatformIdentityLodRules.isHarborLanding(deck))
-                if isPromenadePylon or routeSupport
+                local spineShaft = part:IsA("MeshPart") and Kit.isSkySpinePylon(part)
+                if isPromenadePylon or spineShaft or routeSupport
                     or (bridge and LargeStructure.matchesSkybridgeSupport(part,bridge)) then
                     local pylons = promenadePylonsByDeck[id] or {}
                     promenadePylonsByDeck[id] = pylons
                     pylons[#pylons + 1] = part
                     local function changed() reconcilePylon(part) end
                     for _, property in ipairs({"Size","CFrame","Anchored",
-                        "CanCollide","CanTouch","CanQuery","Shape","Name","Transparency"}) do
+                        "CanCollide","CanTouch","CanQuery","Name","Transparency"}) do
                         watchers[#watchers + 1] =
                             part:GetPropertyChangedSignal(property):Connect(changed)
                     end
-                    for _, attribute in ipairs({"PromenadeVisualOnly","PerimeterPlatformIndex"}) do
+                    local harborPile = routeSupport and PlatformIdentityLodRules.isHarborLanding(deck)
+                    local geometryProperty = part:IsA("Part") and "Shape"
+                        or ((isPromenadePylon or spineShaft or harborPile) and "MeshId")
+                    if geometryProperty then
+                        watchers[#watchers + 1] = part:GetPropertyChangedSignal(geometryProperty):Connect(changed)
+                    end
+                    local attributes = {"PromenadeVisualOnly", "PerimeterPlatformIndex"}
+                    if part:IsA("MeshPart") then
+                        table.insert(attributes, if isPromenadePylon then "OriginalPromenadePylonShaft3D"
+                            elseif spineShaft then "OriginalSkySpinePylonShaft3D" else "OriginalPlatformSupport3D")
+                        if spineShaft then table.insert(attributes, "SkySpineDecor") end
+                        if isPromenadePylon or spineShaft or harborPile then
+                            table.insert(attributes, "Original3DAssetId")
+                        end
+                        if harborPile then table.insert(attributes, "OriginalHarborPileCasting3D") end
+                    end
+                    for _, attribute in ipairs(attributes) do
                         watchers[#watchers + 1] =
                             part:GetAttributeChangedSignal(attribute):Connect(changed)
                     end
@@ -1177,9 +1207,9 @@ function Kit.breakdown()
                     result.harborPile += 1
                 end
             elseif name:match("^SkySpine%d+_MonumentalPylon%-?1$") then
-                if not crownPylons[part] then result.pylon += 1 end
+                if not primaryPylons[part] then result.pylon += 1 end
             elseif name:match("^Promenade%d+_LoadPylon%-?1$") then
-                result.promenadePylon += 1
+                if not primaryPylons[part] then result.promenadePylon += 1 end
             else
                 result.other += 1
             end

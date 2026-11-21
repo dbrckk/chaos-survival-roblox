@@ -5,6 +5,8 @@
 -- One shared activation / no new remotes / no paid reward / no client trust.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RoundEquipmentArt = require("./RoundEquipmentArt")
+local visual = RoundEquipmentArt.create
 local shared = ReplicatedStorage:FindFirstChild("Shared")
 local themeModule = shared and shared:FindFirstChild("VisualTheme")
 local VisualTheme = if themeModule
@@ -34,25 +36,6 @@ function SkySpineSwitchyard.allowed(ctx)
         -- do not follow those moving decks and must NEVER appear as
         -- ghost solid floors during this particular disaster.
         and (ctx.ActiveDisasters or {}).ShrinkingArena ~= true
-end
-
-local function visual(folder, name, size, frame, color, material, translucent)
-    local p = Instance.new("Part")
-    p.Name = name
-    p.Size = size
-    p.CFrame = frame
-    p.Color = color
-    p.Material = material or Enum.Material.Metal
-    p.Transparency = translucent or 0
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.CastShadow = false
-    p.TopSurface = Enum.SurfaceType.Smooth
-    p.BottomSurface = Enum.SurfaceType.Smooth
-    p.Parent = folder
-    return p
 end
 
 -- The server can only turn an actual physical *gap* into live support.
@@ -133,7 +116,7 @@ function SkySpineSwitchyard.promenadeGapBetween(first, second)
         math.min(first.Size.Z, second.Size.Z) - 1.2)
 end
 
-local function station(folder, deck, step, theme)
+local function station(folder, deck, step, theme, profiles)
     local center = deck.Position
         + Vector3.new(0, deck.Size.Y * 0.5, 0)
     local model = Instance.new("Model")
@@ -141,31 +124,34 @@ local function station(folder, deck, step, theme)
     model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
     model:SetAttribute("CooperativeSpineControl", true)
     model:SetAttribute("CommandStep", step)
-    model.Parent = folder
+    -- The frame spans across the route and exposes its status on the inner faces.
     local frame = CFrame.new(center)
+    if deck:GetAttribute("PromenadeLane") then
+        frame *= CFrame.Angles(0, math.pi * 0.5, 0)
+    end
     visual(model, "CommandPedestal",
         Vector3.new(5.2, 0.34, 5.2),
         frame * CFrame.new(0, 0.17, 0),
-        theme.Structure, Enum.Material.DiamondPlate)
+        theme.Structure, Enum.Material.DiamondPlate, nil, profiles.casting)
+    local traces = {}
     for side = -1, 1, 2 do
         visual(model, "Cantilever" .. side,
-            Vector3.new(1.2, 5.6, 1.5),
+            Vector3.new(1.2, 5.8, 1.5),
             frame * CFrame.new(side * 3.2, 2.9, 0),
-            theme.Structure, Enum.Material.Metal)
-        visual(model, "PowerTrace" .. side,
+            theme.Structure, Enum.Material.Metal, nil, profiles.shaft)
+        traces[#traces + 1] = visual(model, "PowerTrace" .. side,
             Vector3.new(0.26, 4.3, 0.32),
-            frame * CFrame.new(side * 3.5, 3.0, 0),
-            theme.Accent, Enum.Material.Neon, 0.28)
+            frame * CFrame.new(side * 2.54, 3.0, 0),
+            theme.Accent, Enum.Material.Neon, 0.28, profiles.shaft)
     end
     local core = visual(model, "CommandCore",
         Vector3.new(2.3, 2.3, 2.3),
         frame * CFrame.new(0, 3.1, 0),
-        theme.Secondary, Enum.Material.Glass, 0.16)
-    core.Shape = Enum.PartType.Ball
+        theme.Secondary, Enum.Material.Glass, 0.16, profiles.core, Enum.PartType.Ball)
     visual(model, "CommandCrosshead",
         Vector3.new(7.1, 0.85, 1.35),
         frame * CFrame.new(0, 6, 0),
-        theme.Structure, Enum.Material.Metal)
+        theme.Structure, Enum.Material.Metal, nil, profiles.beam)
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "ConnectSkySpine"
     prompt.ActionText = "CONNECT 3 SKY ROUTES"
@@ -198,8 +184,9 @@ local function station(folder, deck, step, theme)
     local rounded = Instance.new("UICorner")
     rounded.CornerRadius = UDim.new(0, 8)
     rounded.Parent = label
+    model.Parent = folder
     return {model = model, prompt = prompt, core = core,
-        label = label, support = deck, claim = nil, claimUntil = 0}
+        label = label, traces = traces, support = deck, claim = nil, claimUntil = 0}
 end
 
 function SkySpineSwitchyard.start(ctx)
@@ -268,8 +255,9 @@ function SkySpineSwitchyard.start(ctx)
     folder:SetAttribute("SkyNetworkGapCount", #gapPairs)
     folder.Parent = arena
     table.insert(ctx.Cleanup, folder)
-    local theme = VisualTheme.arena(
-        tostring(arena:GetAttribute("VariantId") or "Classic"))
+    local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
+    local theme = VisualTheme.arena(variant)
+    local profiles = RoundEquipmentArt.profiles(variant)
     local bridges = {}
     for i, gap in ipairs(gaps) do
         local bridge = visual(folder, "SpineGapBridge" .. i,
@@ -289,7 +277,7 @@ function SkySpineSwitchyard.start(ctx)
                 CFrame.new(gap.center) * CFrame.new(
                     side * (gap.size.X * 0.5 - 0.3),
                     gap.size.Y * 0.5 + 0.07, 0),
-                theme.Secondary, Enum.Material.Neon, 1)
+                theme.Secondary, Enum.Material.Neon, 1, profiles.edge)
             bridge:SetAttribute("SkySpineGapEdgeCount", 2)
             lip:SetAttribute("SkySpineGapEdge", i)
         end
@@ -314,17 +302,17 @@ function SkySpineSwitchyard.start(ctx)
                 CFrame.new(gap.center) * CFrame.new(
                     0, gap.size.Y * 0.5 + 0.07,
                     side * (gap.size.Z * 0.5 - 0.3)),
-                theme.Secondary, Enum.Material.Neon, 1)
+                theme.Secondary, Enum.Material.Neon, 1, profiles.edge)
             lip:SetAttribute("SkyPromenadeGapEdge", true)
         end
     end
     -- Two existing genuine high-route intersections now also have a
     -- physical co-op command. A bot or human can help from any corridor.
     local commands = {
-        station(folder, decks[3], 3, theme),
-        station(folder, decks[8], 8, theme),
-        station(folder, promenade[1][4], "North", theme),
-        station(folder, promenade[2][4], "South", theme),
+        station(folder, decks[3], 3, theme, profiles),
+        station(folder, decks[8], 8, theme, profiles),
+        station(folder, promenade[1][4], "North", theme, profiles),
+        station(folder, promenade[2][4], "South", theme, profiles),
     }
     local round = {active = true, joined = false,
         folder = folder, ctx = ctx, commands = commands, decks = decks,
@@ -416,6 +404,10 @@ function SkySpineSwitchyard.start(ctx)
                 and "ALLY LINKED\n3 SKY ROUTES"
                 or "NETWORK LINKED\n3 SKY ROUTES"
             control.label.TextColor3 = theme.Secondary
+            for _, trace in ipairs(control.traces) do
+                trace.Color = theme.Secondary
+                trace.Transparency = 0.12
+            end
             control.model:SetAttribute("SkySpineLinked", true)
         end
         return true

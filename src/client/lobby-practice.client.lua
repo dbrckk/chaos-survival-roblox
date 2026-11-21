@@ -9,12 +9,26 @@ local CoreLocalization = require(ReplicatedStorage.Shared.CoreLocalization)
 local PracticeVisualKit = require(script.Parent.LobbyPracticeVisualKit)
 local PracticePadRegistry = require(script.Parent.LobbyPracticePadRegistry)
 local PracticeGlyphKit = require(script.Parent.LobbyPracticeGlyphKit)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local player = Players.LocalPlayer
 local localeId = LocalizationService.RobloxLocaleId
 local practiceSignText = CoreLocalization.text(localeId, "PRACTICE_BOOST")
 local tracked = {}
+local refreshAll
+local glyphRefreshPending = false
+local function scheduleGlyphRefresh()
+    if glyphRefreshPending then return end
+    glyphRefreshPending = true
+    task.defer(function()
+        glyphRefreshPending = false
+        refreshAll()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(scheduleGlyphRefresh)
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "LobbyPracticeFeedback"
@@ -54,6 +68,14 @@ local function cancelTweens()
     table.clear(activeTweens)
 end
 
+player:GetAttributeChangedSignal("RoundResultCardVisible"):Connect(function()
+    if player:GetAttribute("RoundResultCardVisible") == true then
+        token += 1
+        cancelTweens()
+        label.Visible = false
+    end
+end)
+
 local function playTween(target, info, values)
     local tween = TweenService:Create(target, info, values)
     activeTweens[#activeTweens + 1] = tween
@@ -65,6 +87,7 @@ local function tier()
 end
 
 local function showFeedback(color)
+    if player:GetAttribute("RoundResultCardVisible") == true then return end
     token += 1
     local current = token
 
@@ -139,21 +162,23 @@ local function refreshBundle(pad, bundle)
     bundle.highlight.FillTransparency = quality.Name == "Low" and 1 or 0.90
     bundle.highlight.OutlineTransparency = quality.Name == "Low" and 0.45 or 0.18
 
-    -- Rebuild only when the graphics tier changes. Static, cosmetic
-    -- chevrons live under the audited and LOD-managed local pad folder.
-    if bundle.glyphTier ~= quality.Name then
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    local source = pressure < 1 and ForgedBridge.sweptProfile() or nil
+    if source and not geometryReady(source) then source = nil end
+    if bundle.glyphTier ~= quality.Name or bundle.glyphSource ~= source then
         if bundle.glyphConnection then
             bundle.glyphConnection:Disconnect()
             bundle.glyphConnection = nil
         end
         if bundle.glyph then bundle.glyph:Destroy() end
         bundle.glyph = PracticeGlyphKit.build(
-            bundle.folder, pad, quality.Name, Config.LobbyCenter
+            bundle.folder, pad, quality.Name, Config.LobbyCenter, source
         )
         if bundle.glyph then
             bundle.glyphConnection = PracticeGlyphKit.follow(bundle.glyph, pad)
         end
         bundle.glyphTier = quality.Name
+        bundle.glyphSource = source
     end
 
     local light = pad:FindFirstChild("PracticePadLight")
@@ -234,7 +259,7 @@ end
 workspace.DescendantAdded:Connect(padObservers.watch)
 workspace.DescendantRemoving:Connect(padObservers.stop)
 
-local function refreshAll()
+refreshAll = function()
     for pad, bundle in pairs(tracked) do
         if pad.Parent then
             refreshBundle(pad, bundle)
@@ -245,6 +270,15 @@ local function refreshAll()
 end
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(refreshAll)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(scheduleGlyphRefresh)
+local function glyphSourceChanged(item)
+    if item.Name == "ApprovedTowersSignatureBridgeTemplates"
+        or item.Name == "ForgedBridge" or item.Name == "SweptCrossbeam" then
+        scheduleGlyphRefresh()
+    end
+end
+ReplicatedStorage.DescendantAdded:Connect(glyphSourceChanged)
+ReplicatedStorage.DescendantRemoving:Connect(glyphSourceChanged)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(function()
     refreshAll()
     -- If accessibility is enabled mid-animation, stop every current

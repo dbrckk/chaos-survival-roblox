@@ -3,6 +3,7 @@
 -- approved, sanitized 7-MeshPart replacement is visible.
 -- Never touches independently approved bridge/lift shafts or gameplay.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry=require("./ExteriorDetailGeometry")
 
 local Kit={}
 -- These southern monuments were authored at the ORIGINAL outer perimeter.
@@ -141,15 +142,11 @@ local function context(arena)
     for index,spec in ipairs(specs) do
         local part=owner:FindFirstChild(spec[1])
         local intended=origin*spec[4]
-        if not part or not part:IsA(spec[2]) or part.Parent~=owner
-            or not part.Anchored or part.CanCollide
-            or part.CanTouch or part.CanQuery
-            or (part.Size-spec[3]).Magnitude>.1
-            or (part.Position-intended.Position).Magnitude>.16
-            or part.CFrame.LookVector:Dot(intended.LookVector)<.999
-            or part.CFrame.UpVector:Dot(intended.UpVector)<.999
-            or (part:IsA("Part")
-                and part.Shape~=Enum.PartType.Block) then
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2])
+        if not size or (size-spec[3]).Magnitude>.10
+            or (pose.Position-intended.Position).Magnitude>.16
+            or pose.LookVector:Dot(intended.LookVector)<.999
+            or pose.UpVector:Dot(intended.UpVector)<.999 then
             return nil
         end
         natives[index]=part

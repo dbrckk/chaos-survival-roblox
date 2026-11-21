@@ -8,6 +8,7 @@ local ArenaDetailKit = require(script.Parent.ArenaDetailKit)
 local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local OrbitalStationLayoutRules = require(ReplicatedStorage.Shared.OrbitalStationLayoutRules)
 
+local HarborCoastalGeometry = require(script.Parent.HarborCoastalGeometry)
 local player = Players.LocalPlayer
 
 local folder = Instance.new("Folder")
@@ -20,11 +21,14 @@ local function clear()
     folder:ClearAllChildren()
 end
 
-local function makePart(name, size, cframe, color, material, transparency, shape)
-    local part = Instance.new("Part")
+local function makePart(name, size, cframe, color, material, transparency, shape, sculpture)
+    local part = sculpture or Instance.new("Part")
     part.Name = name
-    part.Size = size
-    part.CFrame = cframe
+    if not sculpture then
+        part.Size = size
+        part.CFrame = cframe
+        if shape then part.Shape = shape end
+    end
     part.Anchored = true
     part.CanCollide = false
     part.CanTouch = false
@@ -33,9 +37,6 @@ local function makePart(name, size, cframe, color, material, transparency, shape
     part.Color = color
     part.Material = material or Enum.Material.Metal
     part.Transparency = transparency or 0
-    if shape then
-        part.Shape = shape
-    end
     part.Parent = folder
     return part
 end
@@ -257,11 +258,20 @@ local function buildOrbital(base, theme, tier)
 end
 
 
--- Storm Harbor needs maritime silhouettes, not Classic's television
--- transmitter blocks. These NON-WALKABLE cargo hulks are stationed beyond
--- the true map edge, and add layered steel relief without imported assets.
-local function buildHarbor(base, theme, tier)
-    local hx, hz = base.Size.X * 0.5, base.Size.Z * 0.5
+-- The berths stay beyond the original shoreline during rebuilds.
+local function buildHarbor(base, theme, tier, sources)
+    local width, depth = base:GetAttribute("OriginalSizeX"), base:GetAttribute("OriginalSizeZ")
+    local hx = (type(width) == "number" and width >= 318 and width or base.Size.X) * .5
+    local hz = (type(depth) == "number" and depth >= 318 and depth or base.Size.Z) * .5
+    local function coastalPart(name, size, pose, color, material, alpha, profile, alongX)
+        local mesh = HarborCoastalGeometry.fit(profile, size, pose, alongX)
+        return makePart(name, size, pose, color, material, alpha, nil, mesh)
+    end
+    local detailFits = {
+        function(size, pose) return HarborCoastalGeometry.fit(sources.bow, size, pose) end,
+        function(size, pose) return HarborCoastalGeometry.fit(sources.plate, size, pose) end,
+        function(size, pose) return HarborCoastalGeometry.fit(sources.beam, size, pose, true) end,
+    }
     local count = tier.Name == "Low" and 2
         or (tier.Name == "Medium" and 3 or 4)
     local berths = {
@@ -295,24 +305,24 @@ local function buildHarbor(base, theme, tier)
         local origin = frame(
             base, berth[1], deckY + 0.45, berth[2], berth[3]
         )
-        local hull = makePart(
+        local hull = coastalPart(
             "HarborFreightBargeHull" .. i,
             Vector3.new(28, 3.5, 13.2),
             origin,
             hullColor, Enum.Material.CorrodedMetal,
-            tier.Name == "Low" and 0.28 or 0.13
+            tier.Name == "Low" and 0.28 or 0.13, sources.plate
         )
         -- Give these actual original cargo barges large, maritime profiles:
         -- tapered prow on Low, wheelhouse on Medium, boom on High.
         -- Reuse the SAME tiered Midground kit/owner as the four other maps.
         -- All parts are client-only, inert and removed with this folder.
-        ArenaDetailKit.build(folder, "Midground", "Harbor", hull, tier.Name, theme)
-        local container = makePart(
+        ArenaDetailKit.build(folder, "Midground", "Harbor", hull, tier.Name, theme, detailFits)
+        local container = coastalPart(
             "HarborFreightContainer" .. i,
             Vector3.new(21.0, 7.4, 8.6),
             origin * CFrame.new(0, 5.18, 0),
             freightColor, Enum.Material.CorrodedMetal,
-            tier.Name == "Low" and 0.18 or 0.05
+            tier.Name == "Low" and 0.18 or 0.05, sources.plate
         )
         -- Two real inset cargo doors and a central locking seam turn the
         -- generic container cuboid into a recognizable freight module.
@@ -321,49 +331,49 @@ local function buildHarbor(base, theme, tier)
         if tier.Name ~= "Low" then
             local endFrame = container.CFrame * CFrame.new(0, 0, -4.36)
             for side = -1, 1, 2 do
-                makePart(
+                coastalPart(
                     "HarborFreightDoor" .. i .. "_" .. side,
                     Vector3.new(9.6, 6.45, 0.11),
                     endFrame * CFrame.new(side * 5.0, 0, 0),
                     freightColor:Lerp(ribColor, 0.22),
-                    Enum.Material.CorrodedMetal, 0.04
+                    Enum.Material.CorrodedMetal, 0.04, sources.plate
                 )
             end
             if tier.Name == "High" then
-                makePart(
+                coastalPart(
                     "HarborFreightLockingBar" .. i,
                     Vector3.new(0.22, 6.5, 0.20),
                     endFrame * CFrame.new(0, 0, -0.14),
-                    ribColor, Enum.Material.DiamondPlate, 0.02
+                    ribColor, Enum.Material.DiamondPlate, 0.02, sources.plate
                 )
             end
         end
-        makePart(
+        coastalPart(
             "HarborFreightLoadSill" .. i,
             Vector3.new(22.0, 0.38, 9.6),
             container.CFrame * CFrame.new(0, -3.9, 0),
-            ribColor, Enum.Material.DiamondPlate, 0.08
+            ribColor, Enum.Material.DiamondPlate, 0.08, sources.beam, true
         )
 
         if tier.Name ~= "Low" then
             local ribCount = tier.Name == "High" and 4 or 2
             for rib = 1, ribCount do
                 local x = -8.0 + (rib - 1) * (16.0 / math.max(1, ribCount - 1))
-                makePart(
+                coastalPart(
                     "HarborFreightCorrugation" .. i .. "_" .. rib,
                     Vector3.new(0.24, 6.9, 8.72),
                     container.CFrame * CFrame.new(x, 0, 0),
                     ribColor:Lerp(freightColor, 0.28),
-                    Enum.Material.CorrodedMetal, 0.06
+                    Enum.Material.CorrodedMetal, 0.06, sources.plate
                 )
             end
         end
         if tier.Name == "High" then
-            makePart(
+            coastalPart(
                 "HarborFreightRidgeCap" .. i,
                 Vector3.new(21.4, 0.24, 8.9),
                 container.CFrame * CFrame.new(0, 3.77, 0),
-                ribColor, Enum.Material.DiamondPlate, 0.12
+                ribColor, Enum.Material.DiamondPlate, 0.12, sources.beam, true
             )
         end
         -- Source owner can safely mask ALL native details for exactly
@@ -399,7 +409,7 @@ local function rebuild()
     elseif variant == "Orbital" then
         buildOrbital(base, theme, tier)
     elseif variant == "Harbor" then
-        buildHarbor(base, theme, tier)
+        buildHarbor(base, theme, tier, HarborCoastalGeometry.sources())
     elseif variant == "Classic" then
         buildClassic(base, theme, tier)
     end
@@ -445,6 +455,11 @@ workspace.ChildRemoved:Connect(function(child)
     if child == watchedMap then
         bindMap(workspace:FindFirstChild("GeneratedMap"))
     end
+end)
+
+HarborCoastalGeometry.watch(function()
+    local arena = watchedMap and watchedMap:FindFirstChild("Arena")
+    if arena and arena:GetAttribute("VariantId") == "Harbor" then scheduleRebuild() end
 end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)

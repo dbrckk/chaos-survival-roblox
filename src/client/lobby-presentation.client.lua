@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -11,6 +12,7 @@ local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
 local HazardGlyphs = require(ReplicatedStorage.Shared.HazardGlyphs)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local LobbyGateCueKit = require(script.Parent.LobbyGateCueKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local frenchLocale = string.sub(string.lower(LocalizationService.RobloxLocaleId), 1, 2) == "fr"
@@ -31,6 +33,7 @@ local currentDecor = nil
 local currentActivities = nil
 local statusGui = nil
 local socialPads = {}
+local socialFloor = nil
 local trackedParts = {}
 local haloSegments = {}
 local loopPanels = {}
@@ -51,6 +54,7 @@ local function clearLocal()
     presentationToken += 1
     folder:ClearAllChildren()
     socialPads = {}
+    socialFloor = nil
 
     if statusGui and statusGui.Parent then
         statusGui:Destroy()
@@ -108,21 +112,21 @@ local function cacheActivities()
     end)
 end
 
-local function centerPosition()
-    local floor = currentLobby and currentLobby:FindFirstChild("Floor")
-    if floor and floor:IsA("BasePart") then
-        return floor.Position + Vector3.new(0, floor.Size.Y * 0.5 + 0.08, 0)
+local function updateSocialPads(inset)
+    if socialFloor == inset then return end
+    for _, pad in ipairs(socialPads) do
+        pad:Destroy()
     end
-    return Vector3.zero
-end
+    table.clear(socialPads)
+    socialFloor = inset
+    if not inset then return end
 
-local function makeSocialPads()
-    local center = centerPosition()
+    local surface = inset.CFrame * CFrame.new(0, inset.Size.Y * 0.5 + 0.048, 0)
     local offsets = {
-        Vector3.new(-13, 0, -13),
-        Vector3.new(13, 0, -13),
-        Vector3.new(-13, 0, 13),
-        Vector3.new(13, 0, 13),
+        Vector3.new(-16, 0, -16.2),
+        Vector3.new(16, 0, -16.2),
+        Vector3.new(-16, 0, 16.2),
+        Vector3.new(16, 0, 16.2),
     }
 
     local budget = LobbyPresentationRules.decorBudget(quality().Name)
@@ -131,10 +135,8 @@ local function makeSocialPads()
     for i = 1, count do
         local pad = Instance.new("Part")
         pad.Name = "LobbySocialNode" .. i
-        pad.Shape = Enum.PartType.Cylinder
-        pad.Size = Vector3.new(0.055, 5.6, 5.6)
-        pad.CFrame = CFrame.new(center + offsets[i])
-            * CFrame.Angles(0, 0, math.rad(90))
+        pad.Size = Vector3.new(4.2, 0.044, 4.2)
+        pad.CFrame = surface * CFrame.new(offsets[i]) * CFrame.Angles(0, math.pi * 0.25, 0)
         pad.Anchored = true
         pad.CanCollide = false
         pad.CanTouch = false
@@ -145,23 +147,10 @@ local function makeSocialPads()
             and VisualTheme.Accents.Violet
             or VisualTheme.Accents.Cyan
         pad.Transparency = 0.74
+        pad:SetAttribute("LobbySocialMarker", true)
         pad.Parent = folder
+        CollectionService:AddTag(pad, "LobbySculptedCasting")
         table.insert(socialPads, pad)
-
-        local core = Instance.new("Part")
-        core.Name = "LobbySocialCore" .. i
-        core.Shape = Enum.PartType.Cylinder
-        core.Size = Vector3.new(0.045, 2.2, 2.2)
-        core.CFrame = pad.CFrame + Vector3.new(0, 0.035, 0)
-        core.Anchored = true
-        core.CanCollide = false
-        core.CanTouch = false
-        core.CanQuery = false
-        core.CastShadow = false
-        core.Material = Enum.Material.Neon
-        core.Color = pad.Color:Lerp(Color3.new(1, 1, 1), 0.24)
-        core.Transparency = 0.56
-        core.Parent = folder
     end
 end
 
@@ -238,6 +227,7 @@ local function bindLobby()
     currentActivities = currentLobby:FindFirstChild("Activities")
 
     if currentDecor then
+        CelebrationMeshes.readyProfile("runway", player:GetAttribute("OptionalVfxPressure"))
         for _, name in ipairs({
             "CenterGlow",
             "ArenaRunwayRailLeft",
@@ -283,7 +273,6 @@ local function bindLobby()
 
     cacheActivities()
 
-    makeSocialPads()
     makeStatusGui()
 end
 
@@ -373,7 +362,8 @@ local function applyGatePresentation(mode, accent, q, duration)
 
     local gate = currentDecor:FindFirstChild("ArenaGateTop")
     if gate and gate:IsA("BasePart") then
-        local gui = gate:FindFirstChild("ArenaGateGui")
+        local textSurface = gate:FindFirstChild("SignTextSurface") or gate
+        local gui = textSurface:FindFirstChild("ArenaGateGui")
         local panel = gui and gui:FindFirstChild("GatePanel")
         local title = panel and panel:FindFirstChild("GateStatus")
         local subtitle = panel and panel:FindFirstChild("GateSubstatus")
@@ -521,14 +511,19 @@ local function applyState()
     local duration = reducedMotion and 0.10 or 0.24
 
     -- Decor and its gate parts may replicate after Lobby.Floor.
-    if not gateCue and currentDecor then
-        local gateTop = currentDecor:FindFirstChild("ArenaGateTop")
-        local runway = currentDecor:FindFirstChild("ArenaRunway")
-        if gateTop and runway then
-            gateCue = LobbyGateCueKit.build(
-                folder, gateTop, runway, q.Name, VisualTheme.Accents
-            )
+    local gateDecor = currentDecor and currentDecor.Parent == currentLobby and currentDecor
+    local inset = gateDecor and gateDecor:FindFirstChild("LobbyFloorInset")
+    updateSocialPads(if inset and inset:IsA("BasePart") then inset else nil)
+    local gateTop = gateDecor and gateDecor:FindFirstChild("ArenaGateTop")
+    local runway = gateDecor and gateDecor:FindFirstChild("ArenaRunway")
+    if gateCue and (gateCue.gateTop ~= gateTop or gateCue.runway ~= runway) then
+        for _, entry in ipairs(gateCue.pieces) do
+            entry.part:Destroy()
         end
+        gateCue = nil
+    end
+    if not gateCue and gateTop and gateTop:IsA("BasePart") and runway and runway:IsA("BasePart") then
+        gateCue = LobbyGateCueKit.build(folder, gateTop, runway, q.Name, VisualTheme.Accents)
     end
     LobbyGateCueKit.apply(gateCue, mode, VisualTheme.Accents, reducedMotion)
 
@@ -821,11 +816,19 @@ local function runwaySweep(token)
         return
     end
 
-    local sweep = Instance.new("Part")
+    local source = CelebrationMeshes.readyProfile("runway", player:GetAttribute("OptionalVfxPressure"))
+    local mesh = CelebrationMeshes.cloneProfile(source)
+    local sweep = mesh or Instance.new("Part")
+    local width = runway.Size.X * 0.80
+    local height = runway.Size.Y * 0.5 + 0.05
+    local travel = runway.Size.Z * 0.42
+    -- The imported long axis can be X or Z. Fit it across the runway
+    -- and keep its rotation fixed while the sweep moves along the runway.
+    local swap = mesh and source.Size.Z > source.Size.X
+    local rotation = swap and CFrame.Angles(0, math.pi * 0.5, 0) or CFrame.identity
     sweep.Name = "LobbyRunwaySweep"
-    sweep.Size = Vector3.new(runway.Size.X * 0.80, 0.04, 0.55)
-    sweep.CFrame = runway.CFrame
-        * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, runway.Size.Z * 0.42)
+    sweep.Size = swap and Vector3.new(0.55, 0.04, width) or Vector3.new(width, 0.04, 0.55)
+    sweep.CFrame = runway.CFrame * CFrame.new(0, height, -travel) * rotation
     sweep.Anchored = true
     sweep.CanCollide = false
     sweep.CanTouch = false
@@ -844,8 +847,7 @@ local function runwaySweep(token)
             Enum.EasingDirection.In
         ),
         {
-            CFrame = runway.CFrame
-                * CFrame.new(0, runway.Size.Y * 0.5 + 0.05, -runway.Size.Z * 0.42),
+            CFrame = runway.CFrame * CFrame.new(0, height, travel) * rotation,
             Transparency = 1,
         }
     ):Play()
@@ -896,12 +898,9 @@ local function lobbyReturnPulse()
     local q = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
 
-    local ring = Instance.new("Part")
+    local source = CelebrationMeshes.readyProfile("ring", player:GetAttribute("OptionalVfxPressure"))
+    local ring = CelebrationMeshes.disc(source, root.Position - Vector3.new(0, 2.6, 0), 2.6, 0.04)
     ring.Name = "LobbyReturnPulse"
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Size = Vector3.new(0.04, 2.6, 2.6)
-    ring.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.6, 0))
-        * CFrame.Angles(0, 0, math.rad(90))
     ring.Anchored = true
     ring.CanCollide = false
     ring.CanTouch = false
@@ -921,7 +920,7 @@ local function lobbyReturnPulse()
             Enum.EasingDirection.Out
         ),
         {
-            Size = Vector3.new(0.04, target, target),
+            Size = CelebrationMeshes.size(ring, target, 0.04),
             Transparency = 1,
         }
     ):Play()
@@ -939,6 +938,14 @@ stateEvent.OnClientEvent:Connect(function(state)
     local nextState = state
     local nextPhase = tostring(nextState.phase or "waiting")
 
+    if nextPhase ~= previousPhase and (nextPhase == "intermission" or nextPhase == "vote") then
+        CelebrationMeshes.readyProfile("runway", player:GetAttribute("OptionalVfxPressure"))
+    end
+    if nextPhase ~= previousPhase and (nextPhase == "ready" or nextPhase == "result") then
+        local pressure = player:GetAttribute("OptionalVfxPressure")
+        CelebrationMeshes.readyProfile("ring", pressure)
+        CelebrationMeshes.readyProfile("core", pressure)
+    end
     if previousPhase == "result"
         and (nextPhase == "intermission" or nextPhase == "waiting")
     then

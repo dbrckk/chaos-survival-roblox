@@ -941,6 +941,9 @@ jobs:
           assert "ApprovedFloorReliefTemplates" in hardware
           assert "ArenaSurfaceReliefLocal" in census
           relief_server = Path("src/server/PremiumFloorReliefAssets.lua").read_text()
+          horizon_geometry = Path("src/shared/HorizonMonumentGeometry.lua").read_text()
+          floor_castings = horizon_geometry.split("local floorCastings = {", 1)[1].split("}", 1)[0]
+          horizon_assets = horizon_geometry.split("local assets = {", 1)[1].split("}", 1)[0]
           relief_client = Path("src/client/PremiumFloorReliefMeshKit.lua").read_text()
           relief_script = Path("src/client/arena-surface-relief.client.lua").read_text()
           for variant, source_kind in (
@@ -948,8 +951,17 @@ jobs:
               ("Towers", "relief_towers"), ("Crossroads", "relief_crossroads"),
               ("Orbital", "relief_orbital"), ("Harbor", "relief_harbor"),
           ):
-              assert (variant + " = " + approved[source_kind]) in relief_server
-              assert ("id = " + approved[source_kind]) in relief_client
+              expected_id = approved[source_kind]
+              if variant == "Essential":
+                  assert f"{variant} = {expected_id}," in relief_server
+              else:
+                  assert f'{variant} = HorizonMonumentGeometry.floorCastingAssetId("{variant}"),' in relief_server
+                  value = re.search(rf"\b{variant} = ([\w.]+),", floor_castings)[1]
+                  if value.startswith("assets."):
+                      key = value.removeprefix("assets.")
+                      value = re.search(rf"\b{key} = (\d+),", horizon_assets)[1]
+                  assert value == expected_id, (variant, value, expected_id)
+              assert re.search(rf"\b{variant} = \x7b\s+id = {expected_id},", relief_client)
               assert next(m["workflow_run_id"] for m in models
                           if m["name"] == source_kind) == 41736767816
           for required in (

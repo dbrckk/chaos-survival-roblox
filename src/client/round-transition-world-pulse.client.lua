@@ -1,10 +1,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local UITheme = require(ReplicatedStorage.Shared.UITheme)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local RoundEventPresentation = require(ReplicatedStorage.Shared.RoundEventPresentation)
 local CinematicPulseRingKit = require(script.Parent.CinematicPulseRingKit)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -26,17 +28,35 @@ local function arenaBase()
     return base and base:IsA("BasePart") and base or nil
 end
 
-local function emitRing(name, frame, color, startDiameter, endDiameter, duration, tier, reduced, alpha)
+local function quality()
+    return VfxQuality.deviceTier(
+        player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled
+    )
+end
+
+local function emitRing(name, frame, color, startDiameter, endDiameter, duration, tier, reduced, alpha, arenaWide)
+    local source = tier.Name ~= "Low" and CelebrationMeshes.readyProfile(
+        arenaWide and "casting" or "ring", player:GetAttribute("OptionalVfxPressure")
+    )
+    local ringMesh, cloneArc
+    if source then
+        if arenaWide then
+            -- Thin, separated strokes leave the full arena floor readable.
+            cloneArc = function() return CelebrationMeshes.cloneProfile(source) end
+        else
+            ringMesh = CelebrationMeshes.cloneProfile(source)
+        end
+    end
     return CinematicPulseRingKit.emit(
         folder, name, frame, color,
-        startDiameter, endDiameter, duration, tier.Name, reduced, alpha
+        startDiameter, endDiameter, duration, tier.Name, reduced, alpha, ringMesh, cloneArc
     )
 end
 
 local function pulseArena(state, finalRush, epoch)
     local base = arenaBase()
     if not base then return end
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
     local frame = base.CFrame * CFrame.new(0, base.Size.Y * 0.5 + 0.22, 0)
     local diameter = math.max(base.Size.X, base.Size.Z)
@@ -52,7 +72,7 @@ local function pulseArena(state, finalRush, epoch)
         finalRush and diameter * 0.34 or 5,
         finalRush and diameter * 0.96 or diameter * 0.84,
         tier.Name == "Low" and 0.40 or 0.56,
-        tier, reduced, 0.46
+        tier, reduced, 0.46, true
     )
     local secondRing = finalRush or (state.doubleChaos == true and ids[2] ~= nil)
     if secondRing and tier.Name ~= "Low" and not reduced then
@@ -66,7 +86,7 @@ local function pulseArena(state, finalRush, epoch)
                     frame * CFrame.new(0, 0.08, 0), secondColor,
                     finalRush and diameter * 0.44 or 8,
                     finalRush and diameter * 1.04 or diameter * 0.95,
-                    0.62, tier, false, 0.57
+                    0.62, tier, false, 0.57, true
                 )
             end
         end)
@@ -82,7 +102,7 @@ end
 local function pulse(color, strength, doubleRing, epoch, sourcePhase)
     local root = rootPart()
     if not root then return end
-    local tier = VfxQuality.get(player:GetAttribute("VfxQualityTier"))
+    local tier = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
     local scale = reduced and 0.42 or 1
     local diameter = (10 + strength * 8) * scale

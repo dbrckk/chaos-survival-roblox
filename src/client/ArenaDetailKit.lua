@@ -37,12 +37,15 @@ function ArenaDetailKit.count(tier)
     return 2
 end
 
-local function add(parent, name, source, size, offset, rotation, color, material, transparency, shape, kind)
-    local part = Instance.new(kind or "Part")
+local function add(parent, name, source, size, offset, rotation, color, material, transparency, shape, kind, fit)
+    local frame = source.CFrame * CFrame.new(offset) * (rotation or CFrame.identity)
+    local mesh = fit and fit(size, frame)
+    local part = mesh or Instance.new(kind or "Part")
     part.Name = name
-    part.Size = size
-    part.CFrame = source.CFrame * CFrame.new(offset)
-        * (rotation or CFrame.identity)
+    if not mesh then
+        part.Size = size
+        part.CFrame = frame
+    end
     part.Color = color
     part.Material = material
     part.Transparency = transparency or 0
@@ -61,7 +64,7 @@ end
 
 -- The same world palette produces different physical silhouettes in each arena.
 -- Base prop modules continue to own all lifecycle and cleanup.
-function ArenaDetailKit.build(parent, role, variant, host, tier, theme)
+function ArenaDetailKit.build(parent, role, variant, host, tier, theme, fits)
     local names = ArenaDetailKit.names(variant, role)
     if not names or not host or not host:IsA("BasePart")
         or not theme or not parent
@@ -74,7 +77,7 @@ function ArenaDetailKit.build(parent, role, variant, host, tier, theme)
     local function piece(i, size, offset, rotation, color, material, transparency, shape, kind)
         if i > count then return end
         table.insert(pieces, add(parent, names[i], host, size, offset, rotation,
-            color, material, transparency, shape, kind))
+            color, material, transparency, shape, kind, fits and fits[i]))
     end
 
     if role == "Service" then
@@ -193,7 +196,6 @@ function ArenaDetailKit.build(parent, role, variant, host, tier, theme)
         elseif variant == "Harbor" then
             -- Off-map freight barges need an actual tapered prow, aft
             -- wheelhouse and load-boom silhouette, not a third metal box.
-            -- WedgePart is Roblox-native geometry; no new MeshPart/asset ID.
             piece(1, Vector3.new(sx * 0.30, sy * 0.94, sz * 0.92),
                 Vector3.new(sx * 0.61, -0.05, 0),
                 CFrame.Angles(0, math.rad(90), 0),

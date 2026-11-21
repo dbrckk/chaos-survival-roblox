@@ -6,6 +6,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local HazardWarningSignatureRules = require(ReplicatedStorage.Shared.HazardWarningSignatureRules)
 local DisasterCosmeticRules = require(ReplicatedStorage.Shared.DisasterCosmeticRules)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -28,16 +29,14 @@ local function quality()
     return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
 end
 
--- CrackedLava is a native Roblox surface with actual fissure relief;
--- keep its color/transparency consistent through quality switches.
--- No custom texture, extra mesh, emitter, or additional render pass.
+-- Keep the fissured material and its pulse consistent across both surfaces.
 local function lavaSurfaceAlpha(tierName, reduced, pulse)
     local base = tierName == "Low" and 0.23 or 0.13
     return base + (reduced and 0 or math.clamp(pulse, 0, 1) * 0.08)
 end
 
-local function localPart(name, size, color, material, className)
-    local p = Instance.new(className or "Part")
+local function localPart(name, size, color, material, className, source)
+    local p = CelebrationMeshes.cloneProfile(source) or Instance.new(className or "Part")
     p.Name = name
     p.Anchored = true
     p.CanCollide = false
@@ -51,10 +50,27 @@ local function localPart(name, size, color, material, className)
     return p
 end
 
+local function lavaSurfacePose(lava)
+    return lava.CFrame * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0),
+        Vector3.new(math.max(1, lava.Size.X - 1.2), 0.12, math.max(1, lava.Size.Z - 1.2))
+end
+
+local function makeLavaSurface(lava, tier, reduced, source, color)
+    local frame, size = lavaSurfacePose(lava)
+    local surface = localPart(
+        "LavaSurfaceLocal", size, color or Color3.fromRGB(235, 104, 40),
+        Enum.Material.CrackedLava, nil, source
+    )
+    surface.CFrame = frame
+    surface.Transparency = lavaSurfaceAlpha(tier.Name, reduced, 0.5)
+    return surface
+end
+
 local function clearLava()
     if not lavaState then
         return
     end
+    lavaState.surface:Destroy()
     for _, instance in ipairs(lavaState.instances) do
         if instance then instance:Destroy() end
     end
@@ -65,9 +81,17 @@ local function bindLava(lava)
     if not lava:IsA("BasePart") then return end
     local tier = quality()
     local reduced = player:GetAttribute("ReduceMotion") == true
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    local meshEligible = tier.Name ~= "Low" and not reduced and pressure < 1
     if DisasterCosmeticRules.reusableLava(lavaState, lava) then
-        -- Reconfigure existing GPU instances instead of recreating them
-        -- when accessibility or tier changes during an active hazard.
+        -- Swap only the surface. The live embers and light keep their hosts.
+        if lavaState.meshEligible ~= meshEligible then
+            local previous = lavaState.surface
+            local source = meshEligible and CelebrationMeshes.readyProfile("casting", pressure)
+            lavaState.surface = makeLavaSurface(lava, tier, reduced, source, previous.Color)
+            lavaState.meshEligible = meshEligible
+            previous:Destroy()
+        end
         local rate = DisasterCosmeticRules.lavaEmberRate(tier.ParticleScale, reduced, activeDisasterCount)
         if lavaState.embers.Rate ~= rate then lavaState.embers.Rate = rate end
         lavaState.light.Range = 20 + 8 * tier.Scale
@@ -79,17 +103,8 @@ local function bindLava(lava)
     clearLava()
     local instances = {}
 
-    local surface = localPart(
-        "LavaSurfaceLocal",
-        Vector3.new(math.max(1, lava.Size.X - 1.2), 0.12, math.max(1, lava.Size.Z - 1.2)),
-        Color3.fromRGB(235, 104, 40),
-        Enum.Material.CrackedLava
-    )
-    -- Place the overlay immediately: the dormant renderer may be sleeping
-    -- when a new lava part replicates, and must never show a piece at (0,0,0).
-    surface.CFrame = lava.CFrame * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
-    surface.Transparency = lavaSurfaceAlpha(tier.Name, reduced, 0.5)
-    table.insert(instances, surface)
+    local source = meshEligible and CelebrationMeshes.readyProfile("casting", pressure)
+    local surface = makeLavaSurface(lava, tier, reduced, source)
 
     local attachment = Instance.new("Attachment")
     attachment.Name = "LavaHeatLocal"
@@ -136,6 +151,7 @@ local function bindLava(lava)
     lavaState = {
         lava = lava,
         surface = surface,
+        meshEligible = meshEligible,
         attachment = attachment,
         embers = embers,
         light = light,
@@ -170,17 +186,20 @@ end
 
 local function bindFreeze(warning, snapshot)
     if not warning:IsA("BasePart") or not snapshot then return end
+    local tier = quality()
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    local meshEligible = tier.Name ~= "Low" and not reduced and pressure < 1
+    local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
     local current = freezeStates[warning]
-    if current and DisasterCosmeticRules.reusableFreeze(current, warning) then
+    if current and current.meshEligible == meshEligible
+        and DisasterCosmeticRules.reusableFreeze(current, warning) then
         -- A delayed or re-replicated authoritative timeline must replace
         -- any old local schedule on quality/accessibility refresh.
         current.startedAt = snapshot.StartedAt
         current.duration = snapshot.Duration
         current.diameter = snapshot.EndSize
         -- Same-piece-count refreshes reuse the glass ring and mist emitter.
-        local tier = quality()
-        local reduced = player:GetAttribute("ReduceMotion") == true
-        local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
         if #current.segments == count then
             local frame = HazardWarningSignatureRules.frame(warning.Position, current.deck)
             local elapsed = workspace:GetServerTimeNow() - current.startedAt
@@ -207,10 +226,8 @@ local function bindFreeze(warning, snapshot)
     end
     if current then clearFreeze(warning) end
 
-    local tier = quality()
-    local reduced = player:GetAttribute("ReduceMotion") == true
     local diameter = snapshot.EndSize
-    local count = HazardWarningSignatureRules.count("Freeze", tier.Name, reduced)
+    local source = meshEligible and CelebrationMeshes.readyProfile("fragment", pressure)
     local generated = workspace:FindFirstChild("GeneratedMap")
     local arena = generated and generated:FindFirstChild("Arena")
     local base = arena and arena:FindFirstChild("Base")
@@ -223,14 +240,15 @@ local function bindFreeze(warning, snapshot)
     -- and central opaque cylinder. The authoritative freeze warning remains.
     for i = 1, count do
         local design = HazardWarningSignatureRules.recipe(
-            "Freeze", i, count, diameter, 0
+            "Freeze", i, count, diameter, reduced and 0 or snapshot.Progress
         )
         local segment = localPart(
             "FreezeFacetWarning" .. i,
             design.Size,
             design.Secondary and design.SecondaryColor or design.Color,
             design.Material,
-            design.Wedge and "WedgePart" or "Part"
+            design.Wedge and "WedgePart" or "Part",
+            source
         )
         segment.CFrame = frame * CFrame.new(design.Offset) * design.Rotation
         segment.Transparency = reduced and 0.66 or design.Transparency
@@ -287,6 +305,8 @@ local function bindFreeze(warning, snapshot)
         startedAt = snapshot.StartedAt,
         duration = snapshot.Duration,
         mist = mist,
+        meshEligible = meshEligible,
+        segmentMeshId = source and source.MeshId or nil,
         staticPose = nil,
     }
 
@@ -375,7 +395,7 @@ local function rebuildQuality()
     end
 end
 
--- This policy only throttles cosmetic emitters. Rebuilds of Freeze wedges,
+-- This policy only throttles cosmetic emitters. Rebuilds of Freeze segments,
 -- warning markers and the lava surface remain controlled by their owners.
 local function syncParticlePressure()
     local profile = quality()
@@ -431,6 +451,7 @@ end)
 
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(rebuildQuality)
 player:GetAttributeChangedSignal("ReduceMotion"):Connect(rebuildQuality)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(rebuildQuality)
 
 ensureRenderLoop = function()
     if loopStarted then
@@ -467,13 +488,7 @@ ensureRenderLoop = function()
         if surface and surface.Parent then
             local pulse = reduceMotion and 0.5
                 or (math.sin(clock * 2.8) + 1) * 0.5
-            local nextSize = Vector3.new(
-                math.max(1, lava.Size.X - 1.2),
-                0.12,
-                math.max(1, lava.Size.Z - 1.2)
-            )
-            local nextFrame = lava.CFrame
-                * CFrame.new(0, lava.Size.Y * 0.5 + 0.08, 0)
+            local nextFrame, nextSize = lavaSurfacePose(lava)
             -- The server can raise lava during ReduceMotion. Retain
             -- positional tracking but skip identical GPU property writes.
             if surface.Size ~= nextSize then surface.Size = nextSize end

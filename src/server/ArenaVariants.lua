@@ -183,6 +183,7 @@ ArenaVariants.Definitions = {
                     offset = Vector3.new(math.cos(angle) * 31, 4, math.sin(angle) * 31),
                     size = Vector3.new(13, 2, 13),
                     RouteTier = 1,
+                    OrbitalEntryLanding = true,
                 })
             end
             for i = 0, 7 do
@@ -191,6 +192,7 @@ ArenaVariants.Definitions = {
                     offset = Vector3.new(math.cos(angle) * 18, 9 + (i % 2), math.sin(angle) * 18),
                     size = Vector3.new(11, 2, 11),
                     RouteTier = 2,
+                    OrbitalReactorLanding = true,
                 })
             end
             -- Ground-accessible central rescue hub and elevated reactor podium.
@@ -200,11 +202,13 @@ ArenaVariants.Definitions = {
                 offset = Vector3.new(0, 4, 0),
                 size = Vector3.new(18, 2, 18),
                 RouteTier = 1,
+                OrbitalRescueHub = true,
             })
             table.insert(result, {
                 offset = Vector3.new(0, 18, 0),
                 size = Vector3.new(11, 2, 11),
                 RouteTier = 4,
+                OrbitalReactorLanding = true,
             })
             return result
         end)(),

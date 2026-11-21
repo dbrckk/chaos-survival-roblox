@@ -4,6 +4,201 @@
 
 > **Mesure désormais instrumentée :** `src/client/RemainingVisualNativeCensus.lua` observe toutes les **16 passes LOD** les véritables `Part/WedgePart/CornerWedgePart/TrussPart` natives non physiques encore présentes et non masquées localement, dans la carte active. Le recensement inclut façades, casings, arches, Helix, supports, bordures, sous-cadres, panneaux, finitions de sol, stations périphériques, monuments, skyline Harbor et passerelles. Les attributs `LocalP4VisibleNativeAscensionStructure`, `...AscensionSignal`, `...HelixStructure` et `...HelixSignal` séparent **les vrais volumes primitifs des signaux de navigation**. `LocalP4VisibleNativeAllScanned` donne le nombre de primitives natives visibles dans les deux dossiers parcourus, sans prétendre qu'elles méritent toutes un remplacement. Les comptes sont des **instantanés des objets streamés et non masqués**, ni des pixels rendus ni un FPS. Les vrais colliders sont exclus. Les arènes absentes sont signalées par `LocalP4NativeCensusReady=false`, et non traitées comme un zéro validé.
 
+## Priorités autour des parcours jouables
+
+Revue des générateurs de la PR #920 à partir de `aa70b187`. Les nombres ci-dessous décrivent les emplacements cosmétiques persistants produits lorsque la mécanique est présente. Leur présence à l’écran dépend du streaming, du réglage graphique et de la partie.
+
+| Priorité | Famille | Pièces et état du code |
+| --- | --- | --- |
+| 1 | Quatre stations de Classic Grid | Les secours construisent **20 / 68 / 100 pièces** en Low, Medium et High. Chaque station a un socle et un anneau segmenté. Medium ajoute montants et filaments, High ajoute les couronnes. Les guides entre stations et l’effet de passage sont hors de ce total. |
+| 2 | Quatre portiques Flux de Crossroads | **40 / 48 / 60 emplacements** en Low, Medium et High, assises comprises. Les formes simples servent de secours en attendant les profils approuvés ou sous pression graphique. |
+| 3 | Appuis des routes d’ascension, de l’Épine céleste et des Promenades | Les pièces de secours peuvent encore être visibles près d’un tablier si sa source est absente à la construction ou lorsque le modèle local sort du budget. Relever les sous-cadres, appuis et panneaux près des départs et des embranchements avant de refaire une famille entière. |
+| 4 | Repères et portiques du Skyrail | **Huit repères** Low peuvent reprendre le moulage approuvé ou le profil forgé quand le moulage manque. Les quatre portiques Medium/High emploient les mêmes sources de secours pour leurs montants et signaux, selon les profils chargés. |
+
+Le relevé client ajoute un rayon de **36 studs** autour de la caméra, calculé jusqu’à la boîte orientée de chaque pièce. Les attributs `LocalP4VisibleNativeNearRouteNativeTotal` et `LocalP4VisibleNativeNearRouteLocalTotal` suivent respectivement les familles serveur retenues et les trois ensembles décoratifs locaux nommés ci-dessus. Les attributs `LocalP4VisibleNativeNearGridStations`, `...NearFluxGates`, `...NearSkyrail` et les compteurs par famille serveur détaillent le total. Un relevé exploitable a `LocalP4NativeNearRouteReady=true`. Les pièces masquées, les colliders, les capteurs et les effets ponctuels des ensembles locaux sont exclus. Les compteurs décrivent la proximité géométrique et la transparence, sans mesurer l’occlusion ou les pixels rendus. Les compteurs historiques conservent leur périmètre.
+
+Les montants du Skyrail s’engagent dans le bord extérieur de leurs quatre vrais ponts. Les filets lumineux restent devant la face intérieure des montants. Le client conserve au plus une volée d’éclats d’accélération et la retire à l’alerte du volet, à l’effondrement ou à la perte du pont. La pression graphique rend les formes simples aux emplacements existants et retire les éclats. Les compteurs de proximité continuent de distinguer les pièces persistantes et les effets brefs.
+
+## Revue du 20 novembre 2026
+
+La revue de la branche de la PR [#920](https://github.com/dbrckk/chaos-survival-roblox/pull/920), à partir de `565d843`, combine le recensement des générateurs, le registre des modèles et le suivi des propriétaires de chaque famille. Le registre contient 112 modèles approuvés et l’audit recense 509 fichiers Luau. Le fichier CSV du 13 novembre reste le relevé historique. Il ne permet pas de déduire le nombre de primitives visibles un jour donné.
+
+| Famille | État retrouvé dans le code |
+| --- | --- |
+| Monuments de secteur proches des parcours | Les quatre monuments locaux peuvent afficher 20, 56 ou 106 maillages par arène selon la qualité et les sources chargées. Les bâtiments de façade du serveur ont leurs propriétaires et budgets propres. |
+| Bordures, supports, sous-cadres et panneaux des decks | `MapBuilder.lua` peut déjà monter des profils approuvés dans ces familles. Plusieurs propriétaires client masquent ou remplacent des cohortes à portée de caméra. Le compteur historique de primitives ne mesure pas leur apparence une fois chargés. |
+| Arches d’ascension | Les pylônes, ailettes et traverses utilisent une source à la construction quand elle est disponible. Les deux culées, la quille et le longeron peuvent aussi utiliser des maillages dès la construction, pour 48 pièces par arène. Le kit local `ApprovedRemainingStructureMeshKit.lua` garde la priorité sur les arches sélectionnées et peut remettre en place les pièces de base sculptées ou simples. |
+| Colonnes périphériques | `ArchitecturalCladding.lua` prévoit les profilés moulés à la construction. Le kit local de structures restantes prend aussi en charge les colonnes admissibles. |
+| Rampes d’Orbital | Les rampes principales `HelixRamp1…9` peuvent utiliser les longerons approuvés pour leurs 18 cadres latéraux et 27 entretoises. Le modèle complet garde la priorité à proximité, avec le même suivi du rétrécissement. Le générateur crée séparément **jusqu’à 15 châssis visuels** sous les rampes compactes, huit `EntryChassis` et sept `CoreChassis`. Le kit local peut déjà monter le modèle complet sur une sélection de ces châssis. Ces 15 logements privilégient désormais le treillis ajouré du châssis approuvé dans la même enveloppe de 0,22 stud. Les longerons, puis le profil forgé de Tower Run, servent de secours. Ce profil forgé peut aussi reprendre les 45 emplacements de cadres et d’entretoises des rampes principales si leurs longerons manquent. Les modèles complets restent prioritaires à proximité. Les formes simples reprennent le relais si aucun profil de structure n’est chargé. |
+
+L’attribut `LocalP4VisibleNativeHelixAccessChassis` observe leur nombre parmi les structures natives présentes et non masquées côté client. Il fait partie du total Helix. La bande centrale `HelixCenterGrain` est comptée comme un signal puisque son apparence reflète l’état de charge des voies. La mesure en jeu reste au prochain jalon.
+
+Les 72 bandes de guidage des 24 rampes d’Orbital peuvent reprendre le moulage approuvé du périmètre, le relief de sol d’Orbital ou, en dernier secours, le profil forgé de Tower Run. Chaque bande garde un seul emplacement. Les 27 bandes des rampes principales et les 45 bandes des accès suivent la longueur de leur rampe. Les huit voies de jeu conservent leur signal ambré à la charge, avec leurs teintes et leur transparence d’origine au retour à l’état normal.
+
+Les 16 façades par arène peuvent reprendre le moulage du périmètre pour les vitrages et les ailettes de signal, soit 84 pièces sur Classic, Crossroads, Orbital et Storm Harbor, et 100 sur Tower Run. Les quatre enseignes conservent leur fenêtre, leur face et leur orientation. Le vitrage de la cabine reste compatible avec le masque de façade à proximité, comme celui du transfert sur Tower Run l’est avec le masque des équipements de toit.
+
+Chaque arène peut afficher 32 supports blindés façonnés avec le profil polygonal de sa variante et 32 rails de toiture avec les longerons approuvés. Le kit de parois latérales vérifie l’asset et le gabarit des supports avant de prendre le relais. Chaque famille possède son propre secours à la construction.
+
+Les 16 bâtiments peuvent aussi afficher **80 pièces de structure sculptées par arène**. Le lot couvre les 32 pans de toiture, les 32 caissons latéraux et les 16 noyaux de service. Les pans reprennent le sens de leur pente, quelle que soit l’orientation horizontale de l’asset importé. Les caissons et noyaux gardent leur empreinte et restent admissibles à l’habillage des parois de proximité.
+
+Les fondations et les équipements de toit des 16 bâtiments couvrent **180 pièces supplémentaires sur Classic, Tower Run et Storm Harbor, et 196 sur Crossroads et Orbital**. Le lot couvre 32 pièces de fondation, 68 pièces réparties entre les quatre silhouettes de toiture, ainsi que 80 ou 96 équipements propres à l’arène. Chaque maillage remplace une pièce à son emplacement. Les formes simples reprennent le relais si une source manque. Les kits de proximité reconnaissent les maillages approuvés et les formes de secours. Les portes de service gardent leur rôle d’ancrage.
+
+Les 16 entrées de service peuvent reprendre le moulage approuvé pour leur encadrement répliqué. Jusqu’à 64 détails locaux en qualité moyenne et 96 en qualité haute peuvent aussi reprendre les maillages approuvés, selon les bâtiments à portée et l’habillage de façade actif. Les linteaux, auvents, colonnes, coffrets, treuils, collerettes et conduits occupent les emplacements existants. Les auvents profonds descendent vers l’approche et les collerettes s’alignent sur le conduit. Les détails locaux reprennent leurs formes simples si un profil manque ou si la pression graphique augmente. Le vantail garde son fini, son enseigne et ses ancrages.
+
+Les quatre monuments d’angle peuvent utiliser des maillages approuvés dans **57 emplacements par arène**. L’observatoire conserve 17 pièces, le portique de fret 13, le réacteur 17 et le phare 10. Les socles, les corps et les deux couronnes restent compatibles avec les habillages de proximité. La couronne du portique s’aligne sur les axes du monument même si la pente de l’aileron importé exige un quart de tour. Les silhouettes reprennent leurs formes simples si une source manque à la construction.
+
+### Géométrie au contact des parcours
+
+Les quatre générateurs de bouclier des manches Météores et Bombes peuvent utiliser **68 maillages sur Classic, Tower Run et Orbital, et 72 sur Crossroads et Storm Harbor**. Les socles moulés, les fûts polygonaux, les noyaux facettés et les équipements propres à chaque arène réutilisent les emplacements existants. Jusqu’à six liaisons d’équipe peuvent aussi reprendre le profil forgé pour leurs sept repères chacune. Le noyau reste le support de l’interaction, et le volume de protection et sa couronne d’impact conservent leur géométrie. Les formes simples reprennent le relais si leur profil n’est pas chargé. Le recensement `LocalP4VisibleNativeSkyShields` relève les primitives visibles du dossier des boucliers pendant la manche.
+
+Le poste d’aiguillage des trois voies peut afficher **74 pièces sculptées par arène**. Quatre consoles reçoivent chacune un socle moulé, deux montants polygonaux, deux traces lumineuses dégagées, un noyau facetté et une traverse forgée. Le cadre s’aligne en travers de la voie et les traces reprennent la teinte des ponts une fois le réseau connecté. Les 46 bords des ponts temporaires suivent les deux axes et s’allument à l’ouverture des 23 passages. Les pièces simples servent de secours si leur profil manque lors de la création du poste. Les plateformes de liaison gardent leur géométrie de collision. Le recensement `LocalP4VisibleNativeSkySwitchyard` relève les primitives cosmétiques visibles.
+
+Les plateformes de mobilité des cinq arènes peuvent recevoir quatre bordures forgées par capteur à portée du budget graphique. Les bordures sont sous la face supérieure. Le libellé, la direction et la lueur du capteur restent dégagés. Chaque cadre suit son capteur pendant la contraction et reprend la teinte de surcharge ou de bonus personnel. Le cadre s’ajoute lorsque le profil approuvé est chargé. Il est retiré lorsque le profil n’est plus disponible ou que la qualité graphique impose le secours. Le budget existant couvre jusqu’à quatre cadres sur PC, trois en qualité haute tactile et deux en qualité moyenne.
+
+Les deux relais d’accélération d’équipe peuvent afficher **dix pièces sculptées par arène**. Le socle moulé, le fût polygonal, le noyau facetté et les deux bras inclinés réutilisent les emplacements du relais. Les bras s’assombrissent avec le noyau lorsque la charge a été distribuée. La borne s’efface si la contraction lui retire son appui, y compris pendant l’impulsion visuelle. Le bouton, l’indication et le rayon de partage gardent leur point de référence. Les formes simples servent de secours si une source manque au début de la manche. Le recensement `LocalP4VisibleNativeTeamDashRelays` observe les primitives visibles de ces relais.
+
+Les fragments à collecter affichent trois silhouettes si les profils approuvés sont chargés. Le fragment ordinaire est un cristal allongé, le doré un noyau large avec une couronne en qualité moyenne ou haute, et le fret un coffret vert à pans coupés. Chaque fragment utilise au plus deux maillages locaux. Le capteur sphérique reste actif et redevient visible si le maillage disparaît, si sa source est indisponible ou sous pression graphique. Les libellés, les récompenses et les limites d’apparition gardent leurs réglages.
+
+Les quatre aiguillages de Crossroads affichent deux flèches opposées par station, soit **16 branches sculptées** si le profil forgé est disponible à la création. Le socle de proximité et le revêtement de sol restent sous les flèches. La paire chargée reste ambrée. Le raccourci maître conserve sa teinte claire et la direction du dernier virage accepté s’éclaircit brièvement, avec un repère fixe en mode de réduction des mouvements. Les formes simples reprennent les mêmes flèches si le profil manque. Les capteurs et les impulsions gardent leurs réglages.
+
+Les quatre couloirs de balayage de Storm Harbor peuvent afficher **16 bordures sculptées**. Chaque contour suit la limite horizontale qui déclenche la poussée, avec la même marge de 0,3 stud que le serveur et les aides à l’évacuation. Les bordures s’allument en ambre pendant l’annonce, en rouge pendant la poussée et s’effacent au repos. Le marquage central et le compte à rebours gardent leurs réglages. Les bordures simples reprennent le même contour si le profil manque.
+
+Les quatre bandes de Classic Grid utilisent le même contour forgé que Storm Harbor, soit **16 bordures** lorsque le profil est disponible. Elles matérialisent la marge de 0,3 stud comprise dans l’effet réel, sur les deux axes. Elles suivent la bande si elle est déplacée ou redimensionnée, reprennent ses couleurs d’alerte et de poussée, puis s’effacent au repos et au nettoyage. Le signal sonore et le marquage central restent disponibles avec les bordures simples de secours.
+
+Les quatre points d’accélération de Tower Run reprennent les traverses forgées pour leur portique et leur couronne, et la fonderie du périmètre pour les huit repères au sol en qualité basse. Le chargement tardif peut remplacer les formes simples pendant la manche. Les fibres débordent des faces intérieures des montants et les courriers gardent leur orientation sur les deux axes pendant la contraction. Les signaux s’atténuent à la fermeture du volet. Côté serveur, le calcul de la piste disponible utilise le même sens que le déplacement lorsque le pont suit l’axe Z, notamment pour une accélération près d’une extrémité.
+
+Les quatre volets de Tower Run peuvent afficher **16 branches de chevrons forgées**. Les pointes indiquent les deux directions pour s’éloigner de la traverse centrale. Les branches restent entièrement au-dessus du revêtement de marche, sur les deux axes et pour les deux orientations du maillage importé. Elles suivent l’alerte, la montée, la fermeture et la réouverture avec les mêmes fondus. La traverse continue de marquer l’emplacement précis de l’obstacle. Les formes simples reprennent les flèches si le profil manque.
+
+Les quatre stations de Classic Grid peuvent utiliser des socles et couronnes moulés, des montants polygonaux et un anneau à facettes par station. L’anneau remplace les 4, 8 ou 12 segments simples selon la qualité, soit **12 à 44 pièces persistantes de moins** sur les quatre stations lorsque son profil est disponible. Les filaments dégagent la face intérieure des montants et les chevrons entre stations peuvent reprendre le profil forgé. La couleur de progression, les étiquettes et les capteurs gardent leur rôle. Les sources arrivées pendant une manche sont prises en compte, et les formes simples reprennent le relais sous pression graphique.
+
+Les quatre portiques Flux de Crossroads peuvent reprendre les assises moulées, les montants polygonaux et les traverses forgées dès la qualité basse. Deux assises soutiennent chaque portique. Les flèches pointent vers le centre sur les quatre voies et dégagent le revêtement de sol. Le cadre non physique suit le capteur s’il se déplace. Les profils arrivés pendant la manche remplacent les pièces simples. Si le capteur disparaît avec le streaming ou si la pression graphique augmente, le portique se réconcilie avec son capteur et ses profils disponibles.
+
+La revue de la branche à partir de `df33653` a retrouvé huit stations de transit actives pendant les manches éligibles. Elles sont placées au sol entre le centre et les districts. Le recensement précédent ignorait leur dossier temporaire, créé directement sous l’arène. Chaque station peut utiliser des maillages approuvés pour le seuil, les montants, la traverse, les signaux et son équipement propre à l’arène. Cela représente **72 emplacements sur Classic, Crossroads et Orbital, et 80 sur Tower Run et Storm Harbor**. La traverse conserve la position du bouton de voyage et de l’enseigne. Chaque pièce retrouve sa forme simple si son profil manque au début de la manche.
+
+Le recensement client inclut désormais le transit quand le serveur le crée. Les attributs `LocalP4VisibleNativeDistrictTransitStructure` et `LocalP4VisibleNativeDistrictTransitSignal` donnent ses deux sous-totaux. `LocalP4VisibleNativeUnclassifiedLarge` relève les primitives de 12 studs ou plus sans famille identifiée pour orienter la prochaine inspection. `AllDecor` conserve son périmètre historique Décor + Helix. `AllScanned` couvre aussi le transit. Ces mesures dépendent du streaming et des masques client.
+
+Les 20 installations extérieures qui bordent les arènes peuvent utiliser des maillages approuvés dans **276 emplacements**. Classic, Tower Run, Orbital et Storm Harbor ont chacun 52 pièces. Crossroads en a 68, dont les 16 renforts et profilés des quatre portiques. Ces profilés suivent l’axe réel du portique, même si l’import permute les axes horizontaux. Les habillages complets de proximité reconnaissent les formes sculptées et leurs secours avec les mêmes budgets. Les inventaires de sol distinguent toujours les dalles PBR, les alertes et les habillages géométriques.
+
+Les quatre installations de Storm Harbor peuvent réutiliser le moulage fermé de Harbor, de Classic ou du périmètre dans **40 des 52 emplacements** lorsque les poutres et fûts dédiés manquent. Les douze ailes et sous-faces inclinées gardent leur pente de secours si leur profil manque. Les habillages complets de proximité reconnaissent ces moulages et les fûts approuvés par emplacement. Les ancrages extérieurs et le budget Low sont conservés.
+
+### Grandes dalles des parcours
+
+Les **36 dalles par arène**, soit 180 emplacements sur les cinq variantes, peuvent reprendre le biseau continu du caisson de service approuvé. Leur empreinte et leur épaisseur de 0,035 stud restent les mêmes. Leur sommet reste à 0,1705 stud au-dessus du sol physique, sous les marquages de danger. Les dalles gardent leurs teintes, leur finition PBR, leurs ancrages pour les modèles complets de proximité et leur suivi du rétrécissement. Leur forme plate sert de secours si le profil manque à la construction. Les dalles et le fond de sol reçus après un rétrécissement continuent à prendre la teinte de contraste pendant la montée de lave.
+
+### Monuments propres à chaque arène
+
+Les cinq monuments à l’est de l’arène peuvent utiliser des maillages approuvés dans **124 emplacements**. Le lot couvre 25 pièces sur l’observatoire de Classic, 28 sur le portique de Tower Run, 21 sur l’échangeur de Crossroads, 31 sur le réacteur d’Orbital et 19 sur le chantier naval de Storm Harbor. Les dimensions et les budgets de silhouette Low restent les mêmes, soit 10, 8, 6, 10 et 8 pièces. Les corps, socles et équipements complets de proximité gardent leurs ancrages. Chaque forme simple reste disponible si son profil manque à la construction. `LocalP4VisibleNativeHeroMonuments` compte les primitives de ces monuments quand elles sont chargées et visibles côté client.
+
+Le chantier naval de Storm Harbor peut conserver ses **19 pièces sculptées**, dont les **8 de la silhouette Low**, avec le seul moulage fermé de Harbor, de Classic ou du périmètre. Le socle et la coque privilégient le caisson d’amarrage approuvé lorsqu’il est chargé. Les pylônes et les câbles peuvent reprendre un fût approuvé d’une autre arène. Le corps et le socle complets de proximité reconnaissent ces pièces sur leurs ancrages d’origine.
+
+La station de signalisation au large peut désormais reprendre des profils approuvés sur ses **8, 15 ou 20 pièces** selon la qualité Low, Medium ou High. Le radar, le câble et le contrepoids gardent les mêmes repères d’animation. La lentille reste visible avec le modèle complet de proximité. Si le noyau d’Orbital est indisponible, la lentille réutilise la tête forgée à douze facettes. Les deux jambes de force peuvent reprendre le moulage fermé ou le profil forgé de Tower Run, dressés dans le plan du portique. Ces pièces occupent les emplacements existants. En l’absence de maillages compatibles, la sphère et les coins simples reprennent le relais.
+
+### Crêtes et silhouettes industrielles de Storm Harbor
+
+Les **12 crêtes** orientent désormais leur moulage d’après le repère qui marque le haut de la pente. Les quatre orientations d’import occupent la même empreinte et la crête garde son relief simple quand ce repère manque. Les quatre silhouettes industrielles peuvent aussi conserver **24 pièces sculptées** grâce au moulage fermé de Harbor ou de Classic. Le fût approuvé d’une autre arène peut habiller les renforts et les antennes. Les modèles complets continuent à utiliser les ancrages d’origine pendant le rétrécissement.
+
+### Horizons et stations de Storm Harbor
+
+Un seul moulage fermé approuvé de Harbor ou de Classic peut couvrir **52 emplacements sur les horizons** et **56 sur les quatre stations** quand leurs profils spécialisés manquent. Les silhouettes sont réparties entre les deux grands monuments, les quatre tours de premier plan et les huit arrière-plans. Les formes inclinées gardent leur propre profil de secours. Les habillages de proximité reconnaissent les moulages sur les pièces qu’ils couvrent. Aux stations, le repère lumineux reste en place et les emplacements réservés aux mécanismes complets gardent leur géométrie d’origine.
+
+### Flotte de Storm Harbor
+
+La flotte extérieure peut utiliser des maillages approuvés dans **207 emplacements**, dont 122 sur les quatre grues et 85 sur le cargo. Les chariots, câbles, palonniers et charges conservent leur mouvement avec les maillages de secours. Le radar du cargo conserve son balayage sur la silhouette de secours. Les ancrages du portique et du pont du navire conservent leurs axes pour les modèles complets. La silhouette Low du cargo affiche toujours 14 pièces. Les formes simples reprennent le relais lorsqu’un profil manque.
+
+À la construction de l’arène, la flotte privilégie le moulage de Harbor et peut réutiliser ceux de Classic ou du périmètre. Les longerons et les montants reprennent le moulage disponible si leur profil spécialisé manque. Les tambours et leurs flasques peuvent utiliser la lentille facettée ou le fût déjà chargé. Les 14 pièces de la silhouette Low du cargo et les points d’ancrage des modèles complets gardent leurs dimensions. Les deux pans de proue et les deux pans de poupe privilégient le moulage du capuchon, puis celui de l’aile périphérique approuvée. Le côté haut de chaque pan rejoint la coque et la proue recouvre son extrémité de 0,30 stud pour fermer l’ancienne fente. Les coins gardent la même orientation si les deux maillages sont indisponibles.
+
+Les barges du littoral et les défenses de quai peuvent reprendre **16, 39 ou 76 pièces sculptées** selon la qualité Low, Medium ou High. Ce total couvre respectivement 8, 27 ou 56 pièces de barges et 8, 12 ou 20 pièces de quai, dont les quatre butées d’angle en qualité haute. Les barges restent à leurs postes d’amarrage d’origine pendant le rétrécissement et les habillages de quai suivent le bord du terrain.
+
+Le moulage fermé de Harbor ou de Classic prend le relais lorsque les profils spécialisés manquent. Les modèles complets à proximité reconnaissent les deux moulages sur leurs points d’ancrage et masquent la silhouette de secours avec sa cargaison. Le client réagit à l’arrivée des sources dès la première arène et après un changement de carte. Les formes simples restent disponibles lorsque les sources approuvées sont absentes.
+
+Les quatre avant-postes jouables de Storm Harbor peuvent afficher **20 pièces sculptées en qualité moyenne ou 36 en haute**. Les quilles, montants, traverses, jambes de force et ailettes conservent leurs soudures à la vraie plateforme. Les instruments gardent leur pivot d’animation et leurs modèles complets de proximité. Les pièces suivent le rétrécissement, s’atténuent pendant l’alerte et disparaissent à l’effondrement. Si un profil manque ou si la pression graphique augmente, les formes simples reprennent le relais. Les seuils de montage des assemblages de proximité restent inchangés.
+
+Les trois têtes cylindriques acceptent le rouleau moulé de Harbor sur les deux axes d’import. Les quatre instruments peuvent aussi réutiliser la tête polygonale d’une fixation approuvée lorsque le rouleau ou la lentille ne sont pas chargés. Le mouvement reste centré sur le même pivot. Quand un instrument complet prend le relais à proximité, il conserve la même pose pendant les alertes et le rétrécissement.
+
+Les deux passerelles hautes de Storm Harbor peuvent recevoir **28 bordures forgées** sur leurs 14 paliers. Les **58 paliers des trois familles de parcours** peuvent aussi conserver leurs deux signaux et leur châssis sculptés quand les pièces communes manquent à la construction, pour 174 emplacements de secours. Les deux signaux utilisent le rouleau moulé de Harbor. Le châssis utilise son profil de tôle fermé. Les coins et châssis restent admissibles à l’habillage de proximité après rotation de l’import et rétrécissement du palier. Les formes simples restent disponibles selon les sources chargées. Les pièces visibles suivent l’alerte, l’effondrement et la remise en service de leur palier.
+
+### Accès aux quais de Storm Harbor
+
+Huit chevrons marquent les départs des quatre parcours de fret et des quatre quais cardinaux. Chaque repère s’aligne sur les deux premiers paliers et peut reprendre le profil biseauté de Harbor ou le profil forgé de Tower Run. Les huit incrustations de quai acceptent aussi le profil forgé en secours. Ces repères suivent le sol pendant le rétrécissement et gardent le seuil des premiers paliers dégagé. Les seize premiers paliers des deux familles peuvent réutiliser un moulage fermé pour leurs bordures, signaux et sous-cadres quand leurs sources dédiées manquent. Les huit deuxièmes paliers peuvent reprendre un fût polygonal approuvé déjà chargé. Les caissons et habillages de proximité conservent leurs poses de référence. Les formes simples restent disponibles.
+
+Avec le seul moulage fermé de Classic, **28 pièces au sol** restent sculptées sur Storm Harbor : seize branches de chevron, huit incrustations de quai et quatre panneaux de maintenance. Le moulage peut aussi servir de secours aux bordures, balises et chevrons des parcours périphériques. Les balises gardent leurs lumières et les chevrons restent en retrait des premiers paliers. Sur les plateformes qui possèdent déjà une trappe de service, sa collerette peut réutiliser le moulage de la trappe et sa poignée le rouleau de Harbor.
+
+### Quais cardinaux supérieurs de Storm Harbor
+
+Les huit paliers supérieurs peuvent recevoir **16 biseaux forgés** sur les faces transversales aux quatre montées. Leurs **24 poteaux** s’engagent de 0,08 stud dans la dalle, avec quatre appuis sous chaque troisième palier et deux sous chaque avant-poste. Le serveur et les habillages de proximité partagent la même hauteur d’assise. Le moulage fermé et le fût polygonal peuvent prendre le relais si les profils dédiés sont absents. Les biseaux conservent l’empreinte de secours et les pièces suivent le rétrécissement et l’effondrement de leur tablier.
+
+En qualité basse, les incrustations de bois et les chevrons déjà affichés peuvent utiliser la collerette de Harbor ou le moulage fermé de Classic quand le profil principal manque. Le même secours couvre les pièces des avant-postes en qualité moyenne et haute. Les pièces reprennent le profil de Harbor dès son arrivée et gardent leur emplacement, leur nombre et leur suivi du tablier.
+
+### Guidage des bifurcations sur les cinq arènes
+
+Les quatre parcours de chaque arène affichent les deux directions aux paliers 5 et 6, puis le saut qui termine la traversée de secours. Les paires de chevrons indiquent les vrais paliers d'arrivée. Leur visibilité suit la collision, le rétrécissement, l'alerte d'effondrement et les dangers sur le trajet. Une paire incomplète ou dont le palier d'arrivée manque reste masquée. Les chevrons de la branche suivent les mêmes règles jusqu'au raccord avec la Promenade. Le guide garde une seule enseigne et nomme les deux directions lorsqu'elles sont praticables. Sur Orbital, le guide distingue aussi les terrasses et les passerelles extérieures du parcours central à rampes.
+
+Sur les deux Promenades, chaque flèche longitudinale suit le véritable palier voisin ou le belvédère terminal. Aux jonctions de l’Épine céleste, les flèches et le guide exigent un recouvrement praticable. Si la direction suivie et la jonction sont bloquées, le guide vérifie le palier arrière avant de proposer un repli.
+
+### Volets de Tower Run et replis sous alerte
+
+Le guide écarte les chemins qui traversent un volet en fermeture ou levé, à la hauteur du pont. Les trajets sous les passerelles et les replis du même côté restent disponibles. Un bot proche du volet peut dégager le centre puis attendre du côté accessible, en tenant compte des alertes d’impact. Pendant une coupure de pont, il vérifie le palier qui reçoit son repli avant de quitter le tablier. Si le volet ou son support disparaît pendant une fermeture, le cycle libère ce pont et continue avec les volets encore utilisables. La réouverture après une fermeture réelle conserve son signal dédié.
+
+### Retour au sol et replis des bots
+
+Le guide peut accompagner la descente depuis les sommets des terrasses et les belvédères. Il utilise les sauts existants en sens inverse et, si une branche est bloquée, vérifie la traversée de secours. Le dernier repère indique un point sur le vrai sol. Le volume du personnage doit pouvoir y passer et le trajet doit rester hors des zones de danger. Le repère de descente s'efface pendant la montée de lave.
+
+Sur les hauteurs, les bots suivent les connexions de parcours réelles pour leurs déplacements et leurs replis. Ils revérifient l'empreinte du palier quand l'arène se contracte, écartent les arrivées noyées et peuvent rejoindre un palier voisin si leur tablier n'offre aucun abri contre un impact. Les sauts restent soumis au contrôleur Humanoid existant.
+
+### Sorties des terrasses périphériques de Storm Harbor
+
+Les quatre sorties peuvent conserver **16 pièces sculptées** avec le moulage fermé de Harbor ou de Classic. Les huit renforts privilégient un fût polygonal approuvé. Les couronnes et les lentilles gardent leur profil forgé s’il est chargé. Les quatre couronnes peuvent aussi reprendre la pente du capuchon ou de l’aile périphérique, avec la face haute tournée vers l’extérieur sur les deux côtés de l’arène. Le moulage fermé ou le caisson d’amarrage servent de secours avant le coin simple. Les couronnes restent hors de la surface jouable et suivent le rétrécissement et l’effondrement de leur palier.
+
+### Virages des parcours de fret de Storm Harbor
+
+Aux vingt virages, les bandes latérales suivent la sortie du palier et les inserts sculptés sous le tablier reprennent l’axe du saut d’arrivée. Les poteaux s’engagent de 0,08 stud dans la dalle et leurs têtes restent sous le tablier. Le moulage et le fût polygonal déjà chargés peuvent prendre le relais si les sources dédiées manquent. Les instruments de guidage, la détection des alertes et le montage des caissons gardent leurs repères physiques. Le scénario de rétrécissement couvre les deux axes sur les 58 paliers des trois familles.
+
+### Raccords des sommets de fret aux traversées hautes
+
+Sur les quatre raccords de Storm Harbor, les huit biseaux qui se font face peuvent reprendre le profil forgé de Tower Run. Le montage utilise la même sélection de palier que le guidage des sauts, puis vérifie que les rives se font face. Les biseaux gardent leur empreinte afin que le vide reste lisible, y compris pendant le rétrécissement. Chaque rive suit son propre tablier et s’efface avec lui. Les huit tabliers peuvent aussi réutiliser un moulage et un fût polygonal approuvés en secours, en conservant les repères des caissons de proximité.
+
+### Paliers intermédiaires des traversées hautes de Storm Harbor
+
+Les dix paliers intermédiaires peuvent compléter leurs bordures longitudinales avec vingt traverses forgées sur les faces qui bordent les sauts. Les quatre biseaux de chaque palier gardent l’empreinte d’origine et restent compatibles avec le caisson de proximité. Les poteaux s’engagent dans la dalle et conservent leur ancrage sous le tablier. Lorsqu’un profil dédié manque, le moulage fermé et un fût polygonal déjà chargé servent de secours. Le rétrécissement conserve les espaces de saut et les alertes utilisent le propriétaire du tablier.
+
+### Secours des parcours des autres arènes
+
+Sur Classic, Tower Run, Crossroads et Orbital, les **384 paliers** peuvent réutiliser le moulage fermé de leur arène, ou celui de Classic en secours, quand les profils communs manquent. Les 3 072 emplacements répartis sur ces quatre cartes couvrent quatre bordures, une dalle, un châssis et deux signaux par palier. Les chevrons de parcours peuvent aussi reprendre ce moulage. Les profils dédiés gardent la priorité. La hauteur et la transparence des repères restent celles du générateur existant. À Storm Harbor, les paliers acceptent maintenant le rouleau importé sur X ou sur Z. Les tests locaux ont vérifié l’empreinte, le rétrécissement à 45 % et le retour à l’état normal.
+
+### Portiques d’ascension et contremarches
+
+Les 60 portiques réutilisent le moulage fermé de leur arène, puis celui de Classic si nécessaire, quand une source dédiée manque. Avec le seul moulage fermé disponible, 860 des 904 pièces de portique peuvent rester sculptées. Les 240 emplacements de contremarche du périmètre, des branches et des traversées peuvent aussi reprendre ce moulage. Le rotor d’Orbital peut reprendre l’anneau du réacteur. Les lentilles gardent leur sphère de secours. Les pièces restent non physiques et suivent leur palier pendant le rétrécissement et la chute.
+
+### Tours d’horizon d’Orbital
+
+Les quatre tours peuvent réutiliser le fût polygonal d’Orbital, le moulage du périmètre pour leurs huit colliers et le profil facetté du réacteur pour leurs quatre balises, soit seize emplacements. Les tours gardent leurs ancrages d’horizon. L’habillage complet de proximité masque seulement le fût. Il libère la prise si un collier ou une balise est retiré ou ne correspond plus au profil attendu. Chaque famille de maillages peut prendre le relais indépendamment, avec les formes simples en secours.
+
+### Balises et supports du premier anneau d’Orbital
+
+Les douze segments lumineux reprennent le profil forgé de Tower Run. Ils sont tangents à l’anneau et rapprochés du sol. Les quatre pylônes atmosphériques peuvent reprendre le fût polygonal d’Orbital et leurs quatre balises, le noyau facetté du réacteur. Les positions des pylônes et les lumières des balises sont conservées. L’habillage complet de proximité accepte les fûts sculptés et les blocs d’origine, puis restitue le fût masqué quand il se retire. Les sources peuvent manquer indépendamment et les pièces simples restent disponibles.
+
+### Accès au sol d’Orbital
+
+Huit chevrons au sol pointent vers les huit rampes physiques d’entrée, avec deux ailes par repère. Le relief approuvé d’Orbital garde la priorité sur le profil forgé de Tower Run. Les formes simples reprennent la même pose si les deux sources manquent. Les chevrons se contractent avec les rampes en laissant leur seuil dégagé. Les huit rayons du centre et le médaillon suivent aussi le sol. Le disque de secours conserve sa hauteur et reste circulaire pendant le rétrécissement.
+
+### Plateforme centrale de secours d’Orbital
+
+Le tablier sous le réacteur peut incruster l’anneau approuvé dans sa surface, avec un fini métallique et une lèvre sous les marquages de guidage. Il réutilise l’emplacement de la bande périphérique, qui reste disponible si l’anneau manque. Le sous-cadre peut reprendre le treillis ajouré dans son empreinte d’origine. L’anneau et le sous-cadre suivent le tablier pendant le rétrécissement, s’effacent à l’effondrement et retrouvent leur état initial au rétablissement du tablier.
+
+### Plateformes extérieures d’Orbital
+
+Les huit plateformes au débouché des rampes d’entrée peuvent recevoir le profil annulaire du réacteur dans l’emplacement du noyau lumineux. L’anneau est placé sous le sous-cadre et la bande périphérique, y compris lorsque cette dernière reprend sa forme plate. Les bandes jumelles suivent l’axe d’arrivée sur les rampes cardinales. Le profilage des plaques, bandes et biseaux peut utiliser le moulage du périmètre si les revêtements de sol sont absents. Le treillis approuvé prend le relais sous le tablier si les longerons manquent. Les pièces gardent le suivi de leur tablier durant le rétrécissement et l’effondrement.
+
+### Plateformes d’arrivée du réacteur d’Orbital
+
+Les huit paliers intérieurs et le podium peuvent recevoir neuf treillis ajourés dans l’empreinte des sous-cadres existants. Leurs plaques, bandes et biseaux peuvent garder un moulage quand le revêtement principal manque. Les poteaux peuvent reprendre un autre fût polygonal approuvé déjà chargé. Les habillages suivent leurs plateformes au rétrécissement et à l’effondrement. Au-dessus du podium, le noyau lumineux et les huit balises peuvent reprendre le profil facetté du réacteur. Ils conservent leurs positions, leurs teintes et la lumière ponctuelle du noyau. Des formes simples restent disponibles pour les emplacements dont les sources manquent.
+
+### Supports des promenades et de la Sky Spine
+
+Sur les cinq arènes, 430 emplacements peuvent réutiliser le moulage fermé de leur arène ou celui de Classic. Le total comprend 180 pièces des portiques de promenade, 210 pièces de la Sky Spine et 40 renforts aux jonctions avec les belvédères. Les maillages dédiés restent prioritaires. Les châssis de proximité vérifient les sources autorisées, leur emprise après rétrécissement et la continuité du croisement entre les deux tabliers. Les renforts des belvédères ne sont générés que lorsque les tabliers existants se chevauchent.
+
+Les 26 tabliers suspendus par arène (16 de Promenade et 10 de l’Épine céleste) peuvent conserver un sous-cadre sculpté quand le châssis d’accès ne fournit ni treillis ni longerons. Le cadre reprend alors le moulage de l’arène, celui de Classic ou le socle approuvé du périmètre. Il garde son empreinte peu profonde sous les entrées et les jonctions, avec le treillis séparé des portiques. Les poteaux des tabliers et les montants des portiques d’ascension peuvent utiliser le fût polygonal d’une autre arène déjà chargée si leur fût dédié manque. Le registre et les vérifications du modèle importé déterminent quelles sources sont admissibles. Les formes simples restent disponibles quand aucun modèle approuvé n’est prêt à la construction. La mesure de cette couverture en jeu reste à effectuer.
+
 # Audit P4 — structures primitives encore candidates au remplacement 3D
 
 **Date :** 13 novembre 2026 · **Dépôt :** `dbrckk/chaos-survival-roblox` · **Code actuel audité :** `16b8a52cc128e9130ba97a8a5e876d004c946b76` (branche `main`).
@@ -26,6 +221,34 @@ des budgets MeshParts. Les chiffres historiques du CSV ne doivent pas
 être présentés comme un inventaire de ce qui est actuellement visible.
 Aucune capture, mesure FPS, création d'asset ou publication n'est
 revendiquée par cette instrumentation seule.
+
+## Recensement Low de Storm Harbor au 20 novembre 2026
+
+Les définitions de parcours et les générateurs de la PR #920 donnent les volumes suivants. Un emplacement peut contenir un maillage ou une forme simple, selon les sources réellement chargées. Le relevé moteur historique du 13 novembre reste disponible plus bas.
+
+| Groupe | Emplacements du générateur | Manque identifié dans le code |
+|---|---:|---|
+| Paliers de fret, quais cardinaux et traversées hautes | 58 paliers. 232 biseaux, 58 panneaux, 58 sous-cadres et 140 poteaux | Les panneaux peuvent reprendre le caisson fermé de Harbor. Les biseaux et sous-cadres peuvent aussi reprendre le profil forgé. Les **140 poteaux** (72 fret, 40 quais, 28 traversées) disposent de moulages de réserve. |
+| Signaux de ces paliers | 116 | Les 58 bandes et les 58 noyaux peuvent reprendre le moulage fermé du revêtement, du périmètre ou du caisson d’amarrage dès la construction. Les profils dédiés restent prioritaires. |
+| Accès au sol et sorties périphériques | 28 pièces au sol et 16 pièces de sortie | Un moulage fermé peut couvrir les deux groupes. Les couronnes conservent leur forme inclinée si les profils de secours manquent. |
+| Station de signalisation au large | 8 pièces en Low | Sept pièces peuvent reprendre le moulage fermé. La lentille privilégie le noyau d’Orbital, puis la tête forgée à douze facettes, avec la sphère comme dernier secours. |
+| Cargo principal et littoral | 14 pièces du cargo en Low. 16 pièces sur les barges et les défenses en Low | Le moulage fermé en couvre 12 sur le cargo et jusqu’à 16 sur le littoral. L’aile périphérique peut aussi couvrir les deux pans de proue et les deux pans de poupe. Les 14 pièces de la silhouette Low restent dans les mêmes emplacements de rendu. |
+
+**Biseaux et sous-cadres.** Sur les 58 paliers, les **232 biseaux et 58 sous-cadres** peuvent également utiliser le caisson d’amarrage ou le profil forgé lorsque leurs moulages habituels manquent. Les profils déjà présents sur les bords des sauts gardent la priorité. Les pièces de réserve gardent le gabarit d’origine et restent admissibles au masquage par le caisson complet.
+
+**Panneaux d’atterrissage.** Quand le relief de sol et le moulage habituel manquent, les **58 panneaux** peuvent reprendre la cassette pleine du caisson d’amarrage. Le panneau garde sa teinte de parcours, une marge de 0,40 stud avant rétrécissement et sa face supérieure à 0,105 stud au-dessus de la surface de collision, sous les marquages. Si seules les traverses forgées ajourées sont chargées, la plaque simple garde une surface visuelle continue.
+
+**Signaux.** Le caisson d’amarrage prend le relais sur les 58 paliers quand le rouleau et les autres moulages fermés sont indisponibles. Les bandes gardent l’axe de sortie et les noyaux suivent l’approche perpendiculaire dans les virages de fret. Les deux pièces gardent leur teinte, leur gabarit et leur suivi du rétrécissement et de l’effondrement. Les formes simples restent disponibles si aucun profil compatible n’est chargé.
+
+**Poteaux.** Les **140 emplacements** peuvent maintenant reprendre le caisson d’amarrage ou le moulage fermé de Harbor ou de Classic quand le fût polygonal manque. Les poteaux gardent leur empreinte et leur assise pendant le rétrécissement. La limite de montage de proximité couvre les 20 poteaux de 20,08 studs des traversées intérieures, avec les quotas existants. Le relevé Low permettra de mesurer le reliquat lorsque les sources de réserve sont absentes. Les formes de la proue et de la lentille sont moins prioritaires que les pièces proches des zones jouables.
+
+Le relevé client existant publie huit compteurs supplémentaires sous `LocalP4VisibleNativeNear*` :
+
+- `HarborLandingStructure` et `HarborLandingSignals` pour les trois familles de paliers Harbor, identifiées par leurs attributs serveur. `HarborLandingSupports` isole les poteaux au sein du total structurel.
+- `HarborTerraceExits`, `HarborGroundMaintenance` et `HarborGroundWayfinding` pour les sorties, les panneaux de maintenance et les repères au sol.
+- `HarborCoast` et `HarborOffshoreStation` pour les pièces ancrées nommées Harbor dans les dossiers clients du littoral et de la station.
+
+Le compteur retient les primitives décoratives chargées, proches à 36 studs de leur volume et suffisamment opaques après masquage. Les nouvelles valeurs reviennent à zéro hors de Harbor ou quand la caméra n’est pas prête. Ces sous-totaux préservent les dénominateurs historiques. Ils excluent les pièces des plateformes elles-mêmes, les décorations locales soudées, les maillages et le sol physique. Le nombre effectivement rendu à l’écran doit encore être mesuré en partie avec le Low et la pression graphique relevés.
 
 ## Conclusion
 

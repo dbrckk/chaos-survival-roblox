@@ -74,10 +74,13 @@ assert '"Ridge" .. index' in BUILDER
 assert "corner.sx * x" in BUILDER and "corner.sz * z" in BUILDER
 assert "yaw + (index - 2) * 0.32" in BUILDER
 assert 'owner.Name~="ExteriorRidge"..corner' in CLIENT
-assert 'ridge:IsA("WedgePart")' in CLIENT
-assert 'ridge.CFrame.LookVector:Dot(expected.LookVector)' in CLIENT
-assert 'ridge.CFrame.UpVector:Dot(expected.UpVector)' in CLIENT
-assert 'ridge.Size-Vector3.new(11+index*3' in CLIENT
+assert 'ExteriorDetailGeometry.footprint(ridge, owner, 88962643359267, "WedgePart")' in CLIENT
+FIT = (ROOT / "src/client/ExteriorDetailGeometry.lua").read_text()
+assert 'part:IsA(fallbackClass)' in FIT
+assert 'part:GetAttribute("Original3DAssetId") ~= assetId' in FIT
+assert 'pose.LookVector:Dot(expected.LookVector)' in CLIENT
+assert 'pose.UpVector:Dot(expected.UpVector)' in CLIENT
+assert 'size-Vector3.new(11+index*3' in CLIENT
 assert 'ridge.Transparency~=1' in CLIENT
 assert "heights[index]" in CLIENT
 assert "owner:GetAttribute(\"ChaosDistantScenery\")~=true" in CLIENT
@@ -98,4 +101,4 @@ for path in ("src/server/init.server.lua","src/client/scenery-lod.client.lua",
              "src/shared/VisualBudgetRules.lua"):
     assert "ExteriorRidge" in (ROOT/path).read_text(),path
 print("PASS all four owner-authenticated seven-MeshPart models,")
-print("PASS 12 distinct native WedgeParts, exact transforms, rollback, LOD")
+print("PASS 12 distinct ridge slots, approved MeshParts or native wedges, exact transforms, rollback, LOD")

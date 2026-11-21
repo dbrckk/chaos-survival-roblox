@@ -46,8 +46,9 @@ local function refreshSafeFloorContrast(lavaActive)
     if changed or now >= nextGroundScanAt then
         nextGroundScanAt = now + 3
         if decor and decor:IsA("Folder") then
+            local base = arena:FindFirstChild("Base")
             for _, part in ipairs(decor:GetChildren()) do
-                local role = LavaGroundContrastRules.nativeRole(part, decor)
+                local role = LavaGroundContrastRules.nativeRole(part, decor, base)
                 if role then
                     local baseColor = originalNativeGroundColors[part]
                     if not baseColor then

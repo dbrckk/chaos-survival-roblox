@@ -1,3 +1,375 @@
+## Lisibilité mobile pendant et après la manche
+
+Sur le Port des tempêtes, le grand tablier et les 36 dalles décoratives utilisent une finition acier gris-bleu. Les tuiles sculptées reprennent le relief PBR brossé dans le budget existant. Le contraste de la lave et les marquages de danger gardent leur traitement dédié.
+
+La carte de résultat masque la notification d’entraînement jusqu’à la fin de son fondu. Un boost déclenché pendant ce délai conserve son effet dans le monde.
+
+Sur mobile, la consigne de début de manche et le défi occupent la barre basse pendant l’introduction du mécanisme. Le compteur d’éclats revient ensuite. La disposition suit la rotation de l’écran et le Port des tempêtes affiche « AU PAD BLEU » lorsque les pads de transfert sont actifs.
+
+En Double Chaos, l’en-tête affiche les deux dangers et la barre basse rappelle le temps à tenir. Le résultat reprend leurs noms et le bonus dans la langue du joueur. Les annonces de phase sont réservées aux participants encore en vie tant que la carte de résultat est fermée.
+
+À l’ouverture du résultat, la carte spectateur disparaît et cesse de changer de cible. La caméra retrouve le personnage local lorsqu’il est disponible et respecte une caméra déjà reprise par le jeu. Pendant la finale, l’espace libéré par le bouton Suivant agrandit la zone de texte sur mobile.
+
+## P4 — Finitions 3D du lobby
+
+Le lobby applique jusqu’à 74 finitions sculptées après le chargement des maillages approuvés. L’allée, les huit panneaux d’accueil, les repères lumineux et le portail gardent leurs dimensions et leurs ancrages. La traverse reprend la couleur et le fondu du départ de manche. Les formes de secours restent visibles au démarrage et reprennent leur place pendant la manche, sous pression graphique ou si le maillage est indisponible.
+
+Le titre, les trois repères de progression et les quatre panneaux latéraux portent leur texte sur un support transparent sans collision, à la position exacte de la face d’origine. Les plaques peuvent ainsi passer du secours au maillage sculpté sans déplacer le texte. Les trois repères continuent de réagir aux phases du lobby.
+
+L’estrade reprend le profil forgé de Tower Run sur ses quatre flancs. Les quatre protections d’angle et les deux seuils lumineux utilisent la fonderie du périmètre. Ces dix habillages restent sous la surface de marche et reprennent les emplacements de l’ancien socle décoratif.
+
+Les quatre plateformes d’entraînement peuvent afficher 52 maillages approuvés. Les rebords forgés, les angles et embouts moulés et les guides à double bande reprennent les emplacements de secours. Le cadre de chaque station suit la direction du boost. Le capteur conserve son gabarit, sa lumière et son étiquette. Les pièces simples redeviennent visibles si une source est retirée ou si la pression graphique augmente.
+
+## P4 — Silhouettes d’arrière-plan
+
+Les 20 tours principales et les 40 silhouettes lointaines des cinq arènes peuvent utiliser des maillages approuvés dans 244 emplacements existants. Les toitures lointaines reprennent la coque octogonale du modèle complet, surmontée d’un mât facetté. Les sources chargées à la construction déterminent quelles pièces sont sculptées. Les modèles complets utilisent les mêmes repères et gardent leurs limites de proximité.
+
+## P4 — Monuments des horizons nord et sud
+
+Les maillages approuvés peuvent habiller 80 pièces de secours au nord et 73 au sud, réparties sur les cinq arènes. Les deux horizons partagent les mêmes sources de géométrie. Les modèles complets de proximité masquent les pièces sur leurs repères d’origine, puis les restaurent lorsque la distance ou la pression graphique l’exige. Chaque pièce garde sa forme d’origine si son maillage manque à la construction.
+
+## P4 — Reliefs d’angle et silhouettes industrielles
+
+Les cinq arènes peuvent afficher des maillages approuvés sur 60 reliefs d’angle et 120 pièces de silhouettes industrielles. Les reliefs, coques, auvents, renforts verticaux, bandeaux et antennes gardent leurs emplacements hors du terrain jouable. Les modèles complets de proximité prennent le relais sur les mêmes ancrages. Les formes d’origine servent de secours si un maillage manque à la construction.
+
+## P4 — Socles et signaux des stations périphériques
+
+Les vingt stations des cinq arènes peuvent utiliser des maillages approuvés pour leurs socles, lentilles, repères d’approche, encoches lumineuses et rails latéraux. Les sept pièces gardent leurs dimensions et leurs emplacements. Le revêtement complet de proximité peut encore masquer le socle, avec le même décalage derrière le repère d’approche. Les formes simples prennent le relais si leur source manque lors de la construction de l’arène.
+
+## P4 — Carapaces de secours des plateformes
+
+Les cinq arènes peuvent utiliser des jupes et ailettes moulées, des quilles biseautées et des longerons forgés dans les deux, quatre ou sept emplacements existants. Les ailettes suivent le bon axe pendant le rétrécissement et les longerons se recalent entre leurs points d’appui. Les carapaces et berceaux complets gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.
+
+## P4 — Marquages secondaires et supports des plateformes
+
+Les axes de Classic, les voies de Crossroads, les rails d’Orbital et les bandes d’amarrage de Harbor peuvent reprendre les profils approuvés en gardant leur fini et leurs emplacements. Tower Run reçoit des noyaux de levage à douze facettes et des traverses biseautées. Les marquages suivent la contraction des plateformes, les traverses suivent celle des passerelles et les habillages complets gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.
+
+## P4 — Chevrons de départ des sauts
+
+Sur Classic, Tower Run, Crossroads et Storm Harbor, les deux branches de chaque chevron peuvent utiliser le profil biseauté approuvé de l’arène. Les repères conservent leur couleur et suivent le saut recalculé quand les plateformes bougent. Ils s’effacent si le saut devient impraticable ou dangereux. Les formes simples prennent le relais si le maillage manque ou si la charge graphique augmente.
+
+## P4 — Plaques, chevrons et lentilles des plateformes
+
+Les cinq arènes utilisent les reliefs approuvés pour les plaques et bandes des plateformes. Crossroads reçoit des chevrons à pans coupés et les lentilles de Crossroads et d’Orbital reprennent un profil à douze facettes. Les pièces suivent le rétrécissement et les alertes des plateformes. Les habillages complets de dessous de plateforme gardent la priorité. Les formes simples prennent le relais si un maillage manque ou si la charge graphique augmente.
+
+## P4 — Trappes de service des plateformes
+
+En qualité moyenne ou haute, les trappes des cinq arènes peuvent reprendre un couvercle et une collerette biseautés de leurs revêtements approuvés, ainsi qu’une poignée arquée issue du modèle d’amarrage de Harbor. Les trois pièces suivent les plateformes pendant le rétrécissement et s’effacent à l’effondrement. Les modèles complets gardent leur priorité dans les emplacements réservés. Chaque pièce simple reprend le relais si son maillage manque ou si la charge graphique augmente.
+
+## P4 — Rails et renforts diagonaux des plateformes
+
+Dans les cinq arènes, les rails latéraux et les renforts diagonaux peuvent reprendre le profil forgé du pont approuvé de Tower Run. Chaque pièce occupe son emplacement existant en qualité moyenne ou haute. Les rails suivent la bonne direction de contraction et les renforts restent reliés à leurs deux points d’appui. Les treillis complets de Harbor et de Tower Run gardent la priorité. Les formes simples servent de secours si le maillage est indisponible ou si la charge graphique augmente.
+
+## P4 — Renforts d’angle des plateformes
+
+Les angles des plateformes peuvent recevoir une tête de fixation à douze facettes issue d’un modèle approuvé. Le nombre de pièces reste lié à la qualité graphique. Les renforts suivent les angles quand une passerelle raccourcit et les habillages de Harbor gardent la priorité sur les plateformes qu’ils couvrent. Un renfort simple sert de secours si la fixation est indisponible.
+
+## P4 — Biseaux des plateformes
+
+Les quatre biseaux des plateformes peuvent reprendre le profil à douze facettes d’une pièce de fonderie approuvée de Harbor. Ils gardent leur empreinte et accompagnent leur plateforme pendant le rétrécissement ou l’effondrement. Les carapaces, rebords et caissons locaux les masquent quand leur habillage est complet. Des biseaux simples servent de secours si le maillage est indisponible à la construction.
+
+## P4 — Bandes lumineuses des plateformes
+
+Les plateformes ordinaires peuvent reprendre les deux bandes sculptées du pont approuvé de Tower Run, réunies dans un seul maillage. Les bandes des terrasses ancrées au sol suivent le rebord supérieur pour rester visibles. Les teintes de guidage, les avertissements et le suivi du rétrécissement gardent leurs réglages. Une bande plate sert de secours si le maillage est indisponible à la construction.
+
+## P4 — Noyaux lumineux sous les plateformes
+
+Les noyaux lumineux peuvent reprendre les deux inserts sculptés du châssis approuvé dans un seul maillage par plateforme. Les plateformes ordinaires gardent leur gabarit lumineux et les itinéraires spécialisés conservent leurs dimensions ajustées. Les noyaux suivent le rétrécissement et s’effacent avec leur plateforme. Une forme plate sert de secours si le maillage est indisponible à la construction.
+
+## P4 — Supports verticaux sous les plateformes
+
+Les poteaux sous les plateformes peuvent reprendre le profil polygonal de la colonne approuvée de leur arène. Ils gardent leurs points d’appui et se rétractent avec les plateformes. Les habillages locaux peuvent masquer ces poteaux puis les réafficher lors de leur retrait. Des poteaux rectangulaires servent de secours si le maillage est indisponible à la construction.
+
+Sous les Promenades et l’Épine céleste, les fûts descendent jusque dans la dalle de chaque arène. Le serveur et le client utilisent la même référence de hauteur pour les fûts et leurs habillages complets, y compris si l’arène est placée plus haut ou plus bas. Le rétrécissement conserve les deux points d’appui et réduit la section des poteaux avec leur tablier.
+
+## P4 — Longerons sous les plateformes
+
+Les cadres rectangulaires sous les plateformes peuvent reprendre les longerons du châssis approuvé, à raison d’une pièce par cadre. Les habillages locaux vérifient leur alignement avant de les masquer et les réaffichent à leur retrait. Les cadres pleins servent de secours si le maillage est indisponible à la construction.
+
+## P4 — Panneaux des plateformes d’atterrissage
+
+Les panneaux serveur peuvent reprendre le profil biseauté du revêtement approuvé de chaque arène. Leur empreinte et leur hauteur gardent les repères d’atterrissage et les avertissements lisibles. Les habillages 3D locaux continuent de masquer ces panneaux lorsqu’ils prennent le relais. Chaque emplacement conserve une seule pièce côté serveur, avec une forme plate de secours.
+
+## P4 — Panneaux de maintenance au sol
+
+Les vingt panneaux de maintenance peuvent reprendre le socle biseauté du revêtement approuvé de chaque arène. Ils restent visibles au-dessus des dalles et se contractent avec le sol. Chaque panneau utilise une seule pièce, avec une forme plate de secours si le maillage est indisponible à la construction.
+
+## P4 — Chevrons de montée et de retour au carrefour
+
+Les quatre chevrons de montée de Tower Run et les douze chevrons du Flux Relay peuvent reprendre les profils moulés de leurs arènes. Les pointes du Flux Relay se rejoignent au-dessus des voies et indiquent le retour au centre. Les pièces plates servent de secours et suivent le sol pendant le rétrécissement.
+
+## P4 — Grille et chevrons d’entrée de Classic
+
+Les huit lignes de la grille peuvent reprendre le profil forgé du pont de Tower Run et les quatre chevrons celui du revêtement approuvé de Classic. Les lignes restent sous les avertissements de balayage. Les flèches pointent toujours vers les premières terrasses. Les marquages plats servent de secours si les maillages sont indisponibles à la construction.
+
+## P4 — Plaques et noyaux lumineux au sol de Tower Run
+
+Les quatre plaques peuvent reprendre le profil biseauté de la machinerie approuvée de Tower Run. Leurs noyaux à douze faces restent faiblement lumineux et centrés sur les plaques pendant le rétrécissement. Les formes plates prennent le relais si leurs maillages respectifs sont indisponibles à la construction.
+
+## P4 — Voies au sol et carrefour de Crossroads
+
+Les quatre voies peuvent reprendre le profil moulé du revêtement de Crossroads et rejoindre une plaque centrale usinée. Les chevrons du Flux Relay restent au-dessus des voies. La plaque et les voies se contractent avec le sol. Des marquages plats servent de secours si les maillages sont indisponibles à la construction.
+
+## P4 — Incrustations des quais de Storm Harbor
+
+Les huit bandes de quai peuvent reprendre le socle biseauté d’une fixation d’amarrage approuvée. Les marquages gardent leur longueur, leur orientation et leurs teintes au ras du revêtement. Les bandes plates d’origine servent de secours si le maillage est indisponible à la construction.
+
+## P4 — Rayons et médaillon au sol d’Orbital
+
+Les huit rayons lumineux peuvent reprendre le profil forgé de Tower Run. Ils rejoignent le bord du médaillon sans traverser son centre. Le médaillon peut reprendre l’anneau horizontal du réacteur approuvé. Les rayons plats et le disque horizontal prennent le relais si les maillages sont indisponibles à la construction.
+
+## P4 — Couronne et noyau lumineux d’Orbital
+
+Les douze segments animés peuvent reprendre le profil forgé de Tower Run. Le noyau lumineux peut reprendre la forme facettée du réacteur approuvé et conserve sa lumière ponctuelle. Les segments plats et la sphère restent disponibles si leurs maillages respectifs sont indisponibles à la construction.
+
+## P4 — Portiques de Crossroads ancrés au sol
+
+Les quatre traverses et les huit montants peuvent utiliser des maillages approuvés. Les deux montants de chaque portique reposent sur le sol. La traverse a été remontée de cinq studs pour conserver leurs dix studs de hauteur et aligner le modèle 3D complet. L’animation et les formes de secours restent disponibles.
+
+## P4 — Couronnes et bandes lumineuses sculptées
+
+Les quatre couronnes de Classic et les douze bandes de Tower Run peuvent reprendre des maillages approuvés. Elles gardent leurs couleurs, leurs mouvements et leur réduction d’animation sur mobile. Les mâts 3D et les ornements restent indépendants. Les pièces simples prennent le relais si les maillages approuvés sont indisponibles à la construction.
+
+## P4 — Noyaux polygonaux des colonnes
+
+Les 20 noyaux derrière les coques peuvent reprendre le profil polygonal de la colonne approuvée de chaque arène. Ils gardent leur gabarit et se déplacent avec leurs socles et bandeaux pendant le rétrécissement. La forme d’origine sert de secours si le maillage est indisponible à la construction.
+
+## P4 — Socles forgés et coques moulées des colonnes
+
+Les 20 socles et les 40 coques avant et arrière des cinq arènes peuvent reprendre les profils approuvés du pont de Tower Run et du blindage périphérique. Le socle conserve le pivot de rétrécissement. La coque 3D complète se cale sur les positions du socle et de la façade, quelle que soit l’orientation des axes du maillage. Les blocs d’origine restent disponibles en secours.
+
+## P4 — Bras supérieurs forgés des colonnes
+
+Les 40 bras supérieurs peuvent reprendre le profil forgé de Tower Run. Chaque arène conserve la portée et l’épaisseur de ses bras. Ils suivent les colonnes pendant le rétrécissement et cèdent la place à la coque 3D complète lorsqu’elle s’affiche. Les bras simples servent de secours si le maillage est indisponible à la construction.
+
+## P4 — Ailettes moulées et renforts forgés des colonnes
+
+Les 40 ailettes latérales peuvent reprendre le blindage moulé du périmètre et les 40 renforts diagonaux le profil forgé de Tower Run. Les pièces conservent leur inclinaison et suivent les colonnes pendant le rétrécissement. La coque 3D complète garde la priorité à l’affichage. Les formes d’origine prennent le relais si les maillages sont indisponibles à la construction.
+
+## P4 — Colliers et couronnes forgés des colonnes
+
+Les 20 colliers supérieurs et les 20 couronnes encastrées peuvent reprendre le profil forgé approuvé de Tower Run. Les pièces conservent leur recouvrement et les points d’ancrage des têtes et des instruments. La coque 3D complète garde la priorité lorsqu’elle est affichée. Les formes d’origine prennent le relais si le maillage est indisponible à la construction.
+
+## P4 — Barres d’instrumentation forgées
+
+Les 20 barres d’instrumentation des colonnes reprennent le profil forgé du pont approuvé de Tower Run. Elles s’encastrent au bord avant des couronnes, sous les têtes de navigation. Leur finition métallique et leur déplacement avec les colonnes sont conservés. Les barres simples servent de secours si le maillage approuvé est indisponible à la construction.
+
+## P4 — Têtes de navigation moulées des colonnes
+
+Les 20 têtes de navigation peuvent reprendre le blindage moulé approuvé du périmètre. Le maillage s’encastre dans la couronne d’origine et son sommet reste visible au-dessus de la coque 3D. Les têtes gardent leur teinte par arène et suivent les colonnes pendant le rétrécissement. Les pièces d’origine servent de secours si le maillage approuvé est indisponible à la construction.
+
+## P4 — Bandeaux sculptés des colonnes de ceinture
+
+Les 20 bandeaux lumineux reprennent le profil polygonal de la colonne approuvée de chaque arène. Ils affleurent la face tournée vers le centre, au-dessus du socle, et se déplacent avec leur colonne pendant le rétrécissement. Les bandeaux simples prennent le relais si le maillage approuvé est indisponible à la construction.
+
+## P4 — Segments sculptés du halo extérieur
+
+Les 80 segments des cinq arènes peuvent reprendre le profil forgé du pont approuvé de Tower Run. Quatre segments longent chaque côté, hors du sol jouable et sous son rebord. Le halo reste fixe pendant le rétrécissement, tandis que la bordure lumineuse suit le sol. Des segments simples prennent le relais si le maillage approuvé est indisponible à la construction.
+
+## P4 — Lignes de guidage centrales sculptées
+
+Les 20 lignes centrales des cinq arènes peuvent reprendre le profil biseauté du pont approuvé de Tower Run. Leur éclat reste atténué et leur relief affleure le revêtement sous les alertes d’impact. Elles suivent le rétrécissement du sol, avec des lignes simples en secours si le maillage est indisponible à la construction.
+
+## P4 — Longerons forgés du soubassement
+
+Les 20 longerons sous les cinq arènes peuvent reprendre la traverse forgée continue du pont de Tower Run. Les quatre longerons de chaque cadre se rejoignent aux angles et laissent le dessous de l’arène dégagé. Ils suivent le rétrécissement du sol. Les longerons simples prennent le relais si le maillage approuvé est indisponible à la construction.
+
+## P4 — Inserts et goussets sculptés des dalles
+
+Les 60 inserts de maintenance et les 45 goussets des cinq arènes peuvent reprendre la traverse forgée de Tower Run et le blindage moulé du périmètre. Ces détails restent à la hauteur du revêtement, suivent le rétrécissement et cèdent la place à la dalle 3D complète quand elle est affichée. Les inserts et goussets simples servent de secours si les maillages approuvés sont indisponibles à la construction.
+
+## P4 — Habillage sculpté du pourtour du sol
+
+Les cinq arènes peuvent afficher 20 plaques latérales forgées et 20 plaques d’angle issues de maillages approuvés. Les pièces conservent leurs joints et leur hauteur sous les repères de danger. Elles suivent le rétrécissement du sol. Les plaques simples servent de secours si les maillages approuvés sont indisponibles à la construction.
+
+## P4 — Renforts ajourés sous le sol
+
+Les 40 renforts sous les cinq arènes peuvent reprendre le treillis à quatre travées du châssis approuvé d’Orbital. Ils rejoignent le cadre du soubassement et restent sous l’emprise du sol pendant le rétrécissement. Les renforts en biseau prennent le relais si le maillage approuvé est indisponible à la construction.
+
+## P4 — Bordures lumineuses sculptées au sol
+
+Les 20 bordures lumineuses des cinq arènes peuvent reprendre la traverse forgée continue du pont de Tower Run. Elles couvrent les quatre côtés jusqu’aux angles et gardent leur section pendant que le sol rétrécit. Une bordure simple garde la limite visible si le maillage approuvé est indisponible à la construction.
+
+## P4 — Balisage sculpté des points d’apparition
+
+Les 40 points d’apparition des cinq arènes peuvent afficher 80 chevrons forgés et 40 halos à deux bandes issus du pont approuvé de Tower Run. Les pointes indiquent la direction de départ et les repères lumineux dépassent du revêtement du sol. Les positions et les orientations d’apparition restent en place. Des formes simples assurent le balisage si le modèle approuvé est indisponible à la construction.
+
+## P4 — Balises centrales sculptées
+
+La balise centrale de chacune des cinq arènes reprend le profil polygonal de sa colonne approuvée. Le néon réagit toujours à la couleur du danger. La lampe, les particules et les effets orbitaux gardent leurs points d’ancrage. La balise d’origine sert de secours si le maillage approuvé est indisponible à la construction.
+
+## P4 — Balises sculptées aux angles de l’arène
+
+Dans les cinq arènes, les 20 balises d’angle peuvent afficher un montant polygonal et une coiffe forgée lumineuse. Les balises se déplacent avec les angles du sol pendant le rétrécissement. Les lampes, particules et liens d’énergie suivent leur coiffe. Les formes d’origine prennent le relais si les maillages approuvés sont indisponibles à la construction.
+
+## P4 — Façades sculptées des terrasses hautes
+
+Les 20 façades de sortie des cinq arènes peuvent afficher deux nervures polygonales issues de leur colonne approuvée et une couronne forgée issue du pont de Tower Run. Les pièces longent la face extérieure du dernier palier et suivent son rétrécissement. La lentille en verre garde sa place. Les formes d’origine servent de secours si les maillages approuvés sont indisponibles à la construction.
+
+## P4 — Balises sculptées des terrasses hautes
+
+Les 20 balises des cinq arènes peuvent afficher un mât polygonal issu de la colonne approuvée de leur arène et une couronne forgée sous la lentille colorée. Les balises restent sur le sol jouable et suivent le rétrécissement. Les formes simples servent de secours si les maillages approuvés ne sont pas disponibles à la construction.
+
+## P4 — Chevrons sculptés des montées périphériques
+
+Les 100 chevrons au sol et les 160 chevrons de palier reprennent le profil forgé dans les cinq arènes. Le dernier repère au sol reste devant le premier palier. Sur la montée, les flèches dégagent le platelage et les panneaux d’orientation. Chaque palier indique le suivant, et la flèche du sommet indique le retour. Des chevrons simples prennent le relais si le modèle approuvé est indisponible à la construction.
+
+Les 80 branches de chevrons au pied des portiques d’accès et de transfert peuvent désormais reprendre le profil forgé. Elles pointent vers le palier suivant, y compris lorsque le premier saut d’Orbital est en diagonale. Les 20 portiques de sommet reçoivent une lentille facettée sur la traverse, à côté de l’équipement central. Les formes simples servent de secours lorsque les sources manquent à la construction.
+
+## P4 — Contremarches sculptées des accès périphériques
+
+Chaque arène peut afficher 24 plaques issues de maillages approuvés. Le blindage moulé habille les deux flancs du premier palier. Des traverses forgées habillent la face d’approche des paliers 2 à 5, au-dessus du palier précédent. Les plaques suivent le rétrécissement, sous les bandes lumineuses et les surfaces de saut. En l’absence du maillage à la construction, la face d’origine reste visible.
+
+## P4 — Couronnes sculptées des portiques périphériques
+
+Les 60 portiques des cinq arènes peuvent accueillir jusqu’à 84 pièces sculptées dans leurs couronnes. La couronne repose à la hauteur du portique à chaque étape. Orbital reçoit un anneau ajouré autour de son réacteur et Storm Harbor une traverse forgée avec sa suspente. Les couronnes suivent leur palier pendant le rétrécissement et la disparition. Chaque pièce garde sa forme de secours si sa source approuvée est indisponible à la construction.
+
+Les mêmes portiques peuvent recevoir 120 inserts verticaux et 60 bandeaux lumineux facettés. Les inserts pendent de la traverse et le bandeau reste lisible sous la poutre, avec le cadre d’origine comme avec l’arche sculptée. Ils gardent la couleur de leur étape, suivent le rétrécissement du palier et s’effacent quand il disparaît. En l’absence du maillage approuvé à la construction, les signaux simples reprennent les mêmes emplacements.
+
+Les 60 portiques peuvent maintenant conserver une silhouette sculptée lorsque l’arche complète est hors du budget d’affichage. Deux fûts polygonaux, deux ailerons moulés et une traverse forgée occupent les cinq emplacements existants. L’arche complète masque ces pièces lorsqu’elle est affichée, quelle que soit l’orientation d’import de la traverse. Si une source manque, la pièce simple correspondante prend le relais.
+
+## P4 — Socles et chevrons sculptés du réseau périphérique
+
+Les 40 panneaux d’orientation des cinq arènes peuvent reposer sur un socle forgé. Les socles affleurent le platelage et gardent les panneaux à leur hauteur d’origine. Un panneau s’efface dès que son palier passe en alerte ou devient impraticable. Les 60 chevrons d’approche reprennent aussi le profil sculpté, avec des formes simples comme secours si les modèles approuvés ne sont pas chargés.
+
+## P4 — Sorties de l’Épine céleste vers les Promenades
+
+Aux dix extrémités de l’Épine céleste, une paire de chevrons forgés indique les deux directions de la Promenade. Les flèches tiennent entièrement dans la zone de recouvrement des tabliers. Elles restent fixées au tablier de l’Épine céleste pendant le rétrécissement. Un chevron simple sert de secours si le modèle approuvé n’est pas disponible.
+
+## P4 — Chevrons sculptés sur les Promenades
+
+Les 160 chevrons longitudinaux des cinq arènes reprennent le profil forgé de Tower Run. Aux dix jonctions, une flèche transversale indique l’Épine céleste lorsque les deux tabliers se recouvrent réellement. Les flèches restent au-dessus du platelage et suivent le rétrécissement sans ajouter de collision. Des chevrons simples assurent le balisage si le modèle approuvé est indisponible à la construction de l’arène.
+
+## P4 — Liaisons sculptées entre les belvédères et les Promenades
+
+Les cinq arènes équipent 80 paliers latéraux et 20 liaisons de secours de bandes biseautées sous le bord supérieur. Les 100 chevrons des paliers et des embranchements reprennent le profil forgé et restent visibles au-dessus du platelage. Aux vingt belvédères, les chevrons tournent vers l’entrée réelle de la Promenade. Les décors restent liés à leur palier pendant le rétrécissement, et les formes simples servent de secours si le modèle approuvé est indisponible.
+
+Les 80 paliers latéraux peuvent aussi recevoir une plaque forgée sur leur contremarche d’approche, au-dessus du palier précédent et sous la bande lumineuse. Au cinquième palier périphérique, le chevron latéral se rapproche du bord de départ et vise le premier palier du belvédère. Le chevron de la montée principale garde son axe. Les plaques et les chevrons suivent leur palier pendant le rétrécissement.
+
+Les 20 liaisons de secours peuvent recevoir deux plaques moulées, orientées vers les paliers qu’elles relient. Leur chevron de départ indique le saut vers le belvédère, y compris sur Orbital. Il se recale quand l’arène rétrécit et s’efface si le saut devient impraticable ou dangereux. Une forme simple prend le relais si le maillage est indisponible ou que la charge graphique augmente.
+
+Aux 20 transitions entre belvédères et Promenades, le chevron se place dans le recouvrement réel des tabliers. Deux renforts forgés peuvent relier la face du belvédère au dessous du tablier d’entrée, soit jusqu’à 40 pièces. Les renforts suivent le belvédère pendant le rétrécissement. Son panneau s’efface si le palier devient impraticable.
+
+Les 80 tabliers des Promenades peuvent recevoir deux bordures longitudinales forgées dans leurs emplacements existants. Les 50 tabliers sans portique peuvent aussi recevoir un sous-cadre à treillis ajouré. Les portiques conservent leur treillis dédié. Ces pièces suivent le rétrécissement et cèdent la place aux habillages complets quand ils sont affichés. Les bordures et sous-cadres ordinaires reprennent le relais si une source approuvée est indisponible à la construction.
+
+Les 50 tabliers de l’Épine céleste, dont les 10 tabliers de jonction avec les Promenades, peuvent afficher 100 bordures forgées orientées dans le sens de la traversée et 50 sous-cadres ajourés. Les maillages reprennent les emplacements d’origine. Les bordures et berceaux complets peuvent toujours les masquer lorsqu’ils sont affichés.
+
+## P4 — Dessous sculptés sur les paliers de Storm Harbor
+
+Les 28 marches de fret, 16 paliers des jetées et 14 paliers des traversées hautes peuvent recevoir un sous-cadre ajouré, des bandes lumineuses biseautées et des inserts sous le treillis. Les bandes et inserts suivent le sens de chaque itinéraire. Le treillis reprend le gabarit du sous-cadre d’origine pour qu’un caisson complet puisse toujours le masquer. Les trois pièces gardent leur lien au palier pendant le rétrécissement et la disparition. Le décor d’origine sert de secours si les modèles approuvés ne sont pas chargés à la construction de l’arène.
+
+## P4 — Inserts verticaux sculptés sur l’Épine céleste
+
+Les 40 inserts des portiques reprennent le profil forgé de Tower Run. Ils s’encastrent sur la face intérieure des pylônes pour rester visibles depuis le tablier. Ils gardent leur hauteur et se resserrent avec les portiques quand l’arène rétrécit. En l’absence du modèle approuvé à la construction, un insert lumineux simple reprend le même emplacement.
+
+## P4 — Bandes et rails lumineux sculptés sur les traversées aériennes
+
+Les 130 tabliers des Promenades et de l’Épine céleste peuvent afficher deux bandes biseautées sous leurs bords à la place d’une plaque pleine. Les 100 rails de surface et les 20 bandeaux des portiques de l’Épine céleste reprennent le profil sculpté du pont forgé de Tower Run. Chaque remplacement conserve le nombre de pièces, les couleurs propres à l’arène et le suivi du rétrécissement. Les formes d’origine servent de secours si le modèle approuvé n’est pas disponible à la construction de l’arène.
+
+## P4 — Repère de réouverture à Tower Run
+
+Le panneau du volet affiche « VOLET OUVERT » avec un liseré vert pendant 1,6 seconde après une réouverture confirmée. L’indication est visible sans le son et se limite à la passerelle concernée. Une fermeture annulée ne l’affiche pas.
+
+## P4 — Sons de fermeture et de réouverture à Tower Run
+
+Un claquement grave annonce la montée du volet. Un carillon plus clair confirme la réouverture aux joueurs proches. Le carillon se joue une seule fois après une fermeture réelle. Une fermeture annulée ou la fin de la manche ne déclenche pas le signal.
+
+## P4 — Marquage d’alerte des volets de Tower Run
+
+Deux chevrons ambre en miroir encadrent le volet sur chaque passerelle. Ils pointent vers les deux entrées pour signaler que la voie va se fermer. La barre centrale indique l’emplacement du volet. Le marquage apparaît dès l’alerte, s’atténue quand le volet est levé et disparaît à la réouverture.
+
+## P4 — Volets mobiles sculptés de Tower Run
+
+Les quatre volets peuvent reprendre le profil métallique du pont forgé. L’habillage suit le volet et reprend sa couleur pendant la montée. Chaque joueur garde le volet d’origine à l’écran tant que le maillage est indisponible. Les collisions et les temps d’alerte restent pilotés par le serveur.
+
+## P4 — Rails de surface des passerelles de Tower Run
+
+Les huit rails reprennent le profil du pont forgé quand le modèle est disponible. Plus fins, ils restent lisibles en qualité mobile basse. La bande ambre ressort au-dessus du platelage pendant l’alerte. Le cyan et le bleu s’atténuent sur la passerelle concernée dès l’alerte, puis reprennent leur intensité quand la voie se libère.
+
+## P4 — Bandes lumineuses sous les passerelles de Tower Run
+
+Les quatre passerelles peuvent afficher deux bandes fines aux extrémités biseautées sous leur tablier. Un seul maillage du pont forgé remplace chaque plaque lumineuse. Les bandes gardent leur largeur pendant la contraction, s’atténuent pendant l’alerte et disparaissent avec la passerelle. La plaque d’origine sert de secours si le modèle est indisponible à la construction de l’arène.
+
+## P4 — Inserts lumineux sous les passerelles de Tower Run
+
+Deux inserts biseautés issus du châssis approuvé d’Orbital remplacent la plaque lumineuse sous chacune des quatre passerelles. Les deux inserts partagent un seul maillage et gardent leur largeur lorsque le tablier se raccourcit. Ils s’atténuent pendant l’alerte et s’éteignent pendant l’effondrement. La plaque d’origine sert de secours si le modèle est indisponible à la construction de l’arène.
+
+## P4 — Biseaux forgés autour des passerelles de Tower Run
+
+Les quatre passerelles peuvent remplacer leurs seize biseaux par le profil sculpté du pont forgé de Tower Run. Les pièces gardent leur empreinte horizontale et descendent sous la lèvre du tablier, sous les rails lumineux. Le rétrécissement agit sur l’axe réel de chaque pièce, y compris quand une extrémité est tournée de 90°. Les biseaux d’origine servent de secours si le modèle est indisponible à la construction de l’arène.
+
+## P4 — Cadres ajourés sous les passerelles de Tower Run
+
+Les quatre passerelles peuvent afficher le treillis à quatre travées du châssis approuvé d’Orbital sous leur tablier. Un seul maillage par passerelle remplace la plaque rectangulaire. Il se raccourcit avec le tablier, garde sa largeur et s’atténue puis disparaît quand la passerelle s’effondre. La plaque d’origine sert de secours si la source est indisponible à la construction de l’arène.
+
+## P4 — Traverses sculptées sous les passerelles de Tower Run
+
+Les quatre passerelles peuvent remplacer leurs douze nervures rectangulaires par des traverses au profil métallique forgé. Chaque traverse reprend un maillage du pont approuvé de Tower Run et suit le raccourcissement du tablier en gardant sa largeur. Les traverses restent décoratives et suivent les règles de visibilité des passerelles. Les nervures d’origine servent de secours si le modèle est indisponible à la construction de l’arène.
+
+## P4 — Éclairage biseauté sous les tabliers aériens
+
+Les 80 tabliers des Promenades et les 50 tabliers de l’Épine céleste peuvent recevoir deux inserts lumineux biseautés à la place de leur plaque rectangulaire. La paire forme un seul maillage issu du châssis approuvé d’Orbital. Elle reprend la teinte de l’arène, suit la contraction du tablier et utilise les règles de visibilité existantes. Les plaques d’origine prennent le relais si la source 3D est indisponible lors de la construction de l’arène.
+
+## P4 — Bordures sculptées sous le balisage des tabliers aériens
+
+Les bordures 3D des 130 tabliers des Promenades et de l’Épine céleste dépassent désormais du bord du tablier, dans l’enveloppe des biseaux d’origine. Leur lèvre reste sous la surface d’appui. Les bandes lumineuses et les chevrons restent visibles. La saillie suit la contraction et les bordures conservent les créneaux de rendu existants.
+
+## P4 — Traverses sculptées pour les balises de l’Épine céleste
+
+Les quatre portiques de l’Épine céleste dans chaque arène peuvent afficher le treillis approuvé des Promenades. Il se place derrière la bande lumineuse et s’appuie sur les pylônes. La couronne complète garde la priorité. La traverse de détail réutilise les créneaux libres du décor de commandement et suit le rétrécissement de l’arène.
+
+Les 40 montants et 20 traverses de secours peuvent aussi utiliser les fûts facettés de leur arène et le profil forgé de Tower Run. Les fûts rejoignent les traverses et les bandeaux se placent sur la face avant des traverses forgées. Les ensembles complets gardent la priorité. Les formes simples servent de secours si une source manque à la construction.
+
+Les 22 équipements de secours des portiques centraux peuvent afficher des maillages approuvés. Les ailerons, postes de fret et optiques gardent leurs attaches, et l’anneau ajouré d’Orbital dégage le réacteur. Les ensembles complets gardent la priorité. Si une source manque au chargement, la forme simple reprend le même emplacement.
+
+## P4 — Ensembles de levage des Promenades de Storm Harbor
+
+Les six portiques peuvent afficher un bras ajouré, un chariot, deux câbles et une caisse nervurée. Six maillages issus de deux modèles approuvés remplacent ensemble les trois pièces de secours de chaque portique sélectionné. Les câbles relient le chariot à la caisse au fur et à mesure que l’arène rétrécit. Le portique de fret complet reste prioritaire et les pièces d’origine reviennent si l’ensemble est incomplet ou sous pression graphique.
+
+## P4 — Équipements de sommet sculptés des Promenades
+
+Les 90 équipements de secours des cinq arènes peuvent désormais reprendre des maillages approuvés. Les paraboles, balises, ailerons, réacteurs et équipements portuaires suivent la contraction avec leurs portiques. Les ensembles complets gardent la priorité, et les formes simples restent disponibles si leurs sources ne sont pas chargées à la construction.
+
+## P4 — Traverses ajourées des Promenades de Storm Harbor
+
+Les six traverses supérieures peuvent recevoir le treillis approuvé des portiques. Le modèle suit la largeur du tablier pendant la contraction et utilise les créneaux existants, dont une traverse proche en qualité Low. Le portique de fret complet prend la priorité. Si le treillis ne peut plus s’afficher, la traverse d’origine reprend le relais.
+
+Les 30 traverses supérieures des cinq arènes peuvent aussi utiliser le profil forgé de Tower Run. Ce profil conserve la portée et les ancrages de la traverse d’origine lorsque le portique complet ou le treillis de proximité se retire. La traverse simple sert de secours si la source approuvée manque à la construction.
+
+## P4 — Renforts ajourés des Promenades de Storm Harbor
+
+Les 12 diagonales des six portiques peuvent recevoir le treillis approuvé des passerelles. Les deux côtés d’un portique s’affichent ensemble dans les créneaux de renforts Medium et High. Le portique de fret complet prend la priorité. Les diagonales d’origine reprennent le relais si une pièce se décharge, si la pression graphique augmente ou si l’arène se contracte au-delà du dégagement disponible.
+
+## P4 — Diagonales facettées des Promenades
+
+Les 60 diagonales de secours des cinq arènes peuvent reprendre le profil facetté de leur colonne approuvée. Leur inclinaison garde les renforts hors du tablier jusqu’à la contraction maximale. Les formes simples servent de secours si le modèle approuvé est indisponible à la construction.
+
+## P4 — Colonnes sculptées sur les Promenades
+
+Les 12 montants des Promenades de Storm Harbor peuvent désormais recevoir la colonne portuaire approuvée, dans les créneaux de colonnes existants. Le portique complet prend la priorité dès qu’il s’affiche, et la colonne individuelle prend le relais si elle est déjà montée. Quand un seul montant est sélectionné, le modèle se place du côté le plus proche de la caméra. Les cinq arènes totalisent ainsi 60 montants éligibles à un remplacement individuel.
+
+Les 60 montants de secours reprennent aussi le fût facetté approuvé de leur arène. Ils restent verticaux pendant la contraction et conservent leurs ancrages dans les traverses. Si le fût est indisponible à la construction, le montant simple reprend le même emplacement.
+
+## P4 — Châssis ajourés sous l’Épine céleste
+
+Chacun des dix tabliers de l’Épine céleste peut recevoir un seul châssis ajouré à la place de son socle plat, de ses deux longerons et de sa traverse. Le châssis court approuvé d’Orbital s’ajuste à l’empreinte du tablier et rend 200 pièces éligibles sur les cinq arènes. Il suit la contraction et partage le quota des treillis de jonction. Les quatre pièces réapparaissent ensemble si le châssis se décharge. Un berceau complet a la priorité dès son arrivée.
+
+Sur les 50 tabliers des cinq arènes, les 100 longerons et 50 traverses de secours reprennent le profil forgé de Tower Run dès que le modèle est disponible à la construction. Les pièces suivent le tablier pendant la contraction. Les châssis et les berceaux complets gardent la priorité, et les formes simples restent disponibles au chargement sans le maillage approuvé.
+
+## P4 — Châssis sculptés sous les tabliers des Promenades
+
+Sur les cinq arènes, 80 socles plats peuvent recevoir le châssis ajouré approuvé d’Orbital. Aux 20 portiques extérieurs et aux 10 jonctions centrales, le même châssis remplace le socle et son treillis. Chaque montage suit la contraction et occupe un créneau du quota des treillis. Aux jonctions centrales, il dépend du raccord physique à l’Épine céleste. Le treillis forgé approuvé sert de repli si le châssis ou le socle d’origine se décharge. Les berceaux complets et l’habillage portuaire ont la priorité.
+
+Les 30 renforts de secours des portiques peuvent aussi reprendre le treillis d’Orbital, ajusté sous le tablier pour rendre ses travées ajourées visibles depuis le sol. Ils suivent la contraction et s’effacent quand un châssis complet prend le relais. Le bloc d’origine reste disponible si la source approuvée manque à la construction.
+
+## P4 — Platelage nervuré des grandes traversées aériennes
+
+Les 16 tabliers des deux Promenades et les 10 tabliers de l’Épine céleste sont éligibles dans chaque arène. Quand la coque intégrale ne couvre pas la surface, deux sections du relief approuvé de passerelle épousent le panneau d’origine. Elles reprennent sa finition, suivent le rétrécissement et occupent un créneau existant de passerelle. Elles s’arrêtent à l’intérieur du tablier et se retirent ensemble si le panneau se décharge, si une fixation disparaît ou si une alerte se déclenche.
+
+## P4 — Platelage nervuré des passerelles de Tower Run
+
+Les quatre passerelles à volets peuvent recevoir le relief antidérapant du modèle approuvé de passerelle. Deux sections en qualité basse et trois dans les profils supérieurs couvrent le panneau existant, dans les créneaux de détail des passerelles. Les sections suivent le raccourcissement du tablier et reprennent sa finition métallique. Dès le début d’une alerte ou en cas de perte d’une fixation, le jeu réaffiche le panneau d’origine.
+
 ## P4 — Relief antidérapant sur les paliers hors gabarit
 
 Les paliers compacts de Classic Grid, Tower Run, Crossroads et Orbital peuvent recevoir un relief antidérapant en 3D lorsque le modèle complet du palier couvre mal leur surface. La finition reprend une seule pièce du modèle approuvé du jeu, s’ajuste aux dimensions du panneau d’origine et reprend sa teinte et son matériau. Les grands paliers centraux et les réceptions rectangulaires de Crossroads sont concernés.
@@ -724,7 +1096,7 @@ The original Reactor Spire, Service Crane and Perimeter Gate OBJ/MTL sources liv
 - Real-engine gameplay matrix: every arena × every disaster + every allowed Double Chaos pair
 - Four-client Studio E2E harness with virtual UI clicks, movement, voting, joins and leaves
 - AI Survivor animation state blending (idle/walk/run/jump/fall) and map-aware/hazard-aware navigation
-- 90 engine specs assigned exactly once across Open Cloud CI shards
+- 95 engine specs assigned exactly once across Open Cloud CI shards
 - **Published premium-platformer gameplay:** progressive physical route widths, server-verified airborne parkour mastery medals/records, daily/weekly mastery goals and veteran Tower Run's real timed rising bridge shutters alternating with collapsing bridge challenges. Both use authentic warnings, obstacle collision and fair Skyrail/AI safeguards. This gameplay is present in the latest verified public release described above; [the full premium quality benchmark and remaining acceptance plan](docs/PREMIUM_BENCHMARK_AND_COMPLETION_PLAN_2026-10-30.md) still require actual Android/PC certification.
 - No paid assets required
 

@@ -144,7 +144,7 @@ function ImpactSurfaceScarKit.crack(index, total, radius, kind, family)
 end
 
 function ImpactSurfaceScarKit.build(parent, frame, kind, tier,
-        material, groundColor, hazardColor, radius, reduced)
+        material, groundColor, hazardColor, radius, reduced, fitCrack, centerMesh)
     if typeof(parent) ~= "Instance" or typeof(frame) ~= "CFrame"
         or type(radius) ~= "number" or radius ~= radius
         or math.abs(radius) == math.huge or radius <= 0 then
@@ -156,7 +156,7 @@ function ImpactSurfaceScarKit.build(parent, frame, kind, tier,
     if not style then return {} end
     local extent = math.clamp(radius, 2, 40)
     local built = {}
-    local crater = Instance.new(kind == "Meteor" and "WedgePart" or "Part")
+    local crater = centerMesh or Instance.new(kind == "Meteor" and "WedgePart" or "Part")
     crater.Name = "Impact" .. style.Signature
     crater.Anchored = true
     crater.CanCollide = false
@@ -179,11 +179,14 @@ function ImpactSurfaceScarKit.build(parent, frame, kind, tier,
         local spec = ImpactSurfaceScarKit.crack(
             index, style.CrackCount, extent, kind, style.Family
         )
-        local piece = Instance.new(spec.Wedge and "WedgePart" or "Part")
+        local size = spec.Size
+        local crackFrame = frame * CFrame.new(spec.Offset) * CFrame.Angles(0, spec.Angle, 0)
+        local mesh
+        if fitCrack then mesh, size, crackFrame = fitCrack(size, crackFrame) end
+        local piece = mesh or Instance.new(spec.Wedge and "WedgePart" or "Part")
         piece.Name = style.Signature .. spec.Name .. index
-        piece.Size = spec.Size
-        piece.CFrame = frame * CFrame.new(spec.Offset)
-            * CFrame.Angles(0, spec.Angle, 0)
+        piece.Size = size
+        piece.CFrame = crackFrame
         piece.Anchored = true
         piece.CanCollide = false
         piece.CanTouch = false

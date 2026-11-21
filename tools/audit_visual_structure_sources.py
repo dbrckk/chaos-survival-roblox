@@ -319,7 +319,7 @@ print("PASS station geometry and source-template mutation revocation")
 
 # Creator-owned rectangular/long 7-MeshPart rim art added 13 November.
 # Unlike a full underside carapace, rim replacement may mask ONLY four
-# WedgePart edges and must keep the native underframe and all hazard cues.
+# bevels and must keep the native underframe and all hazard cues.
 rim_server = (ROOT / "src/server/PremiumPlatformRimAssets.lua").read_text(
     encoding="utf8")
 rim_client = (ROOT / "src/client/ApprovedPlatformRimMeshKit.lua").read_text(
@@ -352,7 +352,7 @@ for clause in (
 for clause in (
     "if pieces~=7 then return nil end",
     "if #parts~=7 then copy:Destroy();return nil end",
-    'edge:GetAttribute("OriginalStructuralBevel")~=true',
+    'PlatformIdentityLodRules.isAuthoredPlatformBevel(edge)',
     'underside:GetAttribute("PremiumArchitecturalSurface")~=true',
     "if scale<.60 or coverLong<.90 or coverShort<.87",
     'piece:SetAttribute("OriginalPlatformRim3D",true)',
@@ -367,8 +367,8 @@ assert 'active[id] == "carapace" or active[id] == "rim"' in rim_native
 assert 'if id and (active[id] == "carapace" or active[id] == "cradle")' in rim_native
 for clause in (
     "OriginalPlatformRimAxisSwap",
-    "rimSwapped and ratioZ or ratioX",
-    "rimSwapped and ratioX or ratioZ",
+    "axesSwapped and ratioZ or ratioX",
+    "axesSwapped and ratioX or ratioZ",
 ):
     assert clause in rim_finish
 for clause in (
@@ -388,7 +388,7 @@ assert "task.defer(PremiumPlatformRimAssets.start)" in rim_init
 # Healthy desktop uses the SAME 4/8 existing approved slots over
 # separated physical routes; Android and pressured clients remain nearest
 # only. Source provenance is sampled once each rebuild, but rechecked at
-# mounting so an invalidated source never masks native WedgeParts.
+# mounting so an invalidated source never masks native bevels.
 for clause in (
     'local cap=tier=="High" and (touch and 2 or 12)',
     'or tier=="Medium" and (touch and 1 or 6) or 1',
@@ -413,13 +413,13 @@ assert "RenderStepped" not in rim_client and "Heartbeat:Connect" not in rim_clie
 identity=(ROOT/"src/client/arena-platform-identity.client.lua").read_text(
     encoding="utf8")
 for clause in (
-    "local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)",
+    "local function decorateTowers(platform, index, theme, tier, genuineUnderdeck, profiles)",
     "if genuineUnderdeck then return end",
-    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)',
+    'local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, profiles)',
     'if tier.Name == "High" and not genuineUnderdeck then',
     'decorateTowers(platform, visualIndex, theme, tier,',
     'decorateHarbor(platform, visualIndex, theme, tier,',
-    'authenticUnderdeck)',
+    'authenticUnderdeck, platformArtProfiles)',
     '"HarborCargoLashing" .. index',
     '"TowerPlatformLiftCore" .. index',
     '"HarborKeelMount" .. index',
@@ -432,7 +432,7 @@ print("PASS two genuine approved perimeter rim assets: PC four-sector spread, un
 
 # P4 large-deck bevel coverage must not regress to a hard-coded first-24
 # physical platform gate. Only approved 18-stud, seven-mesh hulls may
-# mask all four fully replicated, noncolliding server WedgeParts.
+# mask all four fully replicated, noncolliding server bevels.
 hull = (ROOT / "src/client/PremiumLargeDeckHullMeshKit.lua").read_text(
     encoding="utf8")
 identity = (ROOT / "src/client/arena-platform-identity.client.lua").read_text(
@@ -442,7 +442,7 @@ for clause in (
     'deck.Name ~= "Platform" .. tostring(n)',
     "n > 512",
     "local function nativeFallback(decor, deck)",
-    'bevel:GetAttribute("OriginalStructuralBevel") ~= true',
+    'PlatformIdentityLodRules.isAuthoredPlatformBevel(bevel)',
     'frame:GetAttribute("PremiumArchitecturalSurface") ~= true',
     'local cap = tier == "High" and (touch and 3 or 6)',
     "if stress >= 2 or type(platforms)",
@@ -852,7 +852,8 @@ for clause in (
     "weld.Part0=platform",
     "weld.Part1=piece",
     "entry.joints[piece].C0=CFrame.new(",
-    "piece.Size=Vector3.new(original.X*fx,original.Y,",
+    "piece.Size=Vector3.new(original.X*(turned and fz or fx),original.Y,",
+    "original.Z*(turned and fx or fz))",
     "local safe = refit(entry,platform)",
     'platform:GetPropertyChangedSignal(prop):Connect(refresh)',
     "if not realFloorScale(base,arena) then",
@@ -909,7 +910,8 @@ for marker in (
     'if not routes[data.route] and data.priority<=ceiling then',
     'local actual=0',
     'entry.model:GetDescendants()',
-    'if actual~=7 then return false end',
+    'local partCount=entry.hoistBeam and HarborHoist.PartCount or 7',
+    'if actual~=partCount then return false end',
     'entry.source:GetDescendants()',
     'if sourceCount~=7 then return false end',
     'source.DescendantRemoving:Connect(function(child)',
@@ -932,7 +934,7 @@ assert '.RenderStepped:Connect(' not in remaining
 assert '.Heartbeat:Connect(' not in remaining
 for marker in (
     'ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,',
-    'RemainingVisualNativeCensus.sample(player, arena, profile.Name)',
+    'RemainingVisualNativeCensus.sample(player, arena, profile.Name, cameraReady and cameraPoint or nil)',
     'LocalP4RemainingStructuralNativePiecesReplaced',
 ):
     assert marker in SCENERY, "P4 telemetry missing: " + marker
@@ -954,7 +956,11 @@ for marker in (
     'counts[key..suffix] += 1',
     'local signal = part.Material==Enum.Material.Neon',
     '"AscensionStructure", "AscensionSignal"',
-    '"HelixStructure", "HelixSignal"',
+    '"HelixStructure", "HelixSignal", "HelixAccessChassis"',
+    'lower:match("^helixcentergrain%d+$")',
+    'lower:match("^entrychassis%d+$")',
+    'lower:match("^corechassis%d+$")',
+    'counts.HelixAccessChassis += 1',
     '"DistrictStructure", "DistrictSignal"',
     '"PlatformSupportStructure", "PlatformSupportSignal"',
     '"SkySpineStructure", "SkySpineSignal"',
@@ -962,6 +968,10 @@ for marker in (
     'or key=="District" or key=="PlatformSupport"',
     'or key=="SkySpine" or key=="Promenade"',
     '"HarborFleet", "PerimeterStations"',
+    'harborLandingIndices(arena)',
+    'harborNearGroup(part, key, harborIndices, decor)',
+    'for _, key in ipairs(harborNearKeys) do',
+    '"HarborLandingStructure", "HarborLandingSignals", "HarborTerraceExits"',
     'set(player, "AllScanned", scanned)',
 ):
     assert marker in census, "P4 runtime census guard missing: " + marker

@@ -6,6 +6,7 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 
 local Kit={}
 local NODE_ID=104654294187035
+Kit.NodeAssetId = NODE_ID
 local STRUT_ID=138666009076890
 local NODE_BOUNDS=Vector3.new(4.36,4.36,4.36)
 local STRUT_BOUNDS=Vector3.new(8.46,1.24,1.10)
@@ -104,6 +105,27 @@ local function bothApproved()
     local strut,strutHolder=approved("Strut",STRUT_ID,STRUT_BOUNDS)
     if not strut or strutHolder~=holder then return nil end
     return node,strut,holder
+end
+
+local function nodeProfile(expected)
+    local node = approved("Node", NODE_ID, NODE_BOUNDS)
+    if not node then return nil end
+    local profile
+    for _, part in ipairs(node:GetChildren()) do
+        if part:IsA("MeshPart") and (part.Size - expected).Magnitude < 0.075 then
+            if profile or not part.Archivable or part.MeshId == "" then return nil end
+            profile = part
+        end
+    end
+    return profile
+end
+
+function Kit.coreProfile()
+    return nodeProfile(Vector3.new(2.96, 2.9503, 2.96))
+end
+
+function Kit.ringProfile()
+    return nodeProfile(Vector3.new(4.11, 0.39, 4.11))
 end
 
 local function authenticPart(native,name,size,where,kind,alpha,animated)

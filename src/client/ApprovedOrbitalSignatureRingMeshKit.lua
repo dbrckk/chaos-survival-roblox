@@ -2,6 +2,7 @@
 -- rectangular native ReactorArcs of the actual Orbital signature landmark.
 -- Atomic cosmetics only: no new loop, physics, damages or remote fetches.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit={}
 local MODEL_ID=125070862497818
@@ -32,7 +33,7 @@ local function restore()
     entry=nil
     for _,c in ipairs(current.connections) do c:Disconnect() end
     for part,alpha in pairs(current.natives) do
-        if part.Parent==current.owner and part:IsA("Part")
+        if part.Parent==current.owner and part:IsA("BasePart")
             and part.Anchored and not part.CanCollide
             and not part.CanTouch and not part.CanQuery
             and part.Transparency==1 then
@@ -124,20 +125,17 @@ local function context(arena)
     local arcs={}
     for k=0,SEGMENTS-1 do
         local arc=owner:FindFirstChild("ReactorArc"..(k+1))
-        if not arc or not arc:IsA("Part") or arc.Parent~=owner
-            or arc.Shape~=Enum.PartType.Block
-            or not arc.Anchored or arc.CanCollide
-            or arc.CanTouch or arc.CanQuery
-            or (arc.Size-Vector3.new(CHORD,1.35,2.1)).Magnitude>.10 then
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(arc,owner,"Part")
+        if not size or (size-Vector3.new(CHORD,1.35,2.1)).Magnitude>.10 then
             return nil
         end
         local angle=k*(2*math.pi)/SEGMENTS
         local intended=CFrame.new(center+Vector3.new(
             RADIUS*math.sin(angle),RADIUS*math.cos(angle),0))
             *CFrame.Angles(0,0,-angle)
-        if (arc.Position-intended.Position).Magnitude>.16
-            or arc.CFrame.LookVector:Dot(intended.LookVector)<.999
-            or arc.CFrame.UpVector:Dot(intended.UpVector)<.999 then
+        if (pose.Position-intended.Position).Magnitude>.16
+            or pose.LookVector:Dot(intended.LookVector)<.999
+            or pose.UpVector:Dot(intended.UpVector)<.999 then
             return nil
         end
         arcs[#arcs+1]=arc
@@ -146,13 +144,9 @@ local function context(arena)
     -- support system; also reject partially streamed core structures.
     local core=owner:FindFirstChild("SuspendedReactorCore")
     local retainer=owner:FindFirstChild("CoreRetainer")
-    if not core or not core:IsA("Part") or core.Parent~=owner
-        or core.Shape~=Enum.PartType.Ball or not core.Anchored
-        or core.CanCollide or core.CanTouch or core.CanQuery
-        or (core.Size-Vector3.new(10,10,10)).Magnitude>.1
-        or not retainer or not retainer:IsA("Part")
-        or retainer.Parent~=owner or not retainer.Anchored
-        or retainer.CanCollide or retainer.CanTouch or retainer.CanQuery then
+    local coreSize=ExteriorDetailGeometry.monumentFootprint(core,owner,"Part",Enum.PartType.Ball)
+    local retainerSize=ExteriorDetailGeometry.monumentFootprint(retainer,owner,"Part")
+    if not coreSize or (coreSize-Vector3.new(10,10,10)).Magnitude>.10 or not retainerSize then
         return nil
     end
     return base,owner,arcs,center

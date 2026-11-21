@@ -1,7 +1,8 @@
--- Four creator-owned sculpted ExteriorRidge originals, 3 wedges each.
+-- Four creator-owned sculpted ExteriorRidge originals, 3 fallback pieces each.
 -- A single existing scenery sample decides ranked camera LOD; no frame loop.
 -- All wedge originals are hidden only after a fully validated mesh mounts.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit={}
 local CORNERS={"NW","NE","SW","SE"}
@@ -43,7 +44,7 @@ local function dispose(owner)
     mounted[owner]=nil
     for _,c in ipairs(entry.connections) do c:Disconnect() end
     for part,alpha in pairs(entry.natives) do
-        if part.Parent==owner and part:IsA("WedgePart")
+        if part.Parent==owner and part:IsA("BasePart")
             and part.Anchored and not part.CanCollide
             and not part.CanTouch and not part.CanQuery
             and part.Transparency==1 then
@@ -155,14 +156,20 @@ local function realRidges(arena,owner,corner)
             (index-2)*spec.sx*8,height*.5-1.5,
             (index-2)*spec.sz*6))
             *CFrame.Angles(0,yaw+(index-2)*.32,0)
-        if not ridge or not ridge:IsA("WedgePart")
-            or ridge.Parent~=owner or not ridge.Anchored
-            or ridge.CanCollide or ridge.CanTouch or ridge.CanQuery
-            or (ridge.Size-Vector3.new(11+index*3,
+        local size, pose = ExteriorDetailGeometry.footprint(ridge, owner, 88962643359267, "WedgePart")
+        local turns = size and ridge:GetAttribute("ExteriorRidgeCapTurns")
+        if turns ~= nil then
+            if arena:GetAttribute("VariantId") ~= "Harbor" or not ridge:IsA("MeshPart")
+                or type(turns) ~= "number" or turns % 1 ~= 0 or math.abs(turns) > 2
+                or ridge:GetAttribute("ExteriorDetailAxisSwap") == true then return nil end
+            if turns % 2 ~= 0 then size = Vector3.new(size.Z, size.Y, size.X) end
+            pose *= CFrame.Angles(0, -turns * math.pi * .5, 0)
+        end
+        if not size or (size-Vector3.new(11+index*3,
                 height,13+index*2)).Magnitude>.12
-            or (ridge.Position-expected.Position).Magnitude>.16
-            or ridge.CFrame.LookVector:Dot(expected.LookVector)<.999
-            or ridge.CFrame.UpVector:Dot(expected.UpVector)<.999
+            or (pose.Position-expected.Position).Magnitude>.16
+            or pose.LookVector:Dot(expected.LookVector)<.999
+            or pose.UpVector:Dot(expected.UpVector)<.999
             or math.abs(ridge.Transparency-
                 (.07+index*.04))>.03
                 and ridge.Transparency~=1 then
@@ -375,12 +382,13 @@ function Kit.count()
     return count
 end
 
-function Kit.replacedNativeCount()
+function Kit.replacedNativeCount(primitivesOnly)
     local count=0
     for owner,entry in pairs(mounted) do
         if entry.model.Parent==bucket and #entry.pieces==7 then
             for part in pairs(entry.natives) do
-                if part.Parent==owner and part.Transparency==1 then
+                if part.Parent==owner and part.Transparency==1
+                    and (not primitivesOnly or part:IsA("WedgePart")) then
                     count+=1
                 end
             end

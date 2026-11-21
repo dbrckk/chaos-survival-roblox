@@ -83,7 +83,7 @@ function DisasterClimaxSignatureKit.recipe(kind, index, count, span, stage)
 end
 
 function DisasterClimaxSignatureKit.emit(parent, kind, deckCFrame, span,
-        stage, primary, secondary, tier, reduced)
+        stage, primary, secondary, tier, reduced, clonePiece)
     local count = DisasterClimaxSignatureKit.count(tier, reduced)
     local pieces = {}
     if not parent or not ALLOWED[kind] or typeof(deckCFrame) ~= "CFrame"
@@ -98,7 +98,8 @@ function DisasterClimaxSignatureKit.emit(parent, kind, deckCFrame, span,
     for index = 1, count do
         local spec = DisasterClimaxSignatureKit.recipe(kind, index, count, span, stage)
         if not spec then break end
-        local piece = Instance.new(spec.Wedge and "WedgePart" or "Part")
+        local piece = (clonePiece and clonePiece())
+            or Instance.new(spec.Wedge and "WedgePart" or "Part")
         piece.Name = (kind == "freeze" and "FreezeCrystalClimax"
             or "ShockDischargeClimax") .. index
         piece.Size = spec.Size

@@ -48,6 +48,35 @@ local function genuine(model, spec)
         and math.abs(box.Y-spec.height) < (spec.heightTolerance or .8)
 end
 
+local function identifyAccessChassisRegions(model)
+    -- The importer joins the two brass inserts into SIGNAL and the four
+    -- open bays and cassette mounts into ALLOY. ARMOR is the lighter pair
+    -- of segmented spars used for ordinary landing underframes.
+    local signal, lattice, spars
+    local sparsMatches = 0
+    for _, piece in ipairs(model:GetChildren()) do
+        if not piece:IsA("MeshPart") or not piece.Archivable or piece.MeshId == "" then continue end
+        local size = piece.Size
+        local major, minor = math.max(size.X, size.Z), math.min(size.X, size.Z)
+        if math.abs(major - 12.15) < .18 and math.abs(minor - 1.09) < .10
+            and size.Y > 0 and size.Y < .09 then
+            if signal then return end
+            signal = piece
+        elseif math.abs(major - 11.5957) < .12 and math.abs(minor - 4.492) < .12
+            and math.abs(size.Y - .215) < .055 then
+            if lattice then return end
+            lattice = piece
+        elseif math.abs(major - 11.46) < .12 and math.abs(minor - 5.03) < .12
+            and math.abs(size.Y - .37) < .055 then
+            spars = piece
+            sparsMatches += 1
+        end
+    end
+    if signal then signal.Name = "UnderdeckSignal" end
+    if lattice then lattice.Name = "UnderdeckLattice" end
+    if sparsMatches == 1 then spars.Name = "UnderdeckSpars" end
+end
+
 function Kit.start()
     if started then return end
     started = true
@@ -87,6 +116,7 @@ function Kit.start()
                     clean:SetAttribute("CosmeticOnly", true)
                     clean:SetAttribute("Original3DAssetId", spec.id)
                     clean:SetAttribute("P4OriginalRemainingStructure3D", true)
+                    if name == "AccessChassis" then identifyAccessChassisRegions(clean) end
                     clean.Parent = folder
                     folder:SetAttribute(name.."Ready", true)
                     break

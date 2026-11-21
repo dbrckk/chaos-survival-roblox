@@ -1,8 +1,9 @@
 --!strict
 -- Original volumetric cladding of the four existing structural corner columns.
--- No remote meshes, fabricated asset IDs, physics, contacts or fake walkable
--- geometry. Native geometry is always available while licensed 2K PBR
--- MaterialVariants are owned by the existing camera-budgeted client selector.
+-- Cladding and instruments can reuse approved profiles supplied by MapBuilder.
+-- Native geometry remains available without physics or contacts.
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+
 local ArchitecturalCladding = {}
 
 local MATERIALS = {
@@ -13,11 +14,19 @@ local MATERIALS = {
     Harbor = {shell = Enum.Material.CorrodedMetal, inset = Enum.Material.DiamondPlate},
 }
 
-local function piece(model, origin, name, kind, size, frame, color, material, alpha)
-    local p = Instance.new(kind)
+local function piece(model, origin, name, kind, size, frame, color, material, alpha,
+    meshProfile: MeshPart?, alongX: boolean?, meshYaw: number?)
+    local pose = origin * frame
+    local meshPose = if meshYaw then pose * CFrame.Angles(0, meshYaw, 0) else pose
+    local p = RouteSignalGeometry.fit(meshProfile, meshPose, size, nil, alongX)
+    if not p then
+        p = Instance.new(kind)
+        p.Size = size
+        p.CFrame = pose
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
+    end
     p.Name = name
-    p.Size = size
-    p.CFrame = origin * frame
     p.Color = color
     p.Material = material
     p.Transparency = alpha or 0
@@ -26,20 +35,18 @@ local function piece(model, origin, name, kind, size, frame, color, material, al
     p.CanTouch = false
     p.CanQuery = false
     p.CastShadow = false
-    p.TopSurface = Enum.SurfaceType.Smooth
-    p.BottomSurface = Enum.SurfaceType.Smooth
     p.Parent = model
     return p
 end
 
-local function beam(model, origin, name, from, to, thick, tone, material)
+local function beam(model, origin, name, from, to, thick, tone, material, meshProfile: MeshPart?)
     local delta = to - from
     return piece(model, origin, name, "Part",
         Vector3.new(thick, thick, delta.Magnitude),
-        CFrame.lookAt((from + to) * 0.5, to), tone, material, 0.05)
+        CFrame.lookAt((from + to) * 0.5, to), tone, material, 0.05, meshProfile)
 end
 
-function ArchitecturalCladding.build(decor, base, variantId, theme)
+function ArchitecturalCladding.build(decor, base, variantId, theme, headProfile: MeshPart?, forgedProfile: MeshPart?)
     if not decor or not base or not base:IsA("BasePart") then return 0 end
     local finish = MATERIALS[variantId]
     if not finish or not theme then return 0 end
@@ -74,31 +81,35 @@ function ArchitecturalCladding.build(decor, base, variantId, theme)
         -- Architectural mass, not a single unsupported straight cuboid.
         local foot = piece(casing, origin, "FoundationFoot", "Part",
             Vector3.new(5.5, 1.0, 5.5),
-            CFrame.new(0, base.Size.Y*.5 - 3.68, 0), dark, finish.shell, 0.03)
+            CFrame.new(0, base.Size.Y*.5 - 3.68, 0), dark, finish.shell, 0.03, forgedProfile)
         casing.PrimaryPart = foot
+        -- Turn each casting's tall face outward and keep the native fallback frame.
         piece(casing, origin, "ArmoredFrontShell", "Part",
             Vector3.new(3.35, 6.4, 0.65),
-            CFrame.new(0, 0, -1.7), shell, finish.shell, 0.04)
+            CFrame.new(0, 0, -1.7), shell, finish.shell, 0.04, headProfile, true, math.pi)
         piece(casing, origin, "ArmoredRearShell", "Part",
             Vector3.new(3.1, 5.7, 0.55),
-            CFrame.new(0, 0.18, 1.65), machined, finish.inset, 0.05)
+            CFrame.new(0, 0.18, 1.65), machined, finish.inset, 0.05, headProfile, true)
+        -- Keep the molded slope facing along the fin's depth, across either import axis.
         for side = -1, 1, 2 do
             piece(casing, origin, "AngledArmorFin" .. tostring(side), "WedgePart",
                 Vector3.new(1.35, 5.8, 2.0),
                 CFrame.new(side * 2.05, -0.12, 0)
                     * CFrame.Angles(0, side * 0.14, 0),
-                shell:Lerp(machined, 0.28), finish.inset, 0.05)
+                shell:Lerp(machined, 0.28), finish.inset, 0.05, headProfile, true)
             beam(casing, origin, "DiagonalLoadSpar" .. tostring(side),
                 Vector3.new(side * 2.2, -3.3, -1.15),
                 Vector3.new(side * 0.85, 3.15, -1.15),
-                0.36, machined, finish.shell)
+                0.36, machined, finish.shell, forgedProfile)
         end
         piece(casing, origin, "MachinedUpperCollar", "Part",
             Vector3.new(5.9, 0.65, 5.0), CFrame.new(0, 4.15, 0),
-            machined, finish.shell, 0.02)
-        piece(casing, origin, "RecessedCrown", "Part",
-            Vector3.new(4.5, 0.42, 3.8), CFrame.new(0, 4.58, 0),
-            dark, finish.inset, 0.04)
+            machined, finish.shell, 0.02, forgedProfile)
+        -- Instrument mounts use the authored front, even if the imported axes are swapped.
+        local socketFrame = origin * CFrame.new(0, 4.58, 0)
+        local socketSize = Vector3.new(4.5, 0.42, 3.8)
+        piece(casing, socketFrame, "RecessedCrown", "Part", socketSize, CFrame.identity,
+            dark, finish.inset, 0.04, forgedProfile)
         -- The arena-specific upper silhouette reads even at mobile distance.
         local reach = variantId == "Towers" and 8.8
             or (variantId == "Harbor" and 7.8 or 6.7)
@@ -107,21 +118,34 @@ function ArchitecturalCladding.build(decor, base, variantId, theme)
                 Vector3.new(side * 1.1, 4.65, 0),
                 Vector3.new(side * reach * 0.63, 6.4, -2.1),
                 variantId == "Harbor" and 0.70 or 0.43,
-                machined, finish.shell)
+                machined, finish.shell, forgedProfile)
         end
-        local crown = piece(casing, origin, "LandmarkNavigationHead", "Part",
-            Vector3.new(1.55, 1.55, 1.55), CFrame.new(0, 6.8, 0),
-            theme.Detail:Lerp(theme.Accent, 0.24),
-            variantId == "Orbital" and Enum.Material.CeramicTiles
-                or finish.shell, 0.06)
-        crown.Shape = variantId == "Orbital"
-            and Enum.PartType.Ball or Enum.PartType.Cylinder
-        -- Fine mechanical seams remain reflective, but NEVER red/orange
-        -- warning colors, blinking lights or a fake entry/exit cue.
-        piece(casing, origin, "CrownInstrumentSpine", "Part",
-            Vector3.new(2.4, 0.16, 0.28), CFrame.new(0, 5.1, -1.7),
+        local headName = "LandmarkNavigationHead"
+        local headColor = theme.Detail:Lerp(theme.Accent, 0.24)
+        local headMaterial = variantId == "Orbital" and Enum.Material.CeramicTiles or finish.shell
+        -- Start inside the native socket and keep the sculpted tip above the approved casing.
+        local headSize = Vector3.new(1.55, 2.75, 1.55)
+        local headFrame = socketFrame * CFrame.new(0, (socketSize.Y + headSize.Y) * 0.5 - 0.05, 0)
+            * CFrame.Angles(0, math.pi, 0)
+        local head = RouteSignalGeometry.fit(headProfile, headFrame, headSize, nil, true)
+        if head then
+            head.Name = headName
+            head.Color = headColor
+            head.Material = headMaterial
+            head.Transparency = 0.06
+            head.Parent = casing
+        else
+            local fallback = piece(casing, origin, headName, "Part",
+                Vector3.new(1.55, 1.55, 1.55), CFrame.new(0, 6.8, 0), headColor, headMaterial, 0.06)
+            fallback.Shape = variantId == "Orbital" and Enum.PartType.Ball or Enum.PartType.Cylinder
+        end
+        -- Seat the spine in the native crown and clear the slightly higher fitted cap.
+        local spineSize = Vector3.new(2.4, 0.28, 0.28)
+        local spineFrame = CFrame.new(0, (socketSize.Y + spineSize.Y) * 0.5 - 0.02,
+            -socketSize.Z * 0.5 + 0.20)
+        piece(casing, socketFrame, "CrownInstrumentSpine", "Part", spineSize, spineFrame,
             theme.Secondary:Lerp(theme.Detail, 0.55),
-            Enum.Material.Metal, 0.18)
+            Enum.Material.Metal, 0.18, forgedProfile)
         count += #casing:GetChildren()
     end
     return count

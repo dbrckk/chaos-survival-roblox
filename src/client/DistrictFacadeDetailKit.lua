@@ -1,5 +1,5 @@
 --!strict
--- Render the six optional details of a district service entrance LOCALLY.
+-- Render the optional entrance and roofline details with the district LOD.
 -- Server replicates the readable two-piece doorway only; 16 buildings no
 -- longer send the optional 96 cosmetic Parts to every joining phone.
 -- This kit is called solely by the existing 0.65/0.90s scenery LOD loop.
@@ -12,6 +12,20 @@ local stylesModule = shared and shared:FindFirstChild("DistrictFacadeStyles")
 local Styles = if stylesModule
     then require(stylesModule)
     else require("../shared/DistrictFacadeStyles")
+
+local Armor = require(script.Parent.ApprovedPerimeterArmorMeshKit)
+local Bridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
+local LargeStructures = require(script.Parent.PremiumLargeStructureMeshKit)
+local Reactor = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
+
+type Profile = {source: MeshPart, id: number, rotation: CFrame?, swapXZ: boolean?, swapXY: boolean?}
+type Profiles = {casting: Profile?, slope: Profile?, lintel: Profile?, shaft: Profile?, collar: Profile?}
+
+local function profile(source: MeshPart?, id: number?, rotation: CFrame?, swapXZ: boolean?,
+    swapXY: boolean?): Profile?
+    if not source or not id then return nil end
+    return {source = source, id = id, rotation = rotation, swapXZ = swapXZ, swapXY = swapXY}
+end
 
 local DistrictFacadeDetailKit = {}
 local MEDIUM = {
@@ -26,6 +40,31 @@ local HIGH = {
     [3] = {"TurbineDuctCollar-1", "TurbineDuctCollar1"},
     [4] = {"AerialCableConduit-1", "AerialCableConduit1"},
 }
+
+-- Resolve each verified template once for the entire district pass.
+function DistrictFacadeDetailKit.sources(tierName, pressure): Profiles
+    if (tierName ~= "Medium" and tierName ~= "High") or (tonumber(pressure) or 0) >= 1 then
+        return {}
+    end
+    local cast = Armor.wayfinderProfile()
+    local slope
+    if cast then
+        local sloped, yaw, swapXZ, slopeId = Armor.slopedCapProfile(cast)
+        slope = profile(sloped, slopeId, yaw, swapXZ)
+    end
+    local swept = Bridge.sweptProfile()
+    local shaft, shaftId = LargeStructures.forgedShaftProfile()
+    local ring = if tierName == "High" then Reactor.ringProfile() else nil
+    local crosswise = swept and swept.Size.X < swept.Size.Z or false
+    return {
+        casting = profile(cast, 88962643359267),
+        slope = slope,
+        lintel = profile(swept, Bridge.AssetId,
+            if crosswise then CFrame.Angles(0, math.pi / 2, 0) else nil, crosswise),
+        shaft = profile(shaft, shaftId),
+        collar = profile(ring, Reactor.NodeAssetId, CFrame.Angles(0, 0, math.pi / 2), nil, true),
+    }
+end
 
 local function owned(model, name)
     local child = model:FindFirstChild(name)
@@ -69,12 +108,33 @@ local function countOwned(model, names)
 end
 
 local function add(model, origin, name, kind, size, localFrame,
-    color, material, requiredTier)
+    color, material, requiredTier, artwork: Profile?)
     local existing = owned(model, name)
-    if existing then return existing end
-    -- Do not override foreign/server authored components on a streaming race.
-    if model:FindFirstChild(name) then return nil end
-    local piece = Instance.new(kind)
+    local source = artwork and artwork.source
+    if existing then
+        if source and artwork and existing:IsA("MeshPart") and existing.MeshId == source.MeshId
+            and existing:GetAttribute("Original3DAssetId") == artwork.id then return existing end
+        if not source and existing.ClassName == kind then return existing end
+    elseif model:FindFirstChild(name) then
+        return nil
+    end
+
+    local mesh = source and source:Clone()
+    if not mesh and existing and existing.ClassName == kind then return existing end
+    local piece = mesh or Instance.new(kind)
+    if mesh and artwork then
+        mesh:ClearAllChildren()
+        mesh.TextureID = ""
+        mesh.MaterialVariant = ""
+        mesh.Transparency = 0
+        mesh.LocalTransparencyModifier = 0
+        mesh.DoubleSided = true
+        mesh:SetAttribute("Original3DAssetId", artwork.id)
+        if artwork.rotation then localFrame *= artwork.rotation end
+        if artwork.swapXZ then size = Vector3.new(size.Z, size.Y, size.X) end
+        -- The collar's normal is mapped from the mesh's Y axis to the duct's X axis.
+        if artwork.swapXY then size = Vector3.new(size.Y, size.X, size.Z) end
+    end
     piece.Name = name
     piece.Size = size
     piece.CFrame = origin * localFrame
@@ -95,6 +155,7 @@ local function add(model, origin, name, kind, size, localFrame,
         or name:find("AerialCableConduit", 1, true) then
         piece:SetAttribute("PreserveNativeMaterial", true)
     end
+    if existing then existing:Destroy() end
     piece.Parent = model
     return piece
 end
@@ -118,59 +179,56 @@ local function originAndPalette(model)
         door.Color, recess.Color, rim.Color
 end
 
-local function makeMedium(model, origin, steel, alloy, finish)
+local function makeMedium(model, origin, steel, alloy, finish, profiles: Profiles)
     add(model, origin, "ServiceEntryLintel", "Part",
         Vector3.new(6.7, 0.62, 0.95),
-        CFrame.new(0, 6.98, -4.13), alloy, finish.lintel, "Medium")
-    -- The variant-specific cantilever is still ONE anchored part. Its
-    -- Native/PBR material is preserved; changing its silhouette on the
-    -- dock and tower versions costs no extra network instance.
+        CFrame.new(0, 6.98, -4.13), alloy, finish.lintel, "Medium", profiles.lintel)
+    -- Deep freight and harbor canopies slope down toward the approach.
     local canopyShape = (finish.canopyDepth >= 2.4)
         and "WedgePart" or "Part"
     add(model, origin, "ServiceEntryCanopy", canopyShape,
         Vector3.new(7.6, 0.38, finish.canopyDepth),
-        CFrame.new(0, 7.45, -4.57), steel, finish.canopy, "Medium")
+        CFrame.new(0, 7.45, -4.57), steel, finish.canopy, "Medium",
+        if canopyShape == "WedgePart" then profiles.slope else profiles.casting)
     for _, direction in ipairs({-1, 1}) do
         add(model, origin, "PortalHydraulicColumn" .. tostring(direction),
             "Part", Vector3.new(0.42, 5.25, 0.42),
             CFrame.new(direction * 3.35, 4.08, -4.20),
-            alloy, finish.hardware, "Medium")
+            alloy, finish.hardware, "Medium", profiles.shaft)
     end
 end
 
-local function makeHigh(model, origin, steel, dark, alloy, slot)
+local function makeHigh(model, origin, steel, dark, alloy, slot, profiles: Profiles)
     for _, direction in ipairs({-1, 1}) do
         local suffix = tostring(direction)
         if slot == 1 then
             add(model, origin, "SurveyInstrumentCabinet" .. suffix,
                 "Part", Vector3.new(1.15, 3.3, 1.45),
                 CFrame.new(direction * 5.4, 10.1, -2.1),
-                dark, Enum.Material.CorrodedMetal, "High")
+                dark, Enum.Material.CorrodedMetal, "High", profiles.casting)
         elseif slot == 2 then
             add(model, origin, "FreightWinchHousing" .. suffix,
                 "Part", Vector3.new(2.1, 1.9, 1.6),
                 CFrame.new(direction * 5.15, 16.2, -2.0),
-                alloy, Enum.Material.DiamondPlate, "High")
+                alloy, Enum.Material.DiamondPlate, "High", profiles.casting)
         elseif slot == 3 then
             add(model, origin, "TurbineDuctCollar" .. suffix,
                 "Part", Vector3.new(1.7, 2.8, 2.7),
                 CFrame.new(direction * 3.4, 17.2, -1.6),
-                steel, Enum.Material.CorrodedMetal, "High")
+                steel, Enum.Material.CorrodedMetal, "High", profiles.collar)
         else
             add(model, origin, "AerialCableConduit" .. suffix,
                 "Part", Vector3.new(0.56, 8.8, 0.56),
                 CFrame.new(direction * 5.0, 15.7, -2.0)
                     * CFrame.Angles(0, 0, math.rad(direction * 15)),
-                alloy, Enum.Material.Metal, "High")
+                alloy, Enum.Material.Metal, "High", profiles.shaft)
         end
     end
 end
 
--- No stateful per-Model connection or weak-key table. We inspect two
--- owned instance names on each LOD tick; Roblox owns their lifecycle when
--- streamed models disappear. Hysteresis prevents churning at the cutoff.
+-- Streamed models own their local details. Hysteresis prevents churn at the cutoff.
 function DistrictFacadeDetailKit.sync(model, tierName, visible, distance,
-    isTouch, cameraReady)
+    isTouch, cameraReady, profiles: Profiles)
     if not model or not model:IsA("Model") then return 0 end
     if model:GetAttribute("ArenaDistrictArchitecture") ~= true
         or model:GetAttribute("SourceIsOriginal") ~= true
@@ -227,9 +285,9 @@ function DistrictFacadeDetailKit.sync(model, tierName, visible, distance,
         clearOwned(model, slot)
         return 0
     end
-    makeMedium(model, origin, steel, alloy, finish)
+    makeMedium(model, origin, steel, alloy, finish, profiles)
     if tierName == "High" then
-        makeHigh(model, origin, steel, dark, alloy, slot)
+        makeHigh(model, origin, steel, dark, alloy, slot, profiles)
         return countOwned(model, MEDIUM) + countOwned(model, HIGH[slot])
     end
     destroyNames(model, HIGH[slot])

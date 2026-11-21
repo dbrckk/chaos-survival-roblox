@@ -5,6 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SceneryLodRules = if script then require(ReplicatedStorage.Shared.SceneryLodRules)
     else require("../shared/SceneryLodRules")
 
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
+
 local Kit = {}
 local NAMES = {"North","East","South","West"}
 local IDS = {
@@ -164,17 +166,13 @@ end
 
 local function checkPart(owner,name,kind,size,frame,alpha,shape)
     local part = owner:FindFirstChild(name)
-    if not part or not part:IsA(kind) or part.Parent ~= owner
-        or not part.Anchored or part.CanCollide or part.CanTouch
-        or part.CanQuery or (part.Size-size).Magnitude > .12
-        or (part.Position-frame.Position).Magnitude > .16
-        or part.CFrame.LookVector:Dot(frame.LookVector) < .999
-        or part.CFrame.UpVector:Dot(frame.UpVector) < .999
+    local nativeSize, pose = ExteriorDetailGeometry.monumentFootprint(part, owner, kind, shape)
+    if not nativeSize or (nativeSize-size).Magnitude > .12
+        or (pose.Position-frame.Position).Magnitude > .16
+        or pose.LookVector:Dot(frame.LookVector) < .999
+        or pose.UpVector:Dot(frame.UpVector) < .999
         or (math.abs(part.Transparency-alpha) > .035
             and part.Transparency ~= 1) then
-        return nil
-    end
-    if shape and part:IsA("Part") and part.Shape ~= shape then
         return nil
     end
     return part
@@ -318,7 +316,7 @@ local function detailNatives(entry,key)
             or part.LocalTransparencyModifier >= .95 then return nil end
         result[#result+1] = part
     end
-    return result
+    return result,specs
 end
 
 local function axisScale(axis,scale)
@@ -357,7 +355,8 @@ local function sculpt(clone,source,target,size,color)
 end
 
 local function syncDetail(entry,key,source,bar)
-    local native = source and detailNatives(entry,key)
+    local native,specs
+    if source then native,specs = detailNatives(entry,key) end
     local detail = entry[key]
     if detail then
         local intact = native and detail.source == source.source
@@ -381,8 +380,8 @@ local function syncDetail(entry,key,source,bar)
     clone.Name = key == "foot" and "ForgedSkylineFoundation" or "SculptedSkylineEquipment"
     clone:SetAttribute("CosmeticOnly",true)
     clone:SetAttribute("Original3DAssetId",source.spec.id)
-    local size = native[1].Size
-    local center = native[1].CFrame
+    local size = specs[1][3]
+    local center = entry.origin*CFrame.new(0,specs[1][4],0)
     if key == "roof" then
         local top = entry.roofHeight
         local bottom = top-.13
@@ -397,8 +396,9 @@ local function syncDetail(entry,key,source,bar)
             center = entry.origin*CFrame.new(0,bottom+size.Y*.5,0)
         end
     end
+    local barPose = bar and entry.origin*CFrame.new(0,entry.height+specs[2][4],0)
     if not sculpt(clone,source,center,size,native[1].Color)
-        or (bar and not sculpt(clone,bar,native[2].CFrame,Vector3.new(7.5,.66,.62),native[2].Color)) then
+        or (bar and not sculpt(clone,bar,barPose,Vector3.new(7.5,.66,.62),native[2].Color)) then
         clone:Destroy()
         return
     end
@@ -442,7 +442,14 @@ local function syncDetail(entry,key,source,bar)
             "CanTouch","CanQuery","LocalTransparencyModifier"}) do
             watch(part:GetPropertyChangedSignal(property),checkNative)
         end
-        if part:IsA("Part") then watch(part:GetPropertyChangedSignal("Shape"),checkNative) end
+        if part:IsA("Part") then
+            watch(part:GetPropertyChangedSignal("Shape"),checkNative)
+        elseif part:IsA("MeshPart") then
+            watch(part:GetPropertyChangedSignal("MeshId"),checkNative)
+            for _,attribute in ipairs({"OriginalExteriorDetail3D","Original3DAssetId","ExteriorDetailAxisSwap"}) do
+                watch(part:GetAttributeChangedSignal(attribute),checkNative)
+            end
+        end
         part.Transparency = 1
     end
 end
@@ -561,6 +568,14 @@ local function mount(arena,owner,index,source,holder,id)
             part:GetPropertyChangedSignal("CFrame"):Connect(check)
         entry.connections[#entry.connections+1] =
             part:GetPropertyChangedSignal("Size"):Connect(check)
+        if part:IsA("MeshPart") then
+            entry.connections[#entry.connections+1] =
+                part:GetPropertyChangedSignal("MeshId"):Connect(check)
+            for _,attribute in ipairs({"OriginalExteriorDetail3D","Original3DAssetId","ExteriorDetailAxisSwap"}) do
+                entry.connections[#entry.connections+1] =
+                    part:GetAttributeChangedSignal(attribute):Connect(check)
+            end
+        end
     end
 end
 

@@ -7,14 +7,19 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OriginalMeshScenery = require("./OriginalMeshScenery")
 local GlobalApprovedImportGate = require("./PremiumApprovedAssetImportGate")
 
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonGeometry = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonGeometry then require(horizonGeometry)
+    else require("../shared/HorizonMonumentGeometry")
+
 local Kit = {}
 local APPROVED = {
     Essential = 71267601603297,
-    Classic = 102746904688141,
-    Towers = 74708751016233,
-    Crossroads = 84038993323581,
-    Orbital = 123089585720736,
-    Harbor = 94830155055482,
+    Classic = HorizonMonumentGeometry.floorCastingAssetId("Classic"),
+    Towers = HorizonMonumentGeometry.floorCastingAssetId("Towers"),
+    Crossroads = HorizonMonumentGeometry.floorCastingAssetId("Crossroads"),
+    Orbital = HorizonMonumentGeometry.floorCastingAssetId("Orbital"),
+    Harbor = HorizonMonumentGeometry.floorCastingAssetId("Harbor"),
     -- One piece of mechanical art for each remaining primitive family.
     -- The bolt source is authored at 10x scale for reliable Roblox import;
     -- the client scales it to the actual compact mechanical dimensions.

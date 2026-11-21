@@ -2,6 +2,17 @@
 -- Upgrade existing simple exterior markers and lobby pylons into original
 -- three-dimensional architectural assemblies. All pieces are cosmetic.
 -- No new gameplay colliders, links, fake safe paths, particle loops or assets.
+local CollectionService = game:GetService("CollectionService")
+
+local RouteSignalGeometry = require("./RouteSignalGeometry")
+local shared = game:GetService("ReplicatedStorage"):FindFirstChild("Shared")
+local capModule = shared and shared:FindFirstChild("PerimeterCapGeometry")
+local PerimeterCapGeometry = if capModule then require(capModule)
+    else require("../shared/PerimeterCapGeometry")
+
+type Profile = {part: MeshPart?, assetId: number?}
+type Profiles = {bevel: Profile?, beam: Profile?, cast: Profile?, shaft: Profile?}
+
 local StructureRetrofit = {}
 
 local PALETTES = {
@@ -12,11 +23,32 @@ local PALETTES = {
     Harbor = {metal = Enum.Material.CorrodedMetal, secondary = Enum.Material.DiamondPlate},
 }
 
-local function add(model, origin, name, frame, size, color, material, kind, pbr)
-    local item = Instance.new(kind or "Part")
+local function available(profile: Profile?): Profile?
+    local part = profile and profile.part
+    return if part and part.Archivable and part.MeshId ~= "" then profile else nil
+end
+
+local function add(model, origin, name, frame, size, color, material, kind, pbr,
+        profile: Profile?, rotation: CFrame?, swapXZ: boolean?, alignSpan: boolean?)
+    local source = profile and profile.part
+    local target = origin * frame
+    local mesh
+    if source and source.MeshId ~= "" then
+        local meshFrame = if rotation then target * rotation else target
+        local extents = if swapXZ then Vector3.new(size.Z, size.Y, size.X) else size
+        local alongX = if alignSpan then extents.X > extents.Z else source.Size.X > source.Size.Z
+        mesh = RouteSignalGeometry.fit(source, meshFrame, extents, nil, alongX)
+    end
+    local item = mesh or Instance.new(kind or "Part")
+    if mesh then
+        mesh:SetAttribute("Original3DAssetId", profile and profile.assetId)
+    else
+        item.Size = size
+        item.CFrame = target
+        item.TopSurface = Enum.SurfaceType.Smooth
+        item.BottomSurface = Enum.SurfaceType.Smooth
+    end
     item.Name = name
-    item.Size = size
-    item.CFrame = origin * frame
     item.Color = color
     item.Material = material
     item.Transparency = 0.045
@@ -25,19 +57,17 @@ local function add(model, origin, name, frame, size, color, material, kind, pbr)
     item.CanTouch = false
     item.CanQuery = false
     item.CastShadow = false
-    item.TopSurface = Enum.SurfaceType.Smooth
-    item.BottomSurface = Enum.SurfaceType.Smooth
     if pbr then item:SetAttribute("OriginalRetrofitPbrSurface", true) end
     item.Parent = model
     return item
 end
 
-local function spar(model, origin, name, startPoint, endPoint, size, color, material)
+local function spar(model, origin, name, startPoint, endPoint, size, color, material, profile: Profile?)
     local delta = endPoint - startPoint
     return add(model, origin, name,
         CFrame.lookAt((startPoint + endPoint) * 0.5, endPoint),
         Vector3.new(size, size, delta.Magnitude),
-        color, material, nil, false)
+        color, material, nil, false, profile, nil, nil, true)
 end
 
 local function exteriorAnchors(decor, base, variant)
@@ -74,7 +104,7 @@ local function exteriorAnchors(decor, base, variant)
     return result
 end
 
-function StructureRetrofit.buildArena(decor, base, variant, theme)
+function StructureRetrofit.buildArena(decor, base, variant, theme, profiles: Profiles?)
     local palette = PALETTES[variant]
     if not palette or not base or not base:IsA("BasePart") then return 0 end
     local anchors = exteriorAnchors(decor, base, variant)
@@ -82,6 +112,19 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
     local fleet = Instance.new("Folder")
     fleet.Name = "OriginalExteriorRetrofits"
     fleet.Parent = decor
+    local bevel = profiles and profiles.bevel
+    local beam = profiles and profiles.beam
+    local shaft = profiles and profiles.shaft
+    local cast = profiles and profiles.cast
+    if variant == "Harbor" then
+        -- Closed castings fit both equipment housings and structural spans.
+        cast = available(cast)
+        bevel = available(bevel) or cast
+        beam = available(beam) or bevel
+        shaft = available(shaft) or bevel
+    end
+    local slope, swapXZ = PerimeterCapGeometry.slope(cast and cast.part)
+    if not slope then cast = nil end
     local pieces = 0
     for i, center in ipairs(anchors) do
         local model = Instance.new("Model")
@@ -104,41 +147,41 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
         -- Preserve the existing bare source marker as its non-colliding
         -- interior while giving the silhouette real multi-layer volume.
         add(model, origin, "OuterFrontArmor", CFrame.new(0, 0, -2.05),
-            Vector3.new(5.0, 11.8, 0.68), body, palette.metal, nil, true)
+            Vector3.new(5.0, 11.8, 0.68), body, palette.metal, nil, true, bevel)
         add(model, origin, "RearMaintenanceShell", CFrame.new(0, 0.2, 1.92),
             Vector3.new(4.6, 10.8, 0.78), hardware,
-            palette.secondary, nil, true)
+            palette.secondary, nil, true, bevel)
         add(model, origin, "RecessedEquipmentBox", CFrame.new(0, -0.6, -2.49),
             Vector3.new(2.3, 5.2, 0.43), inset,
-            palette.secondary, nil, false)
+            palette.secondary, nil, false, bevel)
         for _, side in ipairs({-1, 1}) do
             add(model, origin, "FacetedSideWing" .. tostring(side),
                 CFrame.new(side * 2.35, -0.35, 0)
                     * CFrame.Angles(0, side * math.rad(12), 0),
                 Vector3.new(1.6, 10.8, 3.1), body,
-                palette.metal, "WedgePart", false)
+                palette.metal, "WedgePart", false, cast, slope, swapXZ)
             spar(model, origin, "DiagonalExteriorStiffener" .. tostring(side),
                 Vector3.new(side * 3.2, -5.8, -1.6),
                 Vector3.new(side * 1.2, 6.2, -1.7), 0.46,
-                hardware, palette.secondary)
+                hardware, palette.secondary, beam)
             add(model, origin, "CrownButtress" .. tostring(side),
                 CFrame.new(side * 2.45, 6.5, -0.3),
                 Vector3.new(0.95, 2.2, 3.8), hardware,
-                palette.secondary, nil, false)
+                palette.secondary, nil, false, bevel)
         end
         add(model, origin, "UpperStructuralCollar", CFrame.new(0, 6.3, 0),
             Vector3.new(6.8, 0.72, 5.4), hardware,
-            palette.metal, nil, false)
+            palette.metal, nil, false, bevel)
         add(model, origin, "CantileverPlatformUnderside",
             CFrame.new(0, 7.4, 0.1),
             Vector3.new(5.9, 0.55, 7.5), inset,
-            palette.secondary, "WedgePart", false)
+            palette.secondary, "WedgePart", false, cast, slope, swapXZ)
         add(model, origin, "WeatherGuardTop", CFrame.new(0, 8.2, 0),
             Vector3.new(4.8, 0.70, 4.6), body,
-            palette.metal, nil, true)
+            palette.metal, nil, true, bevel)
         add(model, origin, "BeaconTensionMast", CFrame.new(0, 10.8, 0),
             Vector3.new(0.50, 4.8, 0.50), hardware,
-            palette.secondary, nil, false)
+            palette.secondary, nil, false, shaft)
         if variant == "Crossroads" then
             -- Crossroads' original gantries are 28-stud horizontal beams,
             -- NOT 12-stud towers. The generic upright casing did not
@@ -146,15 +189,20 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
             -- physical beam's true axis without replacing its signals.
             local source = decor:FindFirstChild("CrossroadGantry" .. i)
             if source and source:IsA("BasePart") then
-                local alongX = source.Size.X > source.Size.Z
+                local longSide = if source.Size.X > source.Size.Z
+                    then source.CFrame.RightVector else source.CFrame.LookVector
+                local alongX = math.abs(longSide.X) > math.abs(longSide.Z)
                 local span = math.max(source.Size.X, source.Size.Z)
                 -- Keep the original gantry and its danger/signal cues.
                 -- This decorative frame uses WORLD axes from the source:
                 -- the outer beams remain beyond the shrinking arena.
                 local beamFrame = CFrame.new(source.Position)
                 local function girder(name, offset, dimensions, material, color, shape)
+                    local wedge = shape == "WedgePart"
                     add(model, beamFrame, name, CFrame.new(offset),
-                        dimensions, color, material, shape, false)
+                        dimensions, color, material, shape, false,
+                        if wedge then cast else beam, if wedge then slope else nil,
+                        wedge and swapXZ, not wedge)
                 end
                 local beamSize = alongX
                     and Vector3.new(span + 1.6, 0.62, 0.90)
@@ -186,7 +234,7 @@ function StructureRetrofit.buildArena(decor, base, variant, theme)
     return pieces
 end
 
-function StructureRetrofit.buildLobby(decor, lobbyCenter)
+function StructureRetrofit.buildLobby(decor, lobbyCenter, platform)
     if not decor then return 0 end
     local color = Color3.fromRGB(99, 121, 154)
     local dark = Color3.fromRGB(45, 62, 83)
@@ -207,16 +255,19 @@ function StructureRetrofit.buildLobby(decor, lobbyCenter)
         model.Parent = group
         local origin = CFrame.new(lobbyCenter + offset)
         for _, side in ipairs({-1, 1}) do
-            add(model, origin, "SideArmor" .. tostring(side),
+            local flank = add(model, origin, "SideArmor" .. tostring(side),
                 CFrame.new(side * 1.32, 0, 0)
                     * CFrame.Angles(0, side * math.rad(11), 0),
                 Vector3.new(0.95, 8.9, 2.8), color,
                 shell, "WedgePart", false)
+            CollectionService:AddTag(flank, "LobbySculptedShaft")
         end
-        add(model, origin, "LowCollar", CFrame.new(0, -4.2, 0),
+        local lowCollar = add(model, origin, "LowCollar", CFrame.new(0, -4.2, 0),
             Vector3.new(4.6, 1.1, 4.6), dark, shell, nil, false)
-        add(model, origin, "UpperCollar", CFrame.new(0, 4.4, 0),
+        local upperCollar = add(model, origin, "UpperCollar", CFrame.new(0, 4.4, 0),
             Vector3.new(4.6, 0.9, 4.6), color, trim, nil, false)
+        CollectionService:AddTag(lowCollar, "LobbySculptedCasting")
+        CollectionService:AddTag(upperCollar, "LobbySculptedCasting")
         count += #model:GetChildren()
     end
     -- The actual arena entrance remains the original physical gate.
@@ -226,52 +277,62 @@ function StructureRetrofit.buildLobby(decor, lobbyCenter)
     gate.Name = "MachinedArenaEntrance"
     gate.Parent = group
     local center = CFrame.new(lobbyCenter + Vector3.new(0, 10.5, 27))
-    add(gate, center, "OuterGateCrosshead", CFrame.new(0, 2.8, -1.9),
+    local crosshead = add(gate, center, "OuterGateCrosshead", CFrame.new(0, 2.8, -1.9),
         Vector3.new(22.7, 2.1, 0.95), color, shell, nil, false)
+    CollectionService:AddTag(crosshead, "LobbySculptedSwept")
     for _, side in ipairs({-1, 1}) do
-        add(gate, center, "AngledGateSupport" .. tostring(side),
+        local support = add(gate, center, "AngledGateSupport" .. tostring(side),
             CFrame.new(side * 11, -3.5, -1.75)
                 * CFrame.Angles(0, side * math.rad(10), 0),
             Vector3.new(2.0, 12.0, 2.6), color,
             shell, "WedgePart", false)
-        spar(gate, center, "GateStrut" .. tostring(side),
+        CollectionService:AddTag(support, "LobbySculptedShaft")
+        local strut = spar(gate, center, "GateStrut" .. tostring(side),
             Vector3.new(side * 10.5, -4.0, -2.3),
             Vector3.new(side * 6.4, 3.9, -2.3),
             0.52, dark, trim)
+        CollectionService:AddTag(strut, "LobbySculptedSwept")
     end
     count += #gate:GetChildren()
 
-    -- The 24x24 central stage was still an undecorated rectangular block,
-    -- visible throughout every pre-round lobby. Build original dimensional
-    -- alloy facings BELOW its authoritative walkable top. The existing
-    -- CenterGlow and floor tutorial graphics remain legible and untouched.
+    -- Tie the fascia to the actual walkable stage. The skin stays below
+    -- the deck and above the floor inset, outside the physical step edge.
     local stage = Instance.new("Model")
     stage.Name = "MachinedLobbyCenterStage"
     stage.Parent = group
-    local stageOrigin = CFrame.new(lobbyCenter + Vector3.new(0, 1.45, 0))
-    for _, side in ipairs({-1, 1}) do
-        add(stage, stageOrigin, "FrontStageArmor" .. tostring(side),
-            CFrame.new(0, -0.24, side * 11.90)
-                * CFrame.Angles(0, side == -1 and 0 or math.pi, 0),
-            Vector3.new(18.8, 0.52, 1.2), color,
-            shell, "WedgePart", false)
-        add(stage, stageOrigin, "FlankStageArmor" .. tostring(side),
-            CFrame.new(side * 11.90, -0.24, 0)
-                * CFrame.Angles(0, side * math.pi * 0.5, 0),
-            Vector3.new(18.8, 0.52, 1.2), color,
-            shell, "WedgePart", false)
-        add(stage, stageOrigin, "RecessedStageKeel" .. tostring(side),
-            CFrame.new(side * 5.5, -1.03, 0),
-            Vector3.new(4.5, 0.42, 15.8), dark,
-            trim, nil, false)
+    local stageOrigin = platform.CFrame
+    local halfWidth = platform.Size.X * 0.5
+    local halfDepth = platform.Size.Z * 0.5
+
+    local function stageDetail(profile, name, frame, size, tint, material)
+        local piece = add(stage, stageOrigin, name, frame, size, tint, material, nil, false)
+        CollectionService:AddTag(piece, profile)
     end
+
+    for face = 1, 4 do
+        local facing = CFrame.Angles(0, (face - 1) * math.pi * 0.5, 0)
+        local front = face % 2 == 1
+        local width = front and halfWidth or halfDepth
+        local depth = front and halfDepth or halfWidth
+        stageDetail("LobbySculptedSwept", "StageFascia" .. face,
+            facing * CFrame.new(0, 0.08, depth + 0.10),
+            Vector3.new((width - 1.40) * 2, 0.58, 0.62), color, shell)
+
+        if front then
+            local indicator = face == 1 and Color3.fromRGB(69, 172, 211)
+                or Color3.fromRGB(140, 129, 225)
+            stageDetail("LobbySculptedCasting", "StageThreshold" .. face,
+                facing * CFrame.new(0, 0.15, depth + 0.42),
+                Vector3.new(width * 0.72, 0.15, 0.20), indicator, Enum.Material.Neon)
+        end
+    end
+
     for _, sx in ipairs({-1, 1}) do
         for _, sz in ipairs({-1, 1}) do
-            local start = Vector3.new(sx * 9.9, -0.52, sz * 9.9)
-            local finish = Vector3.new(sx * 6.2, -1.22, sz * 6.1)
-            spar(stage, stageOrigin,
-                "StageCornerDiagonal" .. tostring(sx) .. "_" .. tostring(sz),
-                start, finish, 0.48, color, shell)
+            local corner = CFrame.new(sx * (halfWidth - 0.42), 0.04, sz * (halfDepth - 0.42))
+                * CFrame.Angles(0, sx * sz * math.pi * 0.25, 0)
+            stageDetail("LobbySculptedCasting", "StageCorner" .. sx .. "_" .. sz,
+                corner, Vector3.new(1.70, 0.57, 0.75), dark, trim)
         end
     end
     count += #stage:GetChildren()

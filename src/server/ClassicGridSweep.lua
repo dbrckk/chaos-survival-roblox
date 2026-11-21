@@ -2,6 +2,7 @@
 -- Predictable, nonlethal horizontal pulse bands. One row is announced well
 -- before impact; a jump or a lane change avoids it. All floor collision stays
 -- intact. Only a small part of the floor is affected in each event.
+local SweepBorderArt = require("./SweepBorderArt")
 local safetyModule = script and script.Parent:FindFirstChild("MovementSafety")
 local MovementSafety = if safetyModule
     then require(safetyModule) else require("./MovementSafety")
@@ -56,8 +57,9 @@ function ClassicGridSweep.inside(position, band)
     local point = band.CFrame:PointToObjectSpace(position)
     -- Only contestants standing on the LOW base floor; elevated platforms
     -- and successfully timed jumps are completely exempt.
-    return math.abs(point.X) <= band.Size.X * 0.5 + 0.3
-        and math.abs(point.Z) <= band.Size.Z * 0.5 + 0.3
+    local halfX, halfZ = SweepBorderArt.halfExtents(band)
+    return math.abs(point.X) <= halfX
+        and math.abs(point.Z) <= halfZ
         and point.Y >= 1.0 and point.Y <= 5.1
 end
 
@@ -97,7 +99,7 @@ function ClassicGridSweep.apply(ctx, band, subject, hitOnce)
     return true
 end
 
-local function makeBand(folder, base, index)
+local function makeBand(folder, base, index, profile)
     local alongX = index == 1 or index == 3
     local laneOffset = index == 1 and -15 or (index == 3 and 15
         or (index == 2 and -15 or 15))
@@ -119,6 +121,7 @@ local function makeBand(folder, base, index)
     band.Color = Color3.fromRGB(75, 151, 190)
     band.Transparency = 0.92
     band:SetAttribute("GridSweepIndex", index)
+    SweepBorderArt.create(band, profile)
     band:AddTag("ChaosClassicSweepBand")
     band.Parent = folder
     return band
@@ -138,6 +141,7 @@ function ClassicGridSweep.setPhase(band, phase, at)
         band.Transparency = 0.92
         band:SetAttribute("GridSweepWarningAt", nil)
     end
+    SweepBorderArt.paint(band, phase)
     band:SetAttribute("GridSweepPhase", phase)
 end
 
@@ -152,8 +156,9 @@ function ClassicGridSweep.start(ctx, arena)
     folder.Name = "GridSweep"
     folder.Parent = mechanics
     local bands = {}
+    local profile = SweepBorderArt.profile("Classic")
     for index = 1, 4 do
-        bands[index] = makeBand(folder, base, index)
+        bands[index] = makeBand(folder, base, index, profile)
     end
 
     local active = true

@@ -76,6 +76,7 @@ local ArenaKeelMeshKit = require(script.Parent.ArenaKeelMeshKit)
 local UnderstructureBeamMeshKit = require(script.Parent.UnderstructureBeamMeshKit)
 local PremiumGroundMeshKit = require(script.Parent.PremiumGroundMeshKit)
 local RemainingVisualNativeCensus = require(script.Parent.RemainingVisualNativeCensus)
+local PerimeterRoutePaint = require(script.Parent.PerimeterRoutePaint)
 
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
@@ -869,6 +870,7 @@ task.spawn(function()
         -- creation/cleanup. Original colliders and hazard cues stay live;
         -- animated collapse, shrink and stream changes hide cosmetics.
         local routeSyncStartedAt = os.clock()
+        PerimeterRoutePaint.sync(arena, cameraReady and cameraPoint or nil)
         PremiumRouteMeshKit.sync(arena, cameraPoint, profile.Name,
             cameraReady, cameraLook,
             player:GetAttribute("OptionalVfxPressure"), isTouch,
@@ -1394,7 +1396,7 @@ task.spawn(function()
                 nativeApexesReplaced)
         end
         -- Source-approved complete-height forged industrial skyline. Only
-        -- four big native tower body/cap/rib Parts are replaced. The original
+        -- four server tower body/cap/rib pieces are covered. The original
         -- SignalBand and Antenna stay readable. Existing LOD camera sample
         -- controls proximity, quality, pressure and fallback; no new loop.
         ApprovedExteriorTowerMeshKit.sync(arena,cameraPoint,
@@ -1406,7 +1408,7 @@ task.spawn(function()
             player:SetAttribute("LocalApprovedExteriorTowerCount",
                 exteriorTowers)
         end
-        local nativeTowersReplaced=ApprovedExteriorTowerMeshKit.replacedNativeCount()
+        local nativeTowersReplaced=ApprovedExteriorTowerMeshKit.replacedNativeCount(true)
         if player:GetAttribute("LocalExteriorPrimitiveTowerPartsReplaced")
             ~=nativeTowersReplaced then
             player:SetAttribute("LocalExteriorPrimitiveTowerPartsReplaced",
@@ -1433,7 +1435,7 @@ task.spawn(function()
                 atmosphereNatives)
         end
         -- Four source-authored exterior corner sculptural ridges.
-        -- Each approved Model replaces three WedgeParts with real art,
+        -- Each approved Model covers three server ridge pieces,
         -- sharing the existing LOD sampler and mobile pressure budget.
         ApprovedExteriorRidgeMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,isTouch,
@@ -1444,7 +1446,7 @@ task.spawn(function()
             player:SetAttribute("LocalApprovedExteriorRidgeModelCount",
                 ridgesModels)
         end
-        local ridgesHidden=ApprovedExteriorRidgeMeshKit.replacedNativeCount()
+        local ridgesHidden=ApprovedExteriorRidgeMeshKit.replacedNativeCount(true)
         if player:GetAttribute("LocalExteriorRidgePrimitivesReplaced")
             ~=ridgesHidden then
             player:SetAttribute("LocalExteriorRidgePrimitivesReplaced",
@@ -1958,8 +1960,10 @@ task.spawn(function()
         if player:GetAttribute("LocalOriginalGatewayMeshCount") ~= gatewayCount then
             player:SetAttribute("LocalOriginalGatewayMeshCount", gatewayCount)
         end
+        local districtPressure = player:GetAttribute("OptionalVfxPressure")
         local localFacadeParts = 0
         if district and district:IsA("Folder") then
+            local facadeSources = DistrictFacadeDetailKit.sources(profile.Name, districtPressure)
             for _, structure in ipairs(district:GetChildren()) do
                 if structure:IsA("Model")
                     and structure:GetAttribute("CosmeticOnly") == true
@@ -1979,7 +1983,7 @@ task.spawn(function()
                         profile, origin, cameraPoint)
                     localFacadeParts += DistrictFacadeDetailKit.sync(
                         structure, profile.Name, visible,
-                        (cameraPoint - origin).Magnitude, isTouch, cameraReady)
+                        (cameraPoint - origin).Magnitude, isTouch, cameraReady, facadeSources)
                 end
             end
         end
@@ -1990,7 +1994,6 @@ task.spawn(function()
         -- Facades and six-MeshPart sidewalls use the SAME touch/pressure
         -- snapshot, so a mobile GPU fallback releases both authentic
         -- surfaces and reveals original native geometry in one LOD tick.
-        local districtPressure = player:GetAttribute("OptionalVfxPressure")
         PremiumDistrictFacadeMeshKit.sync(arena, cameraPoint,
             profile.Name, cameraReady, cameraLook, isTouch, districtPressure,
             if profile.Name == "Low" and cameraReady
@@ -2225,6 +2228,7 @@ task.spawn(function()
         ApprovedRemainingStructureMeshKit.sync(arena,cameraPoint,
             profile.Name,cameraReady,cameraLook,
             player:GetAttribute("OptionalVfxPressure"),isTouch)
+        local spineSignalBeams=ApprovedRemainingStructureMeshKit.count("command","SpineSignalBeam")
         local p4Counts = {
             LocalOriginalAscensionArch3DCount =
                 ApprovedRemainingStructureMeshKit.count("arch"),
@@ -2239,7 +2243,16 @@ task.spawn(function()
             LocalOriginalPromenadeCrosshead3DCount =
                 ApprovedRemainingStructureMeshKit.count("promenade"),
             LocalSkySpineJunctionTrussesReplaced =
-                ApprovedRemainingStructureMeshKit.nativeCount("junction"),
+                ApprovedRemainingStructureMeshKit.count("junction", "JunctionTruss")
+                + ApprovedRemainingStructureMeshKit.count("junction", "JunctionUnderframe"),
+            LocalOriginalPromenadeTrussesReplaced =
+                ApprovedRemainingStructureMeshKit.count("junction", "PromenadeTruss"),
+            LocalOriginalPromenadeFramesReplaced =
+                ApprovedRemainingStructureMeshKit.count("junction", "PromenadeUnderframe")
+                + ApprovedRemainingStructureMeshKit.count("junction", "PromenadeTruss")
+                + ApprovedRemainingStructureMeshKit.count("junction", "JunctionUnderframe"),
+            LocalOriginalSkySpineUnderframesReplaced =
+                ApprovedRemainingStructureMeshKit.count("junction", "SpineUnderframe"),
             LocalOriginalPromenadeDiagonalStay3DCount =
                 ApprovedRemainingStructureMeshKit.count("stay"),
             LocalOriginalPromenadeEquipment3DCount =
@@ -2248,10 +2261,11 @@ task.spawn(function()
                 ApprovedRemainingStructureMeshKit.nativeCount("equipment"),
             LocalOriginalPromenadeRoofFittings3DCount =
                 ApprovedRemainingStructureMeshKit.count("fitting"),
+            LocalOriginalSkySpineSignalBeam3DCount = spineSignalBeams,
             LocalOriginalSkySpineCommandArtCount =
-                ApprovedRemainingStructureMeshKit.count("command"),
+                ApprovedRemainingStructureMeshKit.count("command") - spineSignalBeams,
             LocalSkySpineCommandNativePartsReplaced =
-                ApprovedRemainingStructureMeshKit.nativeCount("command"),
+                ApprovedRemainingStructureMeshKit.nativeCount("command") - spineSignalBeams,
             LocalP4RemainingStructuralNativePiecesReplaced =
                 ApprovedRemainingStructureMeshKit.nativeCount(),
         }
@@ -2299,7 +2313,7 @@ task.spawn(function()
             -- Actual streamed-in native fallback still visible AFTER all
             -- approved MeshPart owners and local LOD masks have reconciled.
             -- This is a snapshot, not an FPS, occlusion or global map count.
-            RemainingVisualNativeCensus.sample(player, arena, profile.Name)
+            RemainingVisualNativeCensus.sample(player, arena, profile.Name, cameraReady and cameraPoint or nil)
             -- Client-only diagnostic counters. The existing performance
             -- pulse can correlate these with frame pacing; these are NOT
             -- sent to the server, nor exposed as a player-facing HUD.

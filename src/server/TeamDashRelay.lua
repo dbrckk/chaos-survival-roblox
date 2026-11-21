@@ -5,6 +5,8 @@
 -- No clients can choose recipients or rewards. No per-frame update loops.
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RoundEquipmentArt = require("./RoundEquipmentArt")
+local visual = RoundEquipmentArt.create
 local SpawnSafety = if script
     then require(script.Parent.SpawnSafety)
     else require("./SpawnSafety")
@@ -202,23 +204,7 @@ function TeamDashRelay.releaseBot(model)
     end
 end
 
-local function part(model, name, size, cframe, color, material)
-    local p = Instance.new("Part")
-    p.Name = name
-    p.Size = size
-    p.CFrame = cframe
-    p.Color = color
-    p.Material = material
-    p.Anchored = true
-    p.CanCollide = false
-    p.CanTouch = false
-    p.CanQuery = false
-    p.CastShadow = false
-    p.Parent = model
-    return p
-end
-
-local function build(folder, position, index, color)
+local function build(folder, position, baseCenter, index, color, profiles)
     local model = Instance.new("Model")
     model.Name = "TeamDashRelay" .. index
     model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
@@ -226,27 +212,27 @@ local function build(folder, position, index, color)
     model:SetAttribute("RelayIndex", index)
     model:SetAttribute("RelayUsed", false)
     model:SetAttribute("TeamBeneficiaries", 0)
-    local frame = CFrame.new(position)
-    part(model, "GroundPlate", Vector3.new(5.6, 0.20, 5.6),
-        frame * CFrame.new(0, 0.12, 0),
-        Color3.fromRGB(34, 57, 68), Enum.Material.DiamondPlate)
-    part(model, "ControlStand", Vector3.new(2.3, 3.5, 2.3),
+    local frame = CFrame.lookAt(position, Vector3.new(baseCenter.X, position.Y, baseCenter.Z))
+    local plate = visual(model, "GroundPlate", Vector3.new(5.6, 0.20, 5.6),
+        frame * CFrame.new(0, 0.19, 0),
+        Color3.fromRGB(34, 57, 68), Enum.Material.DiamondPlate, nil, profiles.casting)
+    local stand = visual(model, "ControlStand", Vector3.new(2.3, 3.5, 2.3),
         frame * CFrame.new(0, 1.9, 0),
-        Color3.fromRGB(54, 82, 95), Enum.Material.CorrodedMetal)
-    local head = part(model, "SharedChargeCore", Vector3.new(2.6, 0.65, 2.6),
+        Color3.fromRGB(54, 82, 95), Enum.Material.CorrodedMetal, nil, profiles.shaft)
+    local head = visual(model, "SharedChargeCore", Vector3.new(2.6, 0.65, 2.6),
         frame * CFrame.new(0, 3.9, 0),
-        color, Enum.Material.Metal)
-    local pulse = part(model, "TeamChargePulse",
-        Vector3.new(5.5, 5.5, 5.5),
-        frame * CFrame.new(0, 3.9, 0),
-        color, Enum.Material.Neon)
-    pulse.Shape = Enum.PartType.Ball
-    pulse.Transparency = 1
+        color, Enum.Material.Metal, nil, profiles.core)
+    local pulse = visual(model, "TeamChargePulse", Vector3.new(5.5, 5.5, 5.5),
+        head.CFrame, color, Enum.Material.Neon, 1, nil, Enum.PartType.Ball)
+    local arms = {}
     for side = -1, 1, 2 do
-        part(model, "CouplingArm" .. tostring(side),
-            Vector3.new(0.36, 2.8, 0.55),
-            frame * CFrame.new(side * 1.56, 2.15, 0),
-            Color3.fromRGB(78, 113, 126), Enum.Material.Metal)
+        local foot = Vector3.new(side * 1.9, 0.23, 0)
+        local socket = Vector3.new(side * 1.1, 3.72, 0)
+        local angle = math.atan2(foot.X - socket.X, socket.Y - foot.Y)
+        arms[#arms + 1] = visual(model, "CouplingArm" .. side,
+            Vector3.new(0.42, (socket - foot).Magnitude, 0.55),
+            frame * CFrame.new((foot + socket) * 0.5) * CFrame.Angles(0, 0, angle),
+            color:Lerp(Color3.fromRGB(44, 61, 75), 0.55), Enum.Material.Metal, nil, profiles.shaft)
     end
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "ShareDashCharge"
@@ -285,7 +271,8 @@ local function build(folder, position, index, color)
     corner.Parent = text
     model.Parent = folder
     return {model = model, prompt = prompt, core = head,
-        pulse = pulse, label = text}
+        pulse = pulse, pulseTween = nil, label = text, billboard = label,
+        housing = {plate, stand, head, arms[1], arms[2]}, arms = arms}
 end
 
 -- Both physical player interaction and real server-driven AI action go
@@ -336,13 +323,19 @@ function TeamDashRelay.activate(entry, actor, fromBot)
         entry.model:SetAttribute("RelayUsed", true)
         entry.model:SetAttribute("TeamBeneficiaries", #helped)
         entry.model:SetAttribute("BotActivated", fromBot == true)
-        entry.core.Color = Color3.fromRGB(66, 97, 106)
+        local exhausted = Color3.fromRGB(66, 97, 106)
+        entry.core.Color = exhausted
+        for _, arm in ipairs(entry.arms) do arm.Color = exhausted end
         entry.pulse.Transparency = 0.86
         local tween = TweenService:Create(entry.pulse,
             TweenInfo.new(0.7, Enum.EasingStyle.Quad,
                 Enum.EasingDirection.Out), {Transparency = 1})
+        entry.pulseTween = tween
+        tween.Completed:Once(function()
+            entry.pulseTween = nil
+            tween:Destroy()
+        end)
         tween:Play()
-        tween.Completed:Once(function() tween:Destroy() end)
         entry.label.Text = fromBot
             and "TEAM DASH\nALLY HELPED"
             or "TEAM DASH\nRELAY USED"
@@ -401,6 +394,7 @@ function TeamDashRelay.start(ctx)
 
     local floorTop = base.Position.Y + base.Size.Y * 0.5
     local color = Color3.fromRGB(109, 220, 190)
+    local profiles = RoundEquipmentArt.profiles(tostring(arena:GetAttribute("VariantId") or "Classic"))
     local built = 0
     for index, candidates in ipairs(OFFSETS) do
         local position = nil
@@ -413,7 +407,7 @@ function TeamDashRelay.start(ctx)
             end
         end
         if position then
-            local entry = build(folder, position, index, color)
+            local entry = build(folder, position, base.Position, index, color, profiles)
             built += 1
             entry.index = index
             entry.used = false
@@ -422,13 +416,22 @@ function TeamDashRelay.start(ctx)
             entry.claimUntil = 0
             table.insert(round.entries, entry)
             local function refresh()
-                entry.prompt.Enabled = not entry.used and ctx.Active()
-                    and withinLiveFloor(base, entry.core)
+                local supported = ctx.Active() and withinLiveFloor(base, entry.core)
+                entry.prompt.Enabled = supported and not entry.used
+                entry.billboard.Enabled = supported
+                for _, piece in ipairs(entry.housing) do
+                    piece.Transparency = supported and 0 or 1
+                end
+                if not supported then
+                    if entry.pulseTween then entry.pulseTween:Cancel() end
+                    entry.pulse.Transparency = 1
+                end
             end
             entry.refresh = refresh
             local shrink = base:GetPropertyChangedSignal("Size"):Connect(refresh)
             entry.model.Destroying:Connect(function()
                 shrink:Disconnect()
+                if entry.pulseTween then entry.pulseTween:Cancel() end
             end)
             refresh()
 

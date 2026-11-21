@@ -11,6 +11,10 @@ local PlatformIdentityLodRules = if script and script.Parent
     else require("../shared/PlatformIdentityLodRules")
 
 local Kit = {}
+local shared = ReplicatedStorage:FindFirstChild("Shared")
+local horizonModule = shared and shared:FindFirstChild("HorizonMonumentGeometry")
+local HorizonMonumentGeometry = if horizonModule then require(horizonModule)
+    else require("../shared/HorizonMonumentGeometry")
 local IDS = {
     Classic = 91626128452597,
     Towers = 107521411452905,
@@ -62,6 +66,16 @@ local function verified(kind)
         and xzLong >= 1.6 and xzLong <= 2.8
         and xzShort >= 1.5 and xzShort <= 2.7) then return nil end
     return source,size,count
+end
+
+function Kit.forgedShaftProfile()
+    local source = verified("Towers")
+    local shaft = source and source:FindFirstChild("BeaconShaft")
+    if shaft and shaft:IsA("MeshPart") and shaft.Archivable and shaft.MeshId ~= ""
+        and shaft.Anchored and math.abs(shaft.Size.Y - 13.56) < .13 then
+        return shaft, IDS.Towers
+    end
+    return nil
 end
 
 function Kit.harborColumnSource()
@@ -144,6 +158,9 @@ end
 -- source-scale requirement. Never admit shorter posts: they remain
 -- bare native until a proven approved source fits.
 local MIN_NATIVE_SUPPORT_HEIGHT = 4.75
+-- Grounding the ten interior skyway landings seats each pile .08 studs
+-- into the slab, for a 20.08-stud authored envelope.
+local MAX_HARBOR_PILE_HEIGHT = 20.1
 
 -- The REAL map authors two 12.2-stud nonphysical silhouette pylons
 -- on Sky Spine steps 2,5,6,9. Reuse the already moderated 7-MeshPart
@@ -161,6 +178,32 @@ function Kit.validNativeSkyPylon(part,index)
     if not id or not side or (index and id~=index)
         or part:GetAttribute("PerimeterPlatformIndex")~=id then
         return false
+    end
+    if part:IsA("MeshPart") then
+        local size=part.Size
+        local scale=size.X/1.5
+        if part:GetAttribute("OriginalSkySpinePylonShaft3D")~=true or part.MeshId==""
+            or math.abs(size.Y-12.65)>.06 or scale<.445 or scale>1.005
+            or math.abs(size.Z-1.7*scale)>.06 then return false end
+        local arena=part.Parent and part.Parent.Parent
+        if not arena then return part.Parent==nil end
+        local platforms=arena:FindFirstChild("Platforms")
+        local deck=platforms and platforms:FindFirstChild("Platform"..id)
+        local step=deck and deck:GetAttribute("SkySpineStep")
+        local variant=arena:GetAttribute("VariantId")
+        local assetId=part:GetAttribute("Original3DAssetId")
+        local shaftId=IDS[variant]
+        if not deck or not deck:IsA("BasePart") or (step~=2 and step~=5 and step~=6 and step~=9)
+            or deck:GetAttribute("SkySpineInterchange")~=true or deck:GetAttribute("RouteTier")~=4
+            or deck:GetAttribute("ChaosPermanentRoute")~=true or math.abs(deck.Size.X-12*scale)>.12
+            or part.Parent~=arena:FindFirstChild("Decor")
+            or not shaftId or (assetId~=shaftId and not HorizonMonumentGeometry.isFloorCasting(assetId,variant)) then
+            return false
+        end
+        local expected=deck.CFrame*CFrame.new(tonumber(side)*8*scale,(deck.Size.Y+12.65)*.5,0)
+        return (part.Position-expected.Position).Magnitude<.16
+            and part.CFrame.LookVector:Dot(expected.LookVector)>.999
+            and part.CFrame.UpVector:Dot(expected.UpVector)>.999
     end
     -- Tight bounds match SkySpineArchitecture's genuine server original.
     return part.Size.Y>=12.15 and part.Size.Y<=12.25
@@ -193,6 +236,11 @@ local function validNativeSupport(part,index)
         and part.Size.Y <= 47
 end
 
+local function isAuthoredSupportShape(part)
+    return (part:IsA("Part") and part.Shape == Enum.PartType.Block)
+        or (part:IsA("MeshPart") and part:GetAttribute("OriginalPlatformSupport3D") == true)
+end
+
 -- MapBuilder places two .72-stud square posts at the ends of each
 -- Towers span. ShrinkingArena moves their longitudinal offset by the
 -- same ratio as the 49-stud deck and keeps their cross-section constant.
@@ -207,7 +255,7 @@ function Kit.matchesSkybridgeSupport(part, deck)
         or arena:FindFirstChild("Platforms") ~= platforms
         or arena:FindFirstChild("Decor") ~= part.Parent
         or not validNativeSupport(part, tonumber(id))
-        or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+        or not isAuthoredSupportShape(part)
         or part.Transparency >= .95 then return false end
 
     local size = deck.Size
@@ -215,7 +263,10 @@ function Kit.matchesSkybridgeSupport(part, deck)
     local span = math.max(size.X, size.Z)
     if span < 18.15 or span > 49.09 or math.abs(math.min(size.X,size.Z)-4.5) > .09
         or math.abs(size.Y-1) > .09 then return false end
-    local height = deck.Position.Y - size.Y*.5 - 1.15
+    local base = arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then return false end
+    local footY = PlatformIdentityLodRules.platformSupportFootY(base,deck)
+    local height = deck.Position.Y - size.Y*.5 - footY
     local sign = side == "1" and -1 or 1
     local along = 22.5 * span/49 * sign
     local across = .25 * sign
@@ -361,14 +412,10 @@ end
 
 local function matchingCradleNative(decor,deck,name,size,offset,tag,index)
     local part = decor:FindFirstChild(name)
-    if not part or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+    if not PlatformIdentityLodRules.matchesUnderdeckFallback(part, deck.CFrame * offset, size, .13, .14)
         or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery
         or part.Transparency >= .95 or part:GetAttribute(tag) ~= true
-        or (index and part:GetAttribute("PerimeterPlatformIndex") ~= index)
-        or (part.Size-size).Magnitude > .13
-        or (part.Position-(deck.CFrame*offset).Position).Magnitude > .14
-        or part.CFrame.UpVector:Dot(deck.CFrame.UpVector) < .999
-        or part.CFrame.LookVector:Dot(deck.CFrame.LookVector) < .999 then return nil end
+        or (index and part:GetAttribute("PerimeterPlatformIndex") ~= index) then return nil end
     return part
 end
 
@@ -408,24 +455,32 @@ function Kit.spineNativeParts(decor,deck)
     return nil
 end
 
+function Kit.promenadeNativeFrame(decor,deck)
+    if not deck or not deck:IsA("BasePart") then return nil end
+    local scale = promenadeFootprint(deck)
+    local id = cradleNativeOwner(decor,deck,scale)
+    if not id then return nil end
+    return cradleNativeFrame(decor,deck,id,scale),id,scale
+end
+
 function Kit.cradleNativeParts(decor,deck)
     if not deck or not deck:IsA("BasePart") then return nil end
     if deck:GetAttribute("SkySpineStep") ~= nil
         or deck:GetAttribute("SkySpineInterchange") == true then
         return Kit.spineNativeParts(decor,deck)
     end
-    local scale = promenadeFootprint(deck)
-    local id = cradleNativeOwner(decor,deck,scale)
-    if not id then return nil end
-    local frame = cradleNativeFrame(decor,deck,id,scale)
+    local frame,id,scale = Kit.promenadeNativeFrame(decor,deck)
     if not frame then return nil end
     local span = PROMENADE_TRUSS_SPAN[deck:GetAttribute("PromenadeStep")]
     if not span then return {frame} end
     -- The existing Harbor portal owns the cargo trusses on these steps.
     if decor.Parent:GetAttribute("VariantId") == "Harbor" then return nil end
-    local truss = matchingCradleNative(decor,deck,"Promenade"..id.."_UnderdeckTruss",
-        Vector3.new(5.6*scale,1.7,span*scale),
-        CFrame.new(0,deck.Size.Y*.5-1.3,0),"PromenadeVisualOnly",id)
+    local trussName = "Promenade"..id.."_UnderdeckTruss"
+    local candidate = decor:FindFirstChild(trussName)
+    if not candidate then return nil end
+    local size,offset = PlatformIdentityLodRules.promenadeUnderdeckGeometry(
+        deck.Size.Y*.5,span,scale,candidate:IsA("MeshPart"))
+    local truss = matchingCradleNative(decor,deck,trussName,size,offset,"PromenadeVisualOnly",id)
     if not truss then return nil end
     return {frame,truss}
 end
@@ -451,14 +506,16 @@ function Kit.routeSupportScale(part, deck)
     local id, corner = part.Name:match("^PlatformSupport(%d+)_([1-4])$")
     if not id or not deck or deck.Name ~= "Platform"..id
         or not validNativeSupport(part,tonumber(id)) then return nil end
+    local platforms = deck.Parent
+    local arena = platforms and platforms.Parent
+    local base = arena and arena:FindFirstChild("Base")
+    if not base or not base:IsA("BasePart") then return nil end
     local scale
     if deck:GetAttribute("SkySpineInterchange") == true then
         scale = Kit.spineFootprint(deck)
     elseif deck:GetAttribute("PromenadeStep") ~= nil then
         scale = promenadeFootprint(deck)
     elseif PlatformIdentityLodRules.isHarborLanding(deck) then
-        local platforms = deck.Parent
-        local arena = platforms and platforms.Parent
         local map = workspace:FindFirstChild("GeneratedMap")
         local width = PlatformIdentityLodRules.harborLandingWidth(deck)
         local sx,sz = deck.Size.X,deck.Size.Z
@@ -469,21 +526,27 @@ function Kit.routeSupportScale(part, deck)
             or not width or tonumber(deck:GetAttribute("RouteTier")) == nil
             or math.abs(deck.Size.Y-2) > .08 or math.abs(sx-sz) > .08
             or (tonumber(corner) > 2 and width < 11) then return nil end
+        if part:IsA("MeshPart") then
+            local casting = HorizonMonumentGeometry.isHarborPileCasting(part:GetAttribute("Original3DAssetId"))
+            local tagged = part:GetAttribute("OriginalHarborPileCasting3D") == true
+            if casting ~= tagged or (casting and part.MeshId == "") then return nil end
+        end
         -- The native socket and deck may stream after the floor has shrunk.
         -- Fit against their authored footprint and shared local geometry.
         scale = sx/width
         if scale < .445 or scale > 1.005 then return nil end
     end
-    if not scale or part.Parent ~= deck.Parent.Parent:FindFirstChild("Decor") then return nil end
+    if not scale or part.Parent ~= arena:FindFirstChild("Decor") then return nil end
     local sx,sz = deck.Size.X,deck.Size.Z
     local insetX = math.max(0,sx*.5-2*scale)
     local insetZ = math.max(0,sz*.5-2*scale)
     local width = math.clamp(math.min(sx,sz)/scale*.10,.72,1.35)*scale
-    local height = deck.Position.Y-deck.Size.Y*.5-1.15
+    local footY = PlatformIdentityLodRules.platformSupportFootY(base,deck)
+    local height = deck.Position.Y-deck.Size.Y*.5-footY
     local x = (corner == "1" or corner == "3") and -insetX or insetX
     local z = (corner == "1" or corner == "4") and -insetZ or insetZ
     local expected = deck.CFrame*CFrame.new(x,-(deck.Size.Y+height)*.5,z)
-    if part.Transparency >= .95 or not part:IsA("Part") or part.Shape ~= Enum.PartType.Block
+    if part.Transparency >= .95 or not isAuthoredSupportShape(part)
         or (part.Size-Vector3.new(width,height,width)).Magnitude > .10
         or (part.Position-expected.Position).Magnitude > .15
         or part.CFrame.UpVector:Dot(expected.UpVector) < .999
@@ -492,6 +555,9 @@ function Kit.routeSupportScale(part, deck)
 end
 
 local function supportFitSize(part, deck)
+    if part:IsA("MeshPart") and Kit.validNativeSkyPylon(part) then
+        return Vector3.new(1.5,part.Size.Y,1.7)
+    end
     if part.Name:match("^PlatformSupport%d+_%d+$") and deck
         and (deck:GetAttribute("PromenadeStep") ~= nil
             or deck:GetAttribute("SkySpineInterchange") == true
@@ -507,7 +573,7 @@ end
 -- crossings. Fit height independently from width so low piles keep their
 -- collars and high piles do not need two stacked seven-part modules.
 local function harborPileFit(nativeSize, sourceBounds)
-    if not nativeSize or nativeSize.Y < 4.75 or nativeSize.Y > 20
+    if not nativeSize or nativeSize.Y < 4.75 or nativeSize.Y > MAX_HARBOR_PILE_HEIGHT
         or nativeSize.X < .94 or nativeSize.X > 1.22 then return nil end
     local scale = nativeSize.Y/sourceBounds.Y
     local width = nativeSize.X*1.30
@@ -632,7 +698,7 @@ function Kit.selectNearRouteStructures(platforms,decor,variant,tier,base,cameraP
                         end
                     end
                 end
-            elseif variant~="Harbor" and platformFolder then
+            elseif platformFolder then
                 id=PlatformIdentityLodRules.promenadePylonIndex(part)
                 local owner=id and platformFolder:FindFirstChild("Platform"..id)
                 if PlatformIdentityLodRules.matchesPromenadePylon(part,owner) then
@@ -910,7 +976,7 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
             and (not Kit.validNativeSkyPylon(child,index)
                 or platform:GetAttribute("SkySpineStep")~=nil) then
             natives[#natives+1]=child
-        elseif variant~="Harbor" and platform:GetAttribute("PromenadeLane")
+        elseif platform:GetAttribute("PromenadeLane")
             and platform.Name == "Platform"..index
             and PlatformIdentityLodRules.matchesPromenadePylon(child,platform)
             and promenadePylonFit(child.Size,box) then
@@ -923,6 +989,14 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
         table.sort(natives,function(a,b)
             local da,db=(a.Position-cameraPoint).Magnitude,(b.Position-cameraPoint).Magnitude
             return da<db or (da==db and a.Name<b.Name)
+        end)
+    elseif next(promenadePylons) and typeof(cameraPoint) == "Vector3" then
+        table.sort(natives,function(a,b)
+            if promenadePylons[a] and promenadePylons[b] then
+                local da,db=(a.Position-cameraPoint).Magnitude,(b.Position-cameraPoint).Magnitude
+                if da~=db then return da<db end
+            end
+            return sortNativeSupports(a,b)
         end)
     else
         table.sort(natives,sortNativeSupports)
@@ -948,7 +1022,7 @@ function Kit.supports(parent,decor,platform,variant,tier,index,available,selecte
             for k=1,segments do
                 local delta=(k-(segments+1)*.5)*height
                 local stage=prepare(source,scale,function(scaled)
-                    if scaled.Y <= 0 or scaled.Y > (harborPile and 20 or 17.8) then return nil end
+                    if scaled.Y <= 0 or scaled.Y > (harborPile and MAX_HARBOR_PILE_HEIGHT or 17.8) then return nil end
                     return support.CFrame*CFrame.new(0,delta,0)
                 end,support,variant,true)
                 if not stage then ok=false; break end

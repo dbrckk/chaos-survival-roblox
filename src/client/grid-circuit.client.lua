@@ -12,6 +12,7 @@ local GuiService = game:GetService("GuiService")
 
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local GridCircuitRules = require(ReplicatedStorage.Shared.GridCircuitRules)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
 
@@ -37,6 +38,9 @@ local connections = {}
 local currentFolder = nil
 local tierName = nil
 local reducedMotion = nil
+local profiles = {}
+local nextProfileCheck = 0
+local meshEligible
 local lastStyleKey = ""
 local lastSweepBand = nil
 local lastSweepAt = nil
@@ -149,8 +153,36 @@ local function quality()
     return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
 end
 
-local function makePart(name, size, cf, tint, material, transparency)
-    local p = Instance.new("Part")
+local function refreshProfiles(tier, pressure)
+    local nextProfiles = {}
+    local changed = false
+    for _, role in ipairs({"casting", "ring", "pylon", "runway"}) do
+        local source
+        if tier ~= "Low" or role == "casting" or role == "ring" then
+            source = CelebrationMeshes.readyProfile(role, pressure)
+        end
+        local meshId = source and source.MeshId
+        nextProfiles[role] = source
+        nextProfiles[role .. "Id"] = meshId
+        if source ~= profiles[role] or meshId ~= profiles[role .. "Id"] then changed = true end
+    end
+    profiles = nextProfiles
+    return changed
+end
+
+local function makePart(name, size, cf, tint, material, transparency, source, meshOnly)
+    local p = CelebrationMeshes.cloneProfile(source)
+    if p then
+        p.MaterialVariant = ""
+        if (source.Size.X > source.Size.Z) ~= (size.X > size.Z) then
+            size = Vector3.new(size.Z, size.Y, size.X)
+            cf *= CFrame.Angles(0, math.pi * 0.5, 0)
+        end
+    elseif meshOnly then
+        return nil
+    else
+        p = Instance.new("Part")
+    end
     p.Name = name
     p.Size = size
     p.CFrame = cf
@@ -223,21 +255,25 @@ local function install(sensor)
     local center = sensor.Position - Vector3.new(0, 2.13, 0)
     local base = makePart("GridStationDeck" .. index,
         Vector3.new(6.15, 0.18, 6.15),
-        CFrame.new(center), palette.Metal, Enum.Material.Metal, 0.04)
+        CFrame.new(center), palette.Metal, Enum.Material.Metal, 0.04, profiles.casting)
 
     local signal = {}
-    local segments = tier == "High" and 12
-        or (tier == "Medium" and 8 or 4)
-    for n = 1, segments do
-        local phi = n / segments * math.pi * 2
-        local radial = Vector3.new(math.cos(phi), 0, math.sin(phi))
-        local tangent = Vector3.new(-radial.Z, 0, radial.X)
-        local at = center + Vector3.new(0, 0.16, 0) + radial * 2.48
-        local segment = makePart("GridStationCircuitRail",
-            Vector3.new(0.18, 0.07, (2 * math.pi * 2.48 / segments) * 0.78),
-            CFrame.lookAt(at, at + tangent),
-            palette.Standby, Enum.Material.Neon, 0.25)
-        table.insert(signal, segment)
+    local ring = makePart("GridStationCircuitRing", Vector3.new(5.14, 0.075, 5.14),
+        CFrame.new(center + Vector3.new(0, 0.16, 0)),
+        palette.Standby, Enum.Material.Neon, 0.25, profiles.ring, true)
+    if ring then
+        signal[1] = ring
+    else
+        local segments = tier == "High" and 12 or (tier == "Medium" and 8 or 4)
+        for n = 1, segments do
+            local phi = n / segments * math.pi * 2
+            local radial = Vector3.new(math.cos(phi), 0, math.sin(phi))
+            local tangent = Vector3.new(-radial.Z, 0, radial.X)
+            local at = center + Vector3.new(0, 0.16, 0) + radial * 2.48
+            signal[#signal + 1] = makePart("GridStationCircuitRail",
+                Vector3.new(0.18, 0.07, (2 * math.pi * 2.48 / segments) * 0.78),
+                CFrame.lookAt(at, at + tangent), palette.Standby, Enum.Material.Neon, 0.25)
+        end
     end
 
     if tier ~= "Low" then
@@ -247,11 +283,11 @@ local function install(sensor)
             local pylon = makePart("GridStationSignalPylon",
                 Vector3.new(0.48, 2.65, 0.48),
                 CFrame.new(center + radial * 2.75 + Vector3.new(0, 1.36, 0)),
-                palette.Edge, Enum.Material.Metal, 0.12)
+                palette.Edge, Enum.Material.Metal, 0.12, profiles.pylon)
             local filament = makePart("GridStationSignalFilament",
                 Vector3.new(0.16, 1.78, 0.16),
-                pylon.CFrame * CFrame.new(0, 0.03, -0.25),
-                palette.Standby, Enum.Material.Neon, 0.28)
+                CFrame.new(pylon.Position - radial * 0.285 + Vector3.new(0, 0.03, 0)),
+                palette.Standby, Enum.Material.Neon, 0.28, profiles.pylon)
             table.insert(signal, filament)
         end
     end
@@ -263,7 +299,7 @@ local function install(sensor)
             local brace = makePart("GridStationServiceCrown",
                 Vector3.new(0.75, 0.22, 0.80),
                 CFrame.new(center + radial * 2.75 + Vector3.new(0, 2.83, 0)),
-                palette.Edge, Enum.Material.DiamondPlate, 0.08)
+                palette.Edge, Enum.Material.DiamondPlate, 0.08, profiles.casting)
             brace.Reflectance = 0.1
         end
     end
@@ -384,7 +420,7 @@ local function ensureGuides()
                     Vector3.new(0.17, 0.055, 1.1),
                     CFrame.lookAt(center, center + horizontal)
                         * CFrame.Angles(0, math.rad(side * 32), 0),
-                    palette.Standby, Enum.Material.Neon, 0.84)
+                    palette.Standby, Enum.Material.Neon, 0.84, profiles.runway)
                 table.insert(guides, {from = index, part = glyph})
             end
         end
@@ -528,6 +564,17 @@ task.spawn(function()
                 if sensor.Parent == circuit then count += 1 end
             end
             if count ~= #circuit:GetChildren() then changed = true end
+        end
+        if circuit then
+            local pressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+            local eligible = pressure < 1
+            local now = os.clock()
+            if changed or eligible ~= meshEligible or now >= nextProfileCheck then
+                local sourcesChanged = refreshProfiles(quality(), pressure)
+                changed = changed or sourcesChanged
+                meshEligible = eligible
+                nextProfileCheck = now + 1
+            end
         end
         if changed then bindCircuit(circuit) end
         updateLook()

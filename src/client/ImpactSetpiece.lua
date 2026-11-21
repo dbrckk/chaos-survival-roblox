@@ -9,7 +9,7 @@ local TweenService = game:GetService("TweenService")
 
 local ImpactSetpiece = {}
 
-function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesOverride)
+function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesOverride, cloneGeometry)
     -- Reject incomplete event data *before* resolving Shared modules. Lest
     -- engine shards intentionally load this file outside its live Rojo tree.
     -- This cheap guard also avoids module lookups for corrupt network events.
@@ -40,6 +40,7 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
     local container = Instance.new("Folder")
     container.Name = "ImpactSignature_" .. recipe.Kind
     container.Parent = parent
+    local meteor = recipe.Kind == "Meteor"
 
     for index = 1, recipe.Count do
         local fragment = rules.fragment(recipe.Kind, index, recipe.Count, recipe.Radius)
@@ -50,9 +51,8 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
         local finish = direction * fragment.EndRadius
             + Vector3.new(0, fragment.Lift, 0)
 
-        local part = recipe.Kind == "Meteor"
-            and Instance.new("WedgePart")
-            or Instance.new("Part")
+        local mesh = cloneGeometry and cloneGeometry("fragment")
+        local part = mesh or Instance.new(meteor and "WedgePart" or "Part")
         part.Name = recipe.Prefix .. index
         part.Anchored = true
         part.CanCollide = false
@@ -76,7 +76,7 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
             and Vector3.new(fragment.Width, fragment.Length, fragment.Width * 1.8)
             or Vector3.new(fragment.Width, 0.08, fragment.Length * 0.50)
         -- Compose authored trajectory, oblique yaw and silhouette bank.
-        -- Geometry is still one wedge/part per existing budget slot.
+        -- Geometry is still one piece per existing budget slot.
         local rotation = CFrame.Angles(0, yaw + fragment.YawSkew, fragment.Bank)
         part.CFrame = groundFrame * CFrame.new(start) * rotation
         part.Parent = container
@@ -103,8 +103,8 @@ function ImpactSetpiece.spawn(parent, payload, qualityTier, reduceMotion, rulesO
     local finishCount = rules.finishCount(recipe.Kind, qualityTier, reduceMotion)
     for index = 1, finishCount do
         local finish = rules.finish(recipe.Kind, index, finishCount, recipe.Radius)
-        local meteor = recipe.Kind == "Meteor"
-        local piece = meteor and Instance.new("WedgePart") or Instance.new("Part")
+        local mesh = cloneGeometry and cloneGeometry(meteor and "fragment" or "pressure")
+        local piece = mesh or Instance.new(meteor and "WedgePart" or "Part")
         piece.Name = meteor and ("MeteorCraterRim" .. index)
             or ("BombPressureArc" .. index)
         piece.Anchored = true

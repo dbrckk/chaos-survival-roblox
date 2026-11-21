@@ -2,7 +2,7 @@
 -- recognizable fractured meteor. No hitboxes, network ownership or damage.
 local MeteorCoreSculptKit = {}
 
-function MeteorCoreSculptKit.build(meteor, tier, rules)
+function MeteorCoreSculptKit.build(meteor, tier, rules, clonePlate)
     if typeof(meteor) ~= "Instance" or not meteor:IsA("BasePart")
         or not meteor.Parent or type(rules) ~= "table" then
         return {}
@@ -12,7 +12,7 @@ function MeteorCoreSculptKit.build(meteor, tier, rules)
     for index = 1, count do
         local recipe = rules.corePlate(index, count, meteor.Size.X)
         if recipe then
-            local plate = Instance.new("WedgePart")
+            local plate = (clonePlate and clonePlate(recipe.Material)) or Instance.new("WedgePart")
             plate.Name = "LocalMeteorFacet" .. index
             plate.Size = recipe.Size
             plate.CFrame = meteor.CFrame * recipe.Transform
@@ -25,13 +25,12 @@ function MeteorCoreSculptKit.build(meteor, tier, rules)
             plate.CanTouch = false
             plate.CanQuery = false
             plate.CastShadow = false
-            plate.Parent = meteor
-
             local weld = Instance.new("WeldConstraint")
             weld.Name = "MeteorFacetWeld"
             weld.Part0 = meteor
             weld.Part1 = plate
             weld.Parent = plate
+            plate.Parent = meteor
 
             pieces[#pieces + 1] = plate
         end

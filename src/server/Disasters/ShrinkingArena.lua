@@ -37,12 +37,12 @@ end
 -- Flat decals and panel insets are decoration, not collision geometry.
 -- Scale their footprint with the base so they never show a ghost floor
 -- beyond the shrinking walkable surface.
-function D.scaledFloorTransform(originalSize, localPosition, scale)
+function D.scaledFloorTransform(originalSize, localPosition, scale, heightOnX)
     local safeScale = math.clamp(tonumber(scale) or 1, 0.05, 1)
     local size = typeof(originalSize) == "Vector3" and originalSize or Vector3.one
     return Vector3.new(
-        math.max(0.05, size.X * safeScale),
-        size.Y,
+        heightOnX and size.X or math.max(0.05, size.X * safeScale),
+        heightOnX and math.max(0.05, size.Y * safeScale) or size.Y,
         math.max(0.05, size.Z * safeScale)
     ), D.scaledLocalPosition(localPosition, safeScale)
 end
@@ -95,7 +95,16 @@ function D.start(ctx)
                     or name:match("^TowerGroundCore%d+$")
                     or name:match("^TowerAscentChevron%d+_%-?%d+$")
                     or name:match("^CrossroadLaneFill%d+$")
+                    or name == "CrossroadHubMark"
                     or name:match("^FluxRouteChevron%d+_%d+_%-?%d+$")
+                    or name:match("^HarborAccessChevron%d+_%d+_%-?%d+$")
+                    or name:match("^HarborQuayInlay%d+$")
+                    or name:match("^OrbitalAccessChevron%d+_%-?%d+$")
+                    or name:match("^OrbitalSpoke%d+$")
+                    or name == "OrbitalCoreMark"
+                    or name:match("^FloorMaintenancePanel%d+$")
+                    or name:match("^EdgeBeacon%d+$")
+                    or name:match("^EdgeBeaconGlow%d+$")
                     -- Keep 320-stud district navigation markings on the
                     -- contracting floor, not floating beyond lethal edges.
                     -- All original thin floor panels, recessed seams,
@@ -109,6 +118,9 @@ function D.start(ctx)
                     floorDetails[#floorDetails+1] = {
                         part = item,
                         size = item.Size,
+                        -- The horizontal fallback cylinder has its thickness on local X.
+                        heightOnX = name == "OrbitalCoreMark" and item:IsA("Part")
+                            and item.Shape == Enum.PartType.Cylinder,
                         cframe = item.CFrame,
                         localCFrame = originalCFrame:ToObjectSpace(item.CFrame),
                         localPosition = originalCFrame:PointToObjectSpace(item.Position),
@@ -229,17 +241,16 @@ function D.start(ctx)
     if decor then
         for _, item in ipairs(decor:GetChildren()) do
             if item:IsA("BasePart") then
-                local bridgeIndex = tonumber(
-                    item.Name:match("^SkybridgeRail(%d+)_")
-                    or item.Name:match("^SkybridgeRib(%d+)_")
-                )
+                local ribIndex = item.Name:match("^SkybridgeRib(%d+)_")
+                local bevelIndex = item.Name:match("^PlatformBevel(%d+)_%d+$")
+                local bridgeIndex = tonumber(ribIndex or item.Name:match("^SkybridgeRail(%d+)_"))
                 local platformIndex = tonumber(
                     item.Name:match("^PlatformGlow(%d+)$")
                     or item.Name:match("^PlatformPanel(%d+)$")
                     or item.Name:match("^PlatformUnderFrame(%d+)$")
                     or item.Name:match("^PlatformCoreGlow(%d+)$")
                     or item.Name:match("^PlatformSupport(%d+)_%d+$")
-                    or item.Name:match("^PlatformBevel(%d+)_%d+$")
+                    or bevelIndex
                     -- Original outer-route facades are linked by an
                     -- explicit owning deck, not guessed from an art name.
                     or item:GetAttribute("PerimeterPlatformIndex")
@@ -247,18 +258,27 @@ function D.start(ctx)
                 local bridge = bridgeStates[bridgeIndex or platformIndex]
                 local deck = platformIndex and platformStates[platformIndex]
                 if bridge then
+                    local localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame)
+                    local stretchX = bridge.alongX
+                    if item:IsA("MeshPart") or bevelIndex then
+                        local axis = bridge.alongX and Vector3.xAxis or Vector3.zAxis
+                        stretchX = math.abs(localCFrame.RightVector:Dot(axis)) > .999
+                    end
                     table.insert(bridgeDetails, {
                         part = item,
                         bridge = bridge,
+                        transverseRib = ribIndex ~= nil,
+                        stretchX = stretchX,
                         size = item.Size,
                         cframe = item.CFrame,
-                        localCFrame = bridge.part.CFrame:ToObjectSpace(item.CFrame),
+                        localCFrame = localCFrame,
                     })
                 elseif deck then
                     table.insert(platformDetails, {
                         part = item,
                         deck = deck,
                         size = item.Size,
+                        heightAxis = item:GetAttribute("RouteSignalHeightAxis"),
                         cframe = item.CFrame,
                         localCFrame = deck.part.CFrame:ToObjectSpace(item.CFrame),
                     })
@@ -342,7 +362,7 @@ function D.start(ctx)
                 local floorArt = state.part
                 if floorArt.Parent then
                     local size, position = D.scaledFloorTransform(
-                        state.size, state.localPosition, scale
+                        state.size, state.localPosition, scale, state.heightOnX
                     )
                     local rotationOnly = state.localCFrame - state.localCFrame.Position
                     floorArt.Size = size
@@ -391,10 +411,14 @@ function D.start(ctx)
                         detail.part.CFrame = detail.deck.part.CFrame
                             * CFrame.new(p.X * scale, p.Y, p.Z * scale)
                             * rotationOnly
+                        -- Upright route signals can store their height on
+                        -- local X or Z. Contract only the horizontal axes.
+                        local size = detail.size
+                        local heightAxis = detail.heightAxis
                         detail.part.Size = Vector3.new(
-                            math.max(0.05, detail.size.X * scale),
-                            detail.size.Y,
-                            math.max(0.05, detail.size.Z * scale)
+                            heightAxis == "X" and size.X or math.max(0.05, size.X * scale),
+                            heightAxis and math.max(0.05, size.Y * scale) or size.Y,
+                            heightAxis == "Z" and size.Z or math.max(0.05, size.Z * scale)
                         )
                     else
                         detail.part.CFrame = detail.deck.part.CFrame * detail.localCFrame
@@ -416,8 +440,12 @@ function D.start(ctx)
                         or Vector3.new(p.X, p.Y, p.Z * ratio)
                     piece.CFrame = bridge.part.CFrame
                         * CFrame.new(relative) * rotationOnly
+                    -- The rib moves along the span but fits the unchanged
+                    -- width. A rotated MeshPart stores that width on its
+                    -- own local axis, which can be the bridge's long axis.
+                    if detail.transverseRib then continue end
                     local size = detail.size
-                    piece.Size = bridge.alongX
+                    piece.Size = detail.stretchX
                         and Vector3.new(
                             size.X > 2.2 and size.X * ratio or size.X,
                             size.Y, size.Z)

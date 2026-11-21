@@ -2,6 +2,7 @@
 -- Three exact real primitive Parts are hidden only after full model mount.
 -- The crane legs, hoists, winches, spreader and cargo keep their native art.
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit={}
 local MODEL_ID=124368710235343
@@ -35,7 +36,7 @@ local function restore()
     mounted=nil
     for _,c in ipairs(state.connections) do c:Disconnect() end
     for native,alpha in pairs(state.originals) do
-        if native.Parent==state.owner and native:IsA("Part")
+        if native.Parent==state.owner and native:IsA("BasePart")
             and native.Anchored and not native.CanCollide
             and not native.CanTouch and not native.CanQuery
             and native.Transparency==1 then
@@ -115,30 +116,27 @@ local function realContext(arena)
         or owner:GetAttribute("SignatureVariant")~="Harbor" then
         return nil
     end
-    local natives={}
+    local natives,poses={},{}
     for i,name in ipairs(NAMES) do
         local part=owner:FindFirstChild(name)
-        if not part or not part:IsA("Part") or part.Parent~=owner
-            or part.Shape~=Enum.PartType.Block
-            or not part.Anchored or part.CanCollide or part.CanTouch
-            or part.CanQuery or (part.Size-SIZES[i]).Magnitude>.12 then
-            return nil
-        end
+        local size,pose=ExteriorDetailGeometry.monumentFootprint(part,owner,"Part")
+        if not size or (size-SIZES[i]).Magnitude>.12 then return nil end
+        poses[i]=pose
         natives[i]=part
     end
-    local beam=natives[1]
+    local beamPose=poses[1]
     local originalX=base:GetAttribute("OriginalSizeX")
     local originalZ=base:GetAttribute("OriginalSizeZ")
     local expected=base.Position+Vector3.new(
         originalX*.24,base.Size.Y*.5+43.5,-(originalZ*.5+66))
-    if (beam.Position-expected).Magnitude>.20 then return nil end
+    if (beamPose.Position-expected).Magnitude>.20 then return nil end
     -- Authored MapBuilder frame relationships are exact and unchanged.
     local expectedRelative={
         CFrame.new(-10,4.5,3),
         CFrame.new(4.8,-4,0),
     }
     for i=2,3 do
-        local observed=beam.CFrame:ToObjectSpace(natives[i].CFrame)
+        local observed=beamPose:ToObjectSpace(poses[i])
         local target=expectedRelative[i-1]
         if (observed.Position-target.Position).Magnitude>.12
             or observed.LookVector:Dot(target.LookVector)<.999
@@ -162,16 +160,15 @@ local function realContext(arena)
     }
     for _,pair in ipairs(companions) do
         local part=owner:FindFirstChild(pair[1])
-        if not part or not part:IsA("Part") or part.Parent~=owner
-            or not part.Anchored or part.CanCollide or part.CanTouch
-            or part.CanQuery or (part.Size-pair[2]).Magnitude>.12 then
+        local size=ExteriorDetailGeometry.monumentFootprint(part,owner,"Part")
+        if not size or (size-pair[2]).Magnitude>.12 then
             return nil
         end
     end
-    return base,owner,natives
+    return base,owner,natives,beamPose
 end
 
-local function fittedModel(source,beam)
+local function fittedModel(source,beamPose)
     local model=source:Clone()
     local nativeBox=Vector3.new(41,14.1,9.1)
     local _,orig=model:GetBoundingBox()
@@ -202,7 +199,7 @@ local function fittedModel(source,beam)
     -- Union center of the three authentic native forms: x=0,
     -- y=43.85,z=1.95. Original QuayCraneSpanningBeam center:
     -- x=0,y=43.5,z=0. Distinct cabin and counterweight keep position.
-    local target=beam.CFrame*CFrame.new(0,.35,1.95)
+    local target=beamPose*CFrame.new(0,.35,1.95)
         *CFrame.Angles(0,yaw,0)
     local meshes={}
     for _,part in ipairs(model:GetDescendants()) do
@@ -229,9 +226,9 @@ end
 
 local function mount(arena,source)
     if mounted then return end
-    local base,owner,natives=realContext(arena)
+    local base,owner,natives,beamPose=realContext(arena)
     if not base then return end
-    local model,meshes=fittedModel(source,natives[1])
+    local model,meshes=fittedModel(source,beamPose)
     if not model then return end
     local stillBase,stillOwner,again=realContext(arena)
     if stillBase~=base or stillOwner~=owner

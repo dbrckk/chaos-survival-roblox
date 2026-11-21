@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local player = Players.LocalPlayer
 
 local folder = Instance.new("Folder")
@@ -39,8 +40,8 @@ local function quality()
     return "Low"
 end
 
-local function part(parent, name, size, frame, color, material, alpha)
-    local p = Instance.new("Part")
+local function part(parent, name, size, frame, color, material, alpha, source)
+    local p = CelebrationMeshes.cloneProfile(source) or Instance.new("Part")
     p.Name = name
     p.Size = size
     p.CFrame = frame
@@ -56,13 +57,13 @@ local function part(parent, name, size, frame, color, material, alpha)
     return p
 end
 
-local function beam(parent, name, a, b, width, tone, material, transparency)
+local function beam(parent, name, a, b, width, tone, material, transparency, source)
     local delta = b - a
     if delta.Magnitude < 0.01 then return nil end
     local middle = (a + b) * 0.5
     return part(parent, name, Vector3.new(width, delta.Magnitude, width),
         CFrame.lookAt(middle, b) * CFrame.Angles(math.pi * 0.5, 0, 0),
-        tone, material, transparency)
+        tone, material, transparency, source)
 end
 
 local function liveStyle(entry)
@@ -87,7 +88,7 @@ local function liveStyle(entry)
     end
 end
 
-local function addStation(model, theme, tier)
+local function addStation(model, theme, tier, shaft, casting, lens)
     if not model:IsA("Model")
         or model:GetAttribute("DistrictSignalStation") ~= true
         or stations[model] then
@@ -122,7 +123,7 @@ local function addStation(model, theme, tier)
             math.cos(b) * radius, math.sin(b) * radius, 0)
         local ring = beam(stage, "ScanningArc" .. index,
             startPoint, endPoint, high and 0.56 or 0.70,
-            accent, Enum.Material.Neon, 0.90)
+            accent, Enum.Material.Neon, 0.90, shaft)
         rings[#rings + 1] = ring
     end
 
@@ -133,16 +134,16 @@ local function addStation(model, theme, tier)
         part(stage, "AnchorPylon" .. index,
             Vector3.new(1.25, 7.8, 1.5),
             frame * CFrame.new(x, -4.5, 0),
-            dark, Enum.Material.Metal, 0.20)
+            dark, Enum.Material.Metal, 0.20, shaft)
         part(stage, "PylonHighlight" .. index,
             Vector3.new(0.22, 5.4, 1.58),
             frame * CFrame.new(x + sign * 0.72, -4.15, 0),
-            metal, Enum.Material.DiamondPlate, 0.24)
+            metal, Enum.Material.DiamondPlate, 0.24, shaft)
         if high then
             beam(stage, "PylonBrace" .. index,
                 origin + Vector3.new(x, -7.5, 0),
                 origin + Vector3.new(sign * 3.5, -2.4, 0),
-                0.50, metal, Enum.Material.Metal, 0.18)
+                0.50, metal, Enum.Material.Metal, 0.18, shaft)
         end
     end
     if high then
@@ -151,18 +152,18 @@ local function addStation(model, theme, tier)
         part(stage, "TrackingCrosshead",
             Vector3.new(11, 0.85, 1.7),
             frame * CFrame.new(0, 6.45, 0),
-            metal, Enum.Material.Metal, 0.16)
+            metal, Enum.Material.Metal, 0.16, casting)
         local window = part(stage, "TrackingLens",
             Vector3.new(2.2, 2.2, 2.2),
             frame * CFrame.new(0, 7.2, 0),
-            accent, Enum.Material.Glass, 0.32)
-        window.Shape = Enum.PartType.Ball
+            accent, Enum.Material.Glass, 0.32, lens)
+        if window:IsA("Part") then window.Shape = Enum.PartType.Ball end
     end
 
     local beacon = part(stage, "LiveScanBeam",
         Vector3.new(0.42, 9, 0.42),
         frame * CFrame.new(0, 4.9, 0),
-        accent, Enum.Material.Neon, 0.82)
+        accent, Enum.Material.Neon, 0.82, shaft)
 
     local entry = {model = model, rings = rings, beacon = beacon,
         owner = stage, route = route}
@@ -190,9 +191,13 @@ local function rebuild()
     watchedSignals = folderOwner
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
+    local pressure = player:GetAttribute("OptionalVfxPressure")
+    local shaft = CelebrationMeshes.readyProfile("pylon", pressure)
+    local casting = tier == "High" and CelebrationMeshes.readyProfile("casting", pressure)
+    local lens = tier == "High" and CelebrationMeshes.readyProfile("fragment", pressure)
 
     local function register(model)
-        addStation(model, theme, tier)
+        addStation(model, theme, tier, shaft, casting, lens)
         -- Atomic streamed models can be delivered before PulseCore;
         -- detect its actual arrival rather than relying on fixed delays.
         if model:IsA("Model")
@@ -200,7 +205,7 @@ local function rebuild()
             and not stations[model] then
             connections[#connections + 1] = model.ChildAdded:Connect(function(c)
                 if c.Name == "PulseCore" then
-                    addStation(model, theme, tier)
+                    addStation(model, theme, tier, shaft, casting, lens)
                 end
             end)
         end
@@ -242,4 +247,12 @@ workspace.DescendantRemoving:Connect(function(child)
     end
 end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(scheduleRebuild)
+local pressureLimited = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    local limited = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) >= 1
+    if pressureLimited ~= limited then
+        pressureLimited = limited
+        if watchedSignals then scheduleRebuild() end
+    end
+end)
 scheduleRebuild()

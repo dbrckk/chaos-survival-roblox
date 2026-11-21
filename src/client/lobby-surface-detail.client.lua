@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -6,12 +7,42 @@ local MapVisualReadiness = require(ReplicatedStorage.Shared.MapVisualReadiness)
 local PremiumLobbyGroundMeshKit = require(script.Parent.PremiumLobbyGroundMeshKit)
 local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local VisualTheme = require(ReplicatedStorage.Shared.VisualTheme)
+local LobbyMeshPreload = require(script.Parent.LobbyMeshPreload)
 
 local player = Players.LocalPlayer
+
+local FALLBACK_PAIRS = {Low = 2, Medium = 3, High = 4}
+-- Fractions of the inset's half extents. Leave its four straight access
+-- routes, the notice panels and the raised center clear.
+local SEAM_LAYOUT = {
+    {x = .56, z = -.82, alongX = true, length = .53},
+    {x = .56, z = .88, alongX = true, length = .53},
+    {x = .89, z = -.51, alongX = false, length = .48},
+    {x = .89, z = .51, alongX = false, length = .48},
+}
+local MAINTENANCE_LAYOUT = {
+    {x = .54, z = -.61, alongX = true, length = 6.4},
+    {x = .54, z = .61, alongX = true, length = 4.8},
+    {x = .80, z = .29, alongX = false, length = 6.4},
+    {x = .80, z = -.57, alongX = false, length = 4.8},
+}
 
 local folder = Instance.new("Folder")
 folder.Name = "LobbySurfaceDetailLocal"
 folder.Parent = workspace
+
+local rebuild
+local refreshPending = false
+local function scheduleRefresh()
+    if refreshPending then return end
+    refreshPending = true
+    task.defer(function()
+        refreshPending = false
+        rebuild()
+    end)
+end
+
+local geometryReady = LobbyMeshPreload.new(scheduleRefresh)
 
 local clearingOwn = false
 local function clear()
@@ -43,7 +74,43 @@ local function makePart(name, size, cframe, color, material, transparency)
     return part
 end
 
-local function rebuild()
+local function buildVestibuleFallback(inset, tier, vestibuleTiles)
+    local top = inset.CFrame * CFrame.new(0, inset.Size.Y * .5, 0)
+    local halfX, halfZ = inset.Size.X * .5, inset.Size.Z * .5
+    local hatchColor = VisualTheme.World.SurfaceRaised:Lerp(VisualTheme.World.Metal, .38)
+    local showHatchLights = tier == "High" and vestibuleTiles == 0
+
+    for i = 1, FALLBACK_PAIRS[tier] do
+        local seam = SEAM_LAYOUT[i]
+        local hatch = MAINTENANCE_LAYOUT[i]
+        local seamSize = seam.alongX and Vector3.new(halfX * seam.length, .026, .12)
+            or Vector3.new(.12, .026, halfZ * seam.length)
+        local hatchRotation = CFrame.Angles(0, hatch.alongX and 0 or math.pi * .5, 0)
+        for side = -1, 1, 2 do
+            local index = (i - 1) * 2 + (side < 0 and 1 or 2)
+            if not PremiumLobbyGroundMeshKit.coversVestibuleSector(vestibuleTiles, side, seam.z) then
+                makePart("LobbyPanelSeam" .. index, seamSize,
+                    top * CFrame.new(side * seam.x * halfX, .017, seam.z * halfZ),
+                    VisualTheme.World.MetalLight, Enum.Material.Metal, tier == "Low" and .48 or .56)
+            end
+            if not PremiumLobbyGroundMeshKit.coversVestibuleSector(vestibuleTiles, side, hatch.z) then
+                local panel = makePart("LobbyMaintenancePanel" .. index,
+                    Vector3.new(hatch.length, .034, 2),
+                    top * CFrame.new(side * hatch.x * halfX, .022, hatch.z * halfZ) * hatchRotation,
+                    hatchColor, Enum.Material.Metal, tier == "Low" and .30 or .16)
+                if showHatchLights then
+                    makePart("LobbyMaintenanceInset" .. index,
+                        Vector3.new(panel.Size.X * .62, .022, .08),
+                        panel.CFrame * CFrame.new(0, panel.Size.Y * .5 + .012, 0),
+                        side < 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
+                        Enum.Material.Neon, .72)
+                end
+            end
+        end
+    end
+end
+
+rebuild = function()
     clear()
 
     local generated = workspace:FindFirstChild("GeneratedMap")
@@ -56,10 +123,12 @@ local function rebuild()
 
     local tier = VfxQuality.deviceTier(
         player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
-    -- Only verified real imported UV meshes replace the native line grid.
+    local centerPlatform = decor and decor:FindFirstChild("CenterPlatform")
+    -- A mounted approved tile takes over the fallback seams and hatches.
     -- All gameplay panels, the 74-stud collision Floor, and spawn remain.
-    local meshParts, meshTiles = PremiumLobbyGroundMeshKit.install(
-        folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure")
+    local meshParts, meshTiles, vestibuleTiles = PremiumLobbyGroundMeshKit.install(
+        folder, floor, tier.Name, player:GetAttribute("OptionalVfxPressure"),
+        centerPlatform, geometryReady
     )
     if player:GetAttribute("LocalOriginalLobbyGroundMeshPartCount")
         ~= meshParts then
@@ -69,100 +138,51 @@ local function rebuild()
         ~= meshTiles then
         player:SetAttribute("LocalOriginalLobbyGroundTileCount", meshTiles)
     end
-    local top = floor.CFrame * CFrame.new(0, floor.Size.Y * 0.5 + 0.04, 0)
-    local halfX = floor.Size.X * 0.5
-    local halfZ = floor.Size.Z * 0.5
-
-    local seamCount = meshTiles > 0 and 0
-        or (tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8))
-    for i = 1, seamCount do
-        local t = (i / (seamCount + 1)) * 2 - 1
-        local horizontal = i % 2 == 0
-        makePart(
-            "LobbyPanelSeam" .. i,
-            horizontal
-                and Vector3.new(floor.Size.X * 0.80, 0.026, 0.075)
-                or Vector3.new(0.075, 0.026, floor.Size.Z * 0.80),
-            top * CFrame.new(
-                horizontal and 0 or t * halfX * 0.78,
-                0,
-                horizontal and t * halfZ * 0.78 or 0
-            ),
-            VisualTheme.World.Deep,
-            Enum.Material.Metal,
-            tier.Name == "Low" and 0.78 or 0.62
-        )
-    end
-
-    local panelCount = tier.Name == "Low" and 4 or (tier.Name == "Medium" and 6 or 8)
-    for i = 1, panelCount do
-        local angle = ((i - 1) / panelCount) * math.pi * 2 + math.rad(22.5)
-        local radius = 25 + ((i * 3) % 6)
-        local x = math.cos(angle) * radius
-        local z = math.sin(angle) * radius
-        local panel = makePart(
-            "LobbyMaintenancePanel" .. i,
-            Vector3.new(4.8 + (i % 2) * 1.6, 0.034, 2.0),
-            top
-                * CFrame.new(x, 0.012, z)
-                * CFrame.Angles(0, -angle + math.pi * 0.5, 0),
-            VisualTheme.World.SurfaceRaised:Lerp(VisualTheme.World.Metal, 0.38),
-            i % 3 == 0 and Enum.Material.DiamondPlate or Enum.Material.Metal,
-            tier.Name == "Low" and 0.30 or 0.16
-        )
-
-        if tier.Name == "High" then
-            makePart(
-                "LobbyMaintenanceInset" .. i,
-                Vector3.new(panel.Size.X * 0.62, 0.022, 0.08),
-                panel.CFrame * CFrame.new(0, panel.Size.Y * 0.5 + 0.02, 0),
-                i % 2 == 0 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
-                Enum.Material.Neon,
-                0.72
-            )
-        end
+    local inset = decor and decor:FindFirstChild("LobbyFloorInset")
+    if inset and inset:IsA("BasePart") then
+        buildVestibuleFallback(inset, tier.Name, vestibuleTiles)
     end
 
     local runway = decor and decor:FindFirstChild("ArenaRunway")
     if runway and runway:IsA("BasePart") then
         local sectionCount = tier.Name == "Low" and 4 or 7
+        -- Seat the relief just clear of the deck and under the moving cue.
+        local detailPlane = runway.CFrame * CFrame.new(0, runway.Size.Y * 0.5 + 0.016, 0)
         for i = 1, sectionCount do
             local t = (i / (sectionCount + 1)) * 2 - 1
+            local sectionFrame = detailPlane * CFrame.new(0, 0, t * runway.Size.Z * 0.44)
             local seam = makePart(
                 "RunwaySection" .. i,
-                Vector3.new(runway.Size.X * 0.78, 0.026, 0.08),
-                runway.CFrame * CFrame.new(
-                    0,
-                    runway.Size.Y * 0.5 + 0.024,
-                    t * runway.Size.Z * 0.44
-                ),
+                Vector3.new(runway.Size.X * 0.78, 0.022, 0.16),
+                sectionFrame,
                 VisualTheme.World.MetalLight,
                 Enum.Material.Metal,
-                tier.Name == "Low" and 0.74 or 0.58
+                tier.Name == "Low" and 0.63 or 0.56
             )
+            CollectionService:AddTag(seam, "LobbySculptedSwept")
 
             if tier.Name ~= "Low" and i % 2 == 1 then
-                makePart(
+                local guide = makePart(
                     "RunwayGuide" .. i,
-                    Vector3.new(1.7, 0.030, 0.18),
-                    seam.CFrame * CFrame.new(0, 0.012, -1.15),
+                    Vector3.new(1.7, 0.022, 0.20),
+                    sectionFrame * CFrame.new(0, 0, -1.15),
                     i % 4 == 1 and VisualTheme.Accents.Cyan or VisualTheme.Accents.Violet,
                     Enum.Material.Neon,
                     0.52
                 )
+                CollectionService:AddTag(guide, "LobbySculptedSwept")
             end
         end
     end
 
-    local centerPlatform = decor and decor:FindFirstChild("CenterPlatform")
     if centerPlatform and centerPlatform:IsA("BasePart") and tier.Name ~= "Low" then
         local topCenter = centerPlatform.CFrame
-            * CFrame.new(0, centerPlatform.Size.Y * 0.5 + 0.04, 0)
+            * CFrame.new(0, centerPlatform.Size.Y * 0.5 + 0.048, 0)
         for i = 1, 4 do
             local angle = math.rad(45 + (i - 1) * 90)
-            makePart(
+            local trim = makePart(
                 "CenterPlatformTrim" .. i,
-                Vector3.new(6.2, 0.03, 0.11),
+                Vector3.new(6.2, 0.036, 0.26),
                 topCenter
                     * CFrame.new(
                         math.cos(angle) * 7.0,
@@ -174,6 +194,7 @@ local function rebuild()
                 Enum.Material.Neon,
                 0.58
             )
+            CollectionService:AddTag(trim, "LobbySculptedSwept")
         end
     end
 end
@@ -181,28 +202,34 @@ end
 -- Existing server asset lane can publish PremiumGroundTile after the
 -- lobby is first shown. One deferred reconstruction replaces native lines
 -- only once actual original MeshParts are ready, not on a fixed timer.
-local refreshPending = false
 local disconnectFloorWatch = nil
 local watchedMap = nil
 local watchedTemplates = nil
 local templateConnections = {}
-
-local function scheduleRefresh()
-    if refreshPending then return end
-    refreshPending = true
-    task.defer(function()
-        refreshPending = false
-        rebuild()
-    end)
-end
 
 local function bindMap(generated)
     if disconnectFloorWatch then disconnectFloorWatch() end
     disconnectFloorWatch = nil
     watchedMap = generated
     if generated then
-        disconnectFloorWatch = MapVisualReadiness.watch(
+        local disconnectFloor = MapVisualReadiness.watch(
             generated, "Lobby", "Floor", scheduleRefresh)
+        local function onDetailAnchorChange(item)
+            if item.Name ~= "CenterPlatform" and item.Name ~= "ArenaRunway"
+                and item.Name ~= "LobbyFloorInset" then return end
+            local lobby = generated:FindFirstChild("Lobby")
+            local decor = lobby and lobby:FindFirstChild("Decor")
+            if decor and item.Parent == decor then scheduleRefresh() end
+        end
+        local added = generated.DescendantAdded:Connect(onDetailAnchorChange)
+        -- On removal, refresh from the canonical hierarchy after the
+        -- anchor (or a streamed ancestor) actually leaves the lobby.
+        local removing = generated.DescendantRemoving:Connect(onDetailAnchorChange)
+        disconnectFloorWatch = function()
+            disconnectFloor()
+            added:Disconnect()
+            removing:Disconnect()
+        end
     else
         clear()
     end
@@ -217,13 +244,16 @@ local function bindTemplates(holder)
     table.clear(templateConnections)
     watchedTemplates = holder
     if holder and holder:IsA("Folder") then
-        local function changed(child)
-            if child.Name == "PremiumGroundTile" then scheduleRefresh() end
+        local function changed(item)
+            local source = item:FindFirstAncestor("PremiumGroundTile")
+            if item.Name == "PremiumGroundTile" or (source and source.Parent == holder) then
+                scheduleRefresh()
+            end
         end
         templateConnections[#templateConnections + 1] =
-            holder.ChildAdded:Connect(changed)
+            holder.DescendantAdded:Connect(changed)
         templateConnections[#templateConnections + 1] =
-            holder.ChildRemoved:Connect(changed)
+            holder.DescendantRemoving:Connect(changed)
         templateConnections[#templateConnections + 1] =
             holder:GetAttributeChangedSignal("OwnerVerified")
                 :Connect(scheduleRefresh)

@@ -7,7 +7,7 @@ local describe, it, expect = Lest.describe, Lest.it, Lest.expect
 local Kit = require("../../src/client/PlatformNativeTrimReplacementKit")
 local ApprovedDistrictSidewallMeshKit = require("../../src/client/ApprovedDistrictSidewallMeshKit")
 local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFacadeMeshKit")
-local PremiumDistrictFacadeMeshKit = require("../../src/client/PremiumDistrictFacadeMeshKit")
+local PlatformIdentityLodRules = require("../../src/shared/PlatformIdentityLodRules")
 local DistrictVisualCensusRules = require("../../src/shared/DistrictVisualCensusRules")
 local PremiumPlatformSideMeshKit = require("../../src/client/PremiumPlatformSideMeshKit")
 local PremiumLargeStructureMeshKit = require("../../src/client/PremiumLargeStructureMeshKit")
@@ -739,7 +739,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             local bevels={}
             for i=1,4 do
                 local bevel=decor:FindFirstChild("PlatformBevel2_"..i)
-                expect(bevel~=nil and bevel:IsA("WedgePart")).toBe(true)
+                expect(PlatformIdentityLodRules.isAuthoredPlatformBevel(bevel)).toBe(true)
                 expect(bevel:GetAttribute("OriginalStructuralBevel")).toBe(true)
                 expect(bevel.CanCollide or bevel.CanTouch or bevel.CanQuery)
                     .toBe(false)
@@ -799,7 +799,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             missingBevel.Parent=decor
             expect(PremiumPlatformSideMeshKit.hasNativeCarapaceFallback(
                 decor,nearby)).toBe(true)
-            -- A present but unauthenticated WedgePart is not legitimate
+            -- A present but unauthenticated bevel is not legitimate
             -- native geometry. Reject before consuming a scarce MeshKit
             -- slot, and resume when the server's original tag returns.
             missingBevel:SetAttribute("OriginalStructuralBevel",false)
@@ -843,7 +843,7 @@ describe("Original 3D native fallback isolation (engine)", function()
             expect(masks.other).toBe(0)
             -- The approved source is a genuine seven-piece bundle.
             -- Losing just its FIRST mesh must immediately restore ALL
-            -- four authentic WedgePart bevels and the full underframe.
+            -- four authentic bevels and the full underframe.
             parts[1].Parent = nil
             expect(Kit.count()).toBe(0)
             for _,bevel in ipairs(bevels) do

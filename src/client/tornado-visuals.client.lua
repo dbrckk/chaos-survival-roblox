@@ -8,6 +8,7 @@ local TornadoBoundaryRules = require(ReplicatedStorage.Shared.TornadoBoundaryRul
 local TornadoVisualBindRules = require(ReplicatedStorage.Shared.TornadoVisualBindRules)
 local DisasterVisuals = require(ReplicatedStorage.Shared.DisasterVisuals)
 local DisasterCosmeticRules = require(ReplicatedStorage.Shared.DisasterCosmeticRules)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 
 local player = Players.LocalPlayer
 local stateEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -29,6 +30,7 @@ local boundaryCenter = nil
 local boundaryAlpha = nil
 local lastDebrisCenter = nil
 local lastDebrisClock = nil
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
 local pulseClock = 0
 local loopStarted = false
 local ensureRenderLoop
@@ -135,8 +137,8 @@ end
 
 -- Storm debris must look like it came from the actual arena: a dock
 -- sheds timber and marine steel, a reactor sheds ceramic composite, and
--- a transit station sheds stone. Original Roblox materials only; no
--- custom image residency, external assets, extra geometry or emitters.
+-- a transit station sheds stone. Keep the native material palettes on
+-- the approved geometry without extra pieces or emitters.
 -- A muted glint appears on one in four fragments but is never Glass/Neon.
 local DEBRIS_MATERIALS = {
     Classic = {Enum.Material.DiamondPlate, Enum.Material.Metal},
@@ -189,10 +191,8 @@ local function buildDebris()
     end
 
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
-    local count = DisasterCosmeticRules.tornadoDebrisCount(
-        tier.Name, player:GetAttribute("ReduceMotion") == true,
-        activeDisasterCount
-    )
+    local reduced = player:GetAttribute("ReduceMotion") == true
+    local count = DisasterCosmeticRules.tornadoDebrisCount(tier.Name, reduced, activeDisasterCount)
 
     debrisFolder = Instance.new("Folder")
     debrisFolder.Name = "TornadoDebrisLocal"
@@ -204,9 +204,11 @@ local function buildDebris()
     local arena = generated and generated:FindFirstChild("Arena")
     local variant = tostring(arena and arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
+    local source = not reduced and tier.Name ~= "Low"
+        and CelebrationMeshes.readyProfile(variant == "Harbor" and "casting" or "fragment", meshPressure)
 
     for i = 1, count do
-        local piece = Instance.new("WedgePart")
+        local piece = CelebrationMeshes.cloneProfile(source) or Instance.new("WedgePart")
         piece.Name = "WindDebris" .. i
         piece.Anchored = true
         piece.CanCollide = false
@@ -225,7 +227,6 @@ local function buildDebris()
             1.20 + ((i * 5) % 7) * 0.19
         )
         piece.Transparency = i % 4 == 0 and 0.16 or 0.07
-        piece.Parent = debrisFolder
         local height = 2 + ((i * 7) % 13)
         local state = {
             part = piece,
@@ -243,6 +244,7 @@ local function buildDebris()
         -- Never let a newly streamed shard flash at world origin before
         -- the visual update loop's next quality-dependent tick.
         poseShard(state, middle.Position, pulseClock)
+        piece.Parent = debrisFolder
         table.insert(debris, state)
     end
 end
@@ -390,6 +392,15 @@ player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     if activeModel and activeModel.Parent and middle then
         buildDebris()
         buildBoundary()
+    end
+end)
+
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    local previous = meshPressure
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if (previous < 1) ~= (meshPressure < 1) and activeModel and activeModel.Parent
+        and middle and middle.Parent then
+        buildDebris()
     end
 end)
 

@@ -43,14 +43,17 @@ assert len(set(k for k,v in pairs))==13
 assert all('"'+name+'"' in builder for name in expected)
 assert 'arena:GetAttribute("VariantId")~="Classic"' in context
 assert 'owner:GetAttribute("SignatureVariant")~="Classic"' in context
-assert 'part:IsA(spec[2])' in context
-assert 'part.CFrame.LookVector:Dot(expected.LookVector)' in context
-assert 'part.CFrame.UpVector:Dot(expected.UpVector)' in context
+assert 'ExteriorDetailGeometry.monumentFootprint(part,owner,spec[2],shape)' in context
+assert 'pose.LookVector:Dot(expected.LookVector)' in context
+assert 'pose.UpVector:Dot(expected.UpVector)' in context
 assert "Enum.PartType.Cylinder" in context
 assert '"WestRadarDish"' in context and '"EastRadarDish"' in context
 assert "Enum.PartType.Block" in context
-assert "or not part.Anchored or part.CanCollide" in context
-print("PASS exact 13 southern Classic Part/Cylinder native targets and transform guard")
+geometry=(root/"src/client/ExteriorDetailGeometry.lua").read_text()
+assert 'or not part.Anchored or part.CanCollide or part.CanTouch or part.CanQuery' in geometry
+assert 'part.Shape ~= (fallbackShape or Enum.PartType.Block)' in geometry
+assert 'part:GetAttribute("Original3DAssetId") ~= assetId' in geometry
+print("PASS exact 13 Classic targets with approved meshes and Part/Cylinder fallback")
 
 restore=client.split("local function restore()",1)[1].split("local function clear()",1)[0]
 assert 'part:IsA("BasePart")' in restore

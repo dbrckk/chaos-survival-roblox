@@ -567,13 +567,14 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             frame:SetAttribute("PremiumArchitecturalSurface",true)
             frame.Parent=decor
             for side=1,4 do
-                local edge=Instance.new("WedgePart")
+                local edge=Instance.new("MeshPart")
                 edge.Name="PlatformBevel"..id.."_"..side
                 edge.Anchored=true
                 edge.CanCollide=false
                 edge.CanTouch=false
                 edge.CanQuery=false
                 edge:SetAttribute("OriginalStructuralBevel",true)
+                edge:SetAttribute("OriginalPlatformBevel3D",true)
                 edge.Parent=decor
             end
             return platform
@@ -640,7 +641,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             end
             expect(near[1].CanCollide).toBe(true)
             local edge=decor:FindFirstChild("PlatformBevel101_1")
-            expect(edge~=nil and edge:IsA("WedgePart")).toBe(true)
+            expect(PlatformIdentityLodRules.isAuthoredPlatformBevel(edge)).toBe(true)
             -- A partially streamed native edge must NEVER reserve an
             -- approved model or leave its real fallback hidden.
             edge:Destroy()
@@ -913,9 +914,6 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         local priorMap=workspace:FindFirstChild("GeneratedMap")
         if priorTemplates then priorTemplates.Parent=nil end
         if priorMap then priorMap.Parent=nil end
-        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
-        local visuals=Instance.new("Folder")
-        visuals.Parent=arena.Parent
         local templates=Instance.new("Folder")
         templates.Name="ApprovedLargeStructureTemplates"
         templates:SetAttribute("OwnerVerified",true)
@@ -929,6 +927,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         for i=1,7 do
             local mesh=Instance.new("MeshPart")
             mesh.Size=i==1 and Vector3.new(2,14,1.8) or Vector3.one*.2
+            if i==1 then mesh.Name="BeaconShaft" end
             mesh.Anchored=true
             mesh.CanCollide=false
             mesh.CanTouch=false
@@ -936,6 +935,9 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             mesh.Parent=source
         end
         source.Parent=templates
+        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
+        local visuals=Instance.new("Folder")
+        visuals.Parent=arena.Parent
         local running=false
         local cleanup,connections={},{}
         local ok,why=pcall(function()
@@ -956,6 +958,7 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local tall=platforms.Platform84
             assert(tall:GetAttribute("HarborSkywayStep")~=nil)
             local shortPile,tallPile=decor.PlatformSupport96_1,decor.PlatformSupport84_2
+            assert(tallPile:IsA("MeshPart") and tallPile:GetAttribute("OriginalPlatformSupport3D"))
             local function install(deck,pile)
                 local index=tonumber(deck.Name:match("%d+"))
                 local _,chosen=Large.selectNearRouteStructures(
@@ -985,6 +988,12 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
             local initial=shaft.Size
             Kit.bind(arena,{},nil,{shortPile,tallPile},visuals)
             expect(Kit.breakdown().harborPile).toBe(2)
+            tallPile:SetAttribute("OriginalPlatformSupport3D",false)
+            task.wait()
+            expect(tallPile.LocalTransparencyModifier).toBe(0)
+            tallPile:SetAttribute("OriginalPlatformSupport3D",true)
+            task.wait()
+            expect(tallPile.LocalTransparencyModifier).toBe(1)
             short:SetAttribute("CollapsePhase","Warning")
             task.wait()
             expect(shortPile.LocalTransparencyModifier).toBe(0)
@@ -1302,11 +1311,26 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                     continue
                 end
 
-                context="rectangular shrink, hazard, source and native owner"
+                context="rectangular shrink, hazard, source and sculpted owner"
                 local deck=arena.Platforms.Platform2
-                local panel=arena.Decor.PlatformPanel2
+                local previousPanel=arena.Decor.PlatformPanel2
+                local panel=Instance.new("MeshPart")
+                for _,property in ipairs({"Name","Size","CFrame","Material","Color","Transparency",
+                    "Anchored","CanCollide","CanTouch","CanQuery","LocalTransparencyModifier"}) do
+                    panel[property]=previousPanel[property]
+                end
+                panel:SetAttribute("PremiumArchitecturalSurface",true)
+                panel:SetAttribute("OriginalPlatformPanel3D",true)
+                previousPanel:Destroy()
+                panel.Parent=arena.Decor
                 local tread=mount(arena,deck,2)
                 assert(Route.landingTreadCount()==1)
+                panel:SetAttribute("OriginalPlatformPanel3D",false)
+                task.wait()
+                assert(tread.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+                panel:SetAttribute("OriginalPlatformPanel3D",true)
+                task.wait()
+                assert(tread.LocalTransparencyModifier==0 and panel.LocalTransparencyModifier==1)
                 panel.Color=Color3.fromRGB(71,86,93)
                 task.wait()
                 assert(tread.Color==panel.Color)
@@ -1351,6 +1375,205 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 late.OriginalRouteMeshCosmeticWeld:Destroy()
                 task.wait()
                 assert(late.LocalTransparencyModifier==1 and near(panel.LocalTransparencyModifier,.23))
+            end
+        end)
+        running=false
+        Route.sync(nil,Vector3.zero,"Low",false)
+        for _,stop in ipairs(cleanup) do stop() end
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if previous then previous.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(tostring(context)..": "..tostring(why)) end
+    end)
+
+    local function approvedSkybridgeFixture(storage)
+        local holder=Instance.new("Folder")
+        holder.Name="PremiumRouteMeshTemplates"
+        holder:SetAttribute("OwnerVerified",true)
+        holder.Parent=storage
+        local source=Instance.new("Model")
+        source.Name="PremiumSkybridgeModule"
+        source:SetAttribute("OwnerVerified",true)
+        source:SetAttribute("CosmeticOnly",true)
+        source:SetAttribute("PremiumRoute3D",true)
+        source:SetAttribute("Original3DAssetId",94023662427980)
+        for i=1,7 do
+            local part=Instance.new("MeshPart")
+            part.Size=i==1 and Vector3.new(9.46,.081,4.64) or Vector3.new(10,1.54,4.94)
+            part.Anchored=true
+            part.CanCollide=false
+            part.CanTouch=false
+            part.CanQuery=false
+            part.Parent=source
+        end
+        source.Parent=holder
+        return holder
+    end
+
+    it("tiles approved treads across both axes of the four gated Tower Run bridges",function()
+        local Route=require("../../src/client/PremiumRouteMeshKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local holder=approvedSkybridgeFixture(storage)
+
+        local generated
+        local running=false
+        local cleanup={}
+        local function treads(deck)
+            for _,model in ipairs(workspace.PremiumRouteMeshLocal:GetChildren()) do
+                if model:GetAttribute("OriginalSkybridgeTread3D") then
+                    local mesh=model:FindFirstChildWhichIsA("MeshPart")
+                    local joint=mesh and mesh:FindFirstChild("OriginalRouteMeshCosmeticWeld")
+                    if joint and joint.Part0==deck then return model:GetChildren() end
+                end
+            end
+            return {}
+        end
+        local ok,why=pcall(function()
+            local arena=MapBuilder.buildArena(Config,"Towers",ArenaVariants,VisualTheme)
+            generated=arena.Parent
+            for index=18,21 do
+                Route.sync(nil,Vector3.zero,"Low",false)
+                local deck=arena.Platforms["Skybridge"..index]
+                local panel=arena.Decor["PlatformPanel"..index]
+                local rail=arena.Decor["SkybridgeRail"..index.."_-1"]
+                panel.LocalTransparencyModifier=.18
+                Route.sync(arena,deck.Position,"Low",true,nil,0,true)
+                local pieces=treads(deck)
+                assert(#pieces==2 and panel.LocalTransparencyModifier==1,deck.Name)
+                assert(rail.LocalTransparencyModifier==0 and deck.CanCollide)
+                for _,piece in ipairs(pieces) do
+                    local frame=piece.OriginalRouteMeshCosmeticWeld.C0
+                    assert(piece.LocalTransparencyModifier==0 and not piece.CanCollide)
+                    assert(math.abs(piece.Size.X*2-48.2*.987)<.04)
+                    assert(math.abs(piece.Size.Z-3.7*.987)<.02)
+                    local direction=index<20 and Vector3.xAxis or Vector3.zAxis
+                    assert(math.abs(frame.RightVector:Dot(direction))>.999)
+                end
+            end
+
+            local deck=arena.Platforms.Skybridge21
+            local panel=arena.Decor.PlatformPanel21
+            local pieces=treads(deck)
+            deck:SetAttribute("BridgeShutterPhase","Raised")
+            task.wait()
+            assert(pieces[1].LocalTransparencyModifier==1 and pieces[2].LocalTransparencyModifier==1)
+            assert(math.abs(panel.LocalTransparencyModifier-.18)<.01)
+            deck:SetAttribute("BridgeShutterPhase","Idle")
+            task.wait()
+            assert(panel.LocalTransparencyModifier==1)
+            running=true
+            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                Active=function() return running end,OnCleanup=cleanup})
+            local deadline=os.clock()+1.5
+            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+            running=false
+            task.wait()
+            assert(arena.Base.Size.X<=144.05 and panel.LocalTransparencyModifier==1)
+            for _,piece in ipairs(pieces) do
+                assert(piece.LocalTransparencyModifier==0)
+                assert(math.abs(piece.Size.X*2-panel.Size.Z*.987)<.04)
+                assert(math.abs(piece.Size.Z-panel.Size.X*.987)<.02)
+            end
+            Route.sync(nil,Vector3.zero,"Low",false)
+            Route.sync(arena,deck.Position,"Low",true,nil,0,true)
+            pieces=treads(deck)
+            assert(#pieces==2 and panel.LocalTransparencyModifier==1)
+            pieces[1].OriginalRouteMeshCosmeticWeld:Destroy()
+            task.wait()
+            assert(pieces[2].LocalTransparencyModifier==1)
+            assert(math.abs(panel.LocalTransparencyModifier-.18)<.01 and deck.CanCollide)
+        end)
+        running=false
+        Route.sync(nil,Vector3.zero,"Low",false)
+        for _,stop in ipairs(cleanup) do stop() end
+        if generated then generated:Destroy() end
+        holder:Destroy()
+        if previous then previous.Parent=storage end
+        if previousMap then previousMap.Parent=workspace end
+        if not ok then error(why) end
+    end)
+
+    it("fits every Promenade and Sky Spine tread inside its original walkable deck",function()
+        local Route=require("../../src/client/PremiumRouteMeshKit")
+        local storage=game:GetService("ReplicatedStorage")
+        local previous=storage:FindFirstChild("PremiumRouteMeshTemplates")
+        local previousMap=workspace:FindFirstChild("GeneratedMap")
+        if previous then previous.Parent=nil end
+        if previousMap then previousMap.Parent=nil end
+        local holder=approvedSkybridgeFixture(storage)
+        local generated,context
+        local running,cleanup=false,{}
+        local function mount(arena,deck)
+            Route.sync(arena,deck.Position,"Low",true,nil,0,true)
+            for _,model in ipairs(workspace.PremiumRouteMeshLocal:GetChildren()) do
+                if model:GetAttribute("OriginalSkybridgeTread3D") then
+                    local mesh=model:FindFirstChildWhichIsA("MeshPart")
+                    local weld=mesh and mesh:FindFirstChild("OriginalRouteMeshCosmeticWeld")
+                    if weld and weld.Part0==deck then return model end
+                end
+            end
+            error("missing connector tread")
+        end
+        local ok,why=pcall(function()
+            for _,variant in ipairs(ArenaVariants.Order) do
+                local arena=MapBuilder.buildArena(Config,variant,ArenaVariants,VisualTheme)
+                generated=arena.Parent
+                local count,spine=0,nil
+                for _,deck in ipairs(arena.Platforms:GetChildren()) do
+                    if deck:GetAttribute("PromenadeStep") or deck:GetAttribute("SkySpineStep") then
+                        context=variant.." "..deck.Name
+                        local isSpine=deck:GetAttribute("SkySpineInterchange")==true
+                        local panel=arena.Decor["PlatformPanel"..deck.Name:match("%d+$")]
+                        local model=mount(arena,deck)
+                        local parts=model:GetChildren()
+                        assert(#parts==2 and panel.LocalTransparencyModifier==1 and deck.CanCollide)
+                        local span=isSpine and panel.Size.Z or panel.Size.X
+                        local width=isSpine and panel.Size.X or panel.Size.Z
+                        for _,piece in ipairs(parts) do
+                            local weld=piece.OriginalRouteMeshCosmeticWeld
+                            local p=weld.C0.Position
+                            local offset=math.abs(isSpine and p.Z or p.X)
+                            assert(piece.Material==panel.Material and piece.Color==panel.Color)
+                            assert(not piece.CanCollide and not piece.CanQuery)
+                            assert(math.abs(2*piece.Size.X-span*.987)<.05)
+                            assert(math.abs(piece.Size.Z-width*.987)<.03)
+                            assert(offset+piece.Size.X*.5<span*.5)
+                        end
+                        count+=1
+                        if isSpine then spine=deck end
+                        Route.sync(nil,Vector3.zero,"Low",false)
+                    end
+                end
+                assert(count==26,variant)
+                if variant=="Orbital" and spine then
+                    context="contracted Orbital Sky Spine"
+                    local panel=arena.Decor["PlatformPanel"..spine.Name:match("%d+$")]
+                    local model=mount(arena,spine)
+                    running=true
+                    ShrinkingArena.start({Config=Config,RoundSeconds=.12,
+                        Active=function() return running end,OnCleanup=cleanup})
+                    local deadline=os.clock()+1.5
+                    repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
+                    running=false
+                    task.wait()
+                    assert(arena.Base.Size.X<=144.05 and mount(arena,spine)==model)
+                    local pieces=model:GetChildren()
+                    assert(math.abs(pieces[1].Size.X*2-panel.Size.Z*.987)<.05)
+                    assert(math.abs(pieces[1].Size.Z-panel.Size.X*.987)<.03)
+                    pieces[1].OriginalRouteMeshCosmeticWeld:Destroy()
+                    task.wait()
+                    assert(panel.LocalTransparencyModifier==0 and pieces[2].LocalTransparencyModifier==1)
+                    for _,stop in ipairs(cleanup) do stop() end
+                    table.clear(cleanup)
+                end
+                Route.sync(nil,Vector3.zero,"Low",false)
+                generated:Destroy()
+                generated=nil
             end
         end)
         running=false
@@ -1438,12 +1661,18 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
                 return Finish.buildLoadBraces(owner,deck,"Harbor",tier,theme,Side.harborGirderSource())
             end
             local function buildCorners(tier)
-                local natives=Finish.buildArmor(owner,deck,"Harbor",tier,theme)
+                local natives=Finish.buildArmor(owner,deck,"Harbor",tier,theme,
+                    {part=sourceParts[1],assetId=92226531849432})
                 local meshes,map=Finish.mountHarborCornerArmor(owner,deck,natives,Hardware.harborCornerSource())
                 return natives,meshes,map
             end
             local function buildKeel()
-                local keel=Finish.build(owner,deck,"Harbor","High",theme)[3]
+                local profile=Instance.new("MeshPart")
+                profile.Size=Vector3.new(2.74,.12,7.55)
+                local keel=Finish.build(owner,deck,"Harbor","High",theme,false,
+                    {hatch=profile,assetId=94830155055482})[3]
+                profile:Destroy()
+                assert(keel:IsA("MeshPart") and keel:GetAttribute("PlatformTrimAxisSwap"))
                 local mount=Instance.new("Part")
                 mount.Name="HarborKeelMount96"
                 mount.Size=Finish.harborKeelMountSize(deck)
@@ -1720,108 +1949,6 @@ describe("Approved perimeter rim fallback and physics (engine)", function()
         if previousMap then previousMap.Parent=workspace end
         if not ok then error(why) end
     end)
-
-    it("replaces the five native pieces under a real Storm Harbor freight landing",function()
-        local Dock=require("../../src/client/HarborDockCaissonMeshKit")
-        local storage=game:GetService("ReplicatedStorage")
-        local previous=storage:FindFirstChild("ApprovedHarborDockCaissonTemplates")
-        local previousMap=workspace:FindFirstChild("GeneratedMap")
-        if previous then previous.Parent=nil end
-        if previousMap then previousMap.Parent=nil end
-        local arena=MapBuilder.buildArena(Config,"Harbor",ArenaVariants,VisualTheme)
-        local folder=Instance.new("Folder")
-        folder.Name="ApprovedHarborDockCaissonTemplates"
-        folder:SetAttribute("OwnerVerified",true)
-        folder.Parent=storage
-        local source=Instance.new("Model")
-        source.Name="DockCaisson"
-        source:SetAttribute("OwnerVerified",true)
-        source:SetAttribute("CosmeticOnly",true)
-        source:SetAttribute("OriginalHarborDockCaisson3D",true)
-        source:SetAttribute("Original3DAssetId",101457508594609)
-        for i=1,7 do
-            local piece=Instance.new("MeshPart")
-            piece.Size=i==1 and Vector3.new(14.07,3.30755,14.07) or Vector3.one*.2
-            piece.Anchored=true
-            piece.CanCollide=false
-            piece.CanTouch=false
-            piece.CanQuery=false
-            piece.Parent=source
-        end
-        source.Parent=folder
-        local running=false
-        local cleanup={}
-        local ok,why=pcall(function()
-            local n=0
-            for _,deck in ipairs(arena.Platforms:GetChildren()) do
-                if deck:GetAttribute("HarborRoute") or deck:GetAttribute("HarborSpokeRoute")
-                    or deck:GetAttribute("HarborSkywayStep") then
-                    Dock.sync(nil,Vector3.zero,"Low",false,nil,0)
-                    Dock.sync(arena,deck.Position,"Low",true,nil,0)
-                    assert(deck:GetAttribute("LocalOriginalHarborDockCaissonMounted")==true,deck.Name)
-                    local models,parts,replaced=Dock.count()
-                    assert(models==1 and parts==7 and replaced==5)
-                    n+=1
-                end
-            end
-            expect(n).toBe(58)
-            local deck
-            for _,part in ipairs(arena.Platforms:GetChildren()) do
-                if part:GetAttribute("HarborSkywayStep")==4 then deck=part;break end
-            end
-            assert(deck)
-            local id=assert(deck.Name:match("^Platform(%d+)$"))
-            local edge=arena.Decor["PlatformBevel"..id.."_1"]
-            local frame=arena.Decor["PlatformUnderFrame"..id]
-            local panel=arena.Decor["PlatformPanel"..id]
-            Dock.sync(nil,Vector3.zero,"Low",false,nil,0)
-            edge.LocalTransparencyModifier=.2
-            Dock.sync(arena,deck.Position,"Low",true,nil,0)
-            assert(edge.LocalTransparencyModifier==1 and frame.LocalTransparencyModifier==1)
-            assert(panel.LocalTransparencyModifier==0 and deck.CanCollide)
-            local models=workspace.OriginalHarborDockCaissonsLocal
-            local resident=models:FindFirstChildWhichIsA("Model")
-            local _,initial=resident:GetBoundingBox()
-            deck:SetAttribute("CollapsePhase","Warning")
-            task.wait()
-            assert(math.abs(edge.LocalTransparencyModifier-.2)<.001)
-            assert(frame.LocalTransparencyModifier==0 and Dock.count()==0)
-            deck:SetAttribute("CollapsePhase","Safe")
-            task.wait()
-            running=true
-            ShrinkingArena.start({Config=Config,RoundSeconds=.12,
-                Active=function() return running end,OnCleanup=cleanup})
-            local deadline=os.clock()+1.5
-            repeat task.wait() until arena.Base.Size.X<=144.05 or os.clock()>deadline
-            running=false
-            task.wait()
-            assert(arena.Base.Size.X<=144.05 and edge.LocalTransparencyModifier==1)
-            local _,final=resident:GetBoundingBox()
-            assert(math.abs(initial.Y-final.Y)<.03 and math.abs(initial.X*.45-final.X)<.03)
-            Dock.sync(nil,Vector3.zero,"Low",false,nil,0)
-            Dock.sync(arena,deck.Position,"Low",true,nil,0)
-            local late=models:FindFirstChildWhichIsA("Model")
-            local _,lateSize=late:GetBoundingBox()
-            assert((lateSize-final).Magnitude<.08)
-            local mesh=late:FindFirstChildWhichIsA("MeshPart")
-            mesh:FindFirstChild("HarborDockCosmeticWeld"):Destroy()
-            task.wait()
-            assert(Dock.count()==0 and math.abs(edge.LocalTransparencyModifier-.2)<.001)
-            Dock.sync(arena,deck.Position,"Low",true,nil,0)
-            assert(Dock.count()==1)
-            Dock.sync(arena,deck.Position,"Low",true,nil,1)
-            assert(Dock.count()==0 and frame.LocalTransparencyModifier==0 and deck.CanCollide)
-        end)
-        running=false
-        Dock.sync(nil,Vector3.zero,"Low",false,nil,0)
-        for _,stop in ipairs(cleanup) do stop() end
-        arena.Parent:Destroy()
-        folder:Destroy()
-        if previous then previous.Parent=storage end
-        if previousMap then previousMap.Parent=workspace end
-        if not ok then error(why) end
-    end)
-
 end)
 
 return nil

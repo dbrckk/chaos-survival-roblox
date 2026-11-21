@@ -1,13 +1,109 @@
--- Procedural 3D prop kit for Chaos Showtime.
--- Works with standard Roblox primitives: no uploaded mesh IDs, no collisions and
--- no independent animation loop. The owning Showtime script drives all motion.
+-- 3D prop kit for Chaos Showtime, with native fallbacks for approved profiles.
+-- The owning Showtime script drives all motion.
 -- Shared theme resolves on the first build in the actual client;
 -- cloud engine tests can inject the same palette explicitly.
 local UITheme = nil
 
 local ShowtimeProps = {}
+local CYLINDER_OFFSET = CFrame.Angles(0, 0, -math.pi * 0.5)
+local EQUALIZER_WIDTH = 0.26
+local EQUALIZER_DEPTH = 0.18
+local EQUALIZER_BASE = 2.8
 
-local function primitive(parent, name, cf, size, color, material, transparency, shape)
+local PROFILE_BY_NAME = {
+    ShowtimeSpeakerHousing1 = "casting",
+    ShowtimeSpeakerHousing2 = "casting",
+    ShowtimeDJBooth = "casting",
+    ["ShowtimeTrussLeg-1"] = "forged",
+    ShowtimeTrussLeg1 = "forged",
+    ShowtimeTrussCrossbar = "forged",
+    ["ShowtimeAcousticWing-1"] = "forged",
+    ShowtimeAcousticWing1 = "forged",
+    ["ShowtimeAcousticWingEdge-1"] = "forged",
+    ShowtimeAcousticWingEdge1 = "forged",
+    ShowtimeCrownCrystal = "crystal",
+    ShowtimeCrownHeart = "crystal",
+    ShowtimeCrownAnchor1 = "crystal",
+    ShowtimeCrownAnchor2 = "crystal",
+}
+
+function ShowtimeProps.fit(part, source, canonicalSize)
+    local meshId = part:IsA("MeshPart") and part.MeshId or nil
+    if meshId == (source and source.MeshId) then return part end
+    local replacement = if source then source:Clone() else Instance.new("Part")
+    if not replacement then return part end
+    local cylinderFallback = not source and part:GetAttribute("ShowtimeCylinder") == true
+    if source then
+        replacement:ClearAllChildren()
+        replacement.TextureID = ""
+    elseif part.Name == "ShowtimeCrownCrystal" or part.Name == "ShowtimeCrownHeart" then
+        replacement.Shape = Enum.PartType.Ball
+    elseif cylinderFallback then
+        replacement.Shape = Enum.PartType.Cylinder
+    end
+
+    local size = canonicalSize or part:GetAttribute("ShowtimeProfileSize") or part.Size
+    local rotate = source and size.X ~= size.Z and (source.Size.X > source.Size.Z) ~= (size.X > size.Z)
+    if cylinderFallback then
+        replacement.PivotOffset = CYLINDER_OFFSET
+        replacement.Size = Vector3.new(size.Y, size.X, size.Z)
+    else
+        replacement.PivotOffset = rotate and CFrame.Angles(0, -math.pi * 0.5, 0) or CFrame.new()
+        replacement.Size = rotate and Vector3.new(size.Z, size.Y, size.X) or size
+    end
+    replacement:PivotTo(part:GetPivot())
+    replacement.Name = part.Name
+    replacement.Color = part.Color
+    replacement.Material = part.Material
+    replacement.Transparency = part.Transparency
+    replacement.LocalTransparencyModifier = part.LocalTransparencyModifier
+    replacement.Anchored = true
+    replacement.CanCollide = false
+    replacement.CanTouch = false
+    replacement.CanQuery = false
+    replacement.CastShadow = false
+    for key, value in pairs(part:GetAttributes()) do
+        replacement:SetAttribute(key, value)
+    end
+    replacement:SetAttribute("ShowtimeProfileSize", size)
+    replacement.Parent = part.Parent
+    for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("SurfaceGui") and child.Name == "ShowtimePrintedDecal" then
+            -- A quarter-turned import maps the authored back face to
+            -- the mesh's left face, preserving the print plane and its up axis.
+            child.Face = rotate and Enum.NormalId.Left or Enum.NormalId.Back
+        end
+        child.Parent = replacement
+    end
+    part:Destroy()
+    return replacement
+end
+
+function ShowtimeProps.applyProfiles(asset, profiles)
+    local crown = asset.crown
+    local ringByPart = {}
+    for _, ring in ipairs(crown.orbit) do ringByPart[ring.part] = ring end
+    local barByPart = {}
+    for _, bar in ipairs(asset.equalizer) do barByPart[bar.part] = bar end
+    for i, part in ipairs(asset.props) do
+        if part.Parent ~= asset.folder or not part:IsA("BasePart") then continue end
+        local ring = ringByPart[part]
+        local bar = barByPart[part]
+        local role = PROFILE_BY_NAME[part.Name] or part:GetAttribute("ShowtimeMeshProfile")
+        if ring or bar or part.Name:match("^ShowtimeWaveguideRib%d+$") then role = "forged" end
+        if role then
+            local size = bar and Vector3.new(EQUALIZER_WIDTH, part.Size.Y, EQUALIZER_DEPTH) or nil
+            local replacement = ShowtimeProps.fit(part, profiles[role], size)
+            asset.props[i] = replacement
+            if crown.crystal == part then crown.crystal = replacement end
+            if crown.heart == part then crown.heart = replacement end
+            if ring then ring.part = replacement end
+            if bar then bar.part = replacement end
+        end
+    end
+end
+
+local function primitive(parent, name, cf, size, color, material, transparency, shape, profile)
     local p = Instance.new("Part")
     p.Name = name
     p.CFrame = cf
@@ -23,6 +119,15 @@ local function primitive(parent, name, cf, size, color, material, transparency, 
     if shape then
         p.Shape = shape
     end
+    if shape == Enum.PartType.Cylinder then
+        -- Authored disk frames use Y as the normal. Native cylinders use X.
+        p:SetAttribute("ShowtimeCylinder", true)
+        p:SetAttribute("ShowtimeProfileSize", size)
+        p.PivotOffset = CYLINDER_OFFSET
+        p.Size = Vector3.new(size.Y, size.X, size.Z)
+        p:PivotTo(cf)
+    end
+    if profile then p:SetAttribute("ShowtimeMeshProfile", profile) end
     p:SetAttribute("ShowtimeDefaultTransparency", p.Transparency)
     p.Parent = parent
     return p
@@ -63,26 +168,26 @@ local function buildSpeaker(folder, baseCF, index, options)
     local baffle = primitive(folder, "ShowtimeSpeakerBaffle" .. index,
         stackCF * CFrame.new(0, 0, 0.85),
         Vector3.new(1.80, 4.1, 0.10),
-        Color3.fromRGB(7, 13, 23), Enum.Material.SmoothPlastic)
+        Color3.fromRGB(7, 13, 23), Enum.Material.SmoothPlastic, nil, nil, "casting")
     faceLabel(baffle, "CHAOS  /  LIVE", Enum.NormalId.Back, accent)
 
     local lowCone = primitive(folder, "ShowtimeBassCone" .. index,
         stackCF * CFrame.new(0, -0.91, 0.94)
             * CFrame.Angles(math.rad(90), 0, 0),
         Vector3.new(1.33, 0.13, 1.33),
-        Color3.fromRGB(42, 57, 78), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder)
+        Color3.fromRGB(42, 57, 78), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder, "crystal")
     lowCone:SetAttribute("ShowtimeCone", true)
     primitive(folder, "ShowtimeBassCore" .. index,
         stackCF * CFrame.new(0, -0.91, 1.05) * CFrame.Angles(math.rad(90), 0, 0),
-        Vector3.new(0.48, 0.15, 0.48), accent, Enum.Material.Neon, 0.13, Enum.PartType.Cylinder)
+        Vector3.new(0.48, 0.15, 0.48), accent, Enum.Material.Neon, 0.13, Enum.PartType.Cylinder, "crystal")
     if options.Detail then
         primitive(folder, "ShowtimeTrebleCone" .. index,
             stackCF * CFrame.new(0, 0.94, 0.94) * CFrame.Angles(math.rad(90), 0, 0),
             Vector3.new(0.84, 0.13, 0.84),
-            Color3.fromRGB(54, 75, 100), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder)
+            Color3.fromRGB(54, 75, 100), Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder, "crystal")
         primitive(folder, "ShowtimeSpeakerTrim" .. index,
             stackCF * CFrame.new(0, 2.05, 0.87),
-            Vector3.new(1.70, 0.12, 0.15), accent, Enum.Material.Neon, 0.09)
+            Vector3.new(1.70, 0.12, 0.15), accent, Enum.Material.Neon, 0.09, nil, "forged")
     end
 end
 
@@ -93,21 +198,21 @@ local function buildConsole(folder, baseCF, tier)
         dark, Enum.Material.Metal, 0.03)
     local front = primitive(folder, "ShowtimeBoothFront", bodyCF * CFrame.new(0, 0, 0.89),
         Vector3.new(4.95, 1.42, 0.08),
-        Color3.fromRGB(30, 43, 67), Enum.Material.Metal, 0.04)
+        Color3.fromRGB(30, 43, 67), Enum.Material.Metal, 0.04, nil, "casting")
     faceLabel(front, "C  H  A  O  S", Enum.NormalId.Back, UITheme.Colors.Cyan)
 
     primitive(folder, "ShowtimeMixDeck", bodyCF * CFrame.new(0, 1.00, 0),
-        Vector3.new(4.8, 0.13, 1.67), dark, Enum.Material.SmoothPlastic)
+        Vector3.new(4.8, 0.13, 1.67), dark, Enum.Material.SmoothPlastic, nil, nil, "casting")
     for i = 1, 2 do
         local side = i == 1 and -1 or 1
         primitive(folder, "ShowtimeTurntable" .. i,
             bodyCF * CFrame.new(side * 1.27, 1.085, 0.03),
             Vector3.new(1.20, 0.10, 1.20), Color3.fromRGB(60, 73, 101),
-            Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder)
+            Enum.Material.SmoothPlastic, 0, Enum.PartType.Cylinder, "crystal")
         primitive(folder, "ShowtimeRecord" .. i,
             bodyCF * CFrame.new(side * 1.27, 1.15, 0.03),
             Vector3.new(0.75, 0.07, 0.75), UITheme.Colors.Violet,
-            Enum.Material.Neon, 0.18, Enum.PartType.Cylinder)
+            Enum.Material.Neon, 0.18, Enum.PartType.Cylinder, "crystal")
     end
     if tier ~= "Low" then
         for i = 1, 5 do
@@ -115,7 +220,7 @@ local function buildConsole(folder, baseCF, tier)
                 bodyCF * CFrame.new((i - 3) * 0.18, 1.13, -0.12),
                 Vector3.new(0.075, 0.09, 0.50),
                 i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
-                Enum.Material.Neon, 0.16)
+                Enum.Material.Neon, 0.16, nil, "forged")
         end
     end
 end
@@ -129,7 +234,7 @@ local function buildTruss(folder, baseCF, tier)
             Vector3.new(0.24, 8.0, 0.24), metal, Enum.Material.Metal, 0.04)
         primitive(folder, "ShowtimeTrussLight" .. tostring(side),
             baseCF * CFrame.new(side * 8.0, 8.4, -7.1),
-            Vector3.new(0.56, 0.45, 0.56), accent, Enum.Material.Neon, 0.20)
+            Vector3.new(0.56, 0.45, 0.56), accent, Enum.Material.Neon, 0.20, nil, "crystal")
     end
     primitive(folder, "ShowtimeTrussCrossbar", baseCF * CFrame.new(0, 8.20, -7.1),
         Vector3.new(16.3, 0.32, 0.32), metal, Enum.Material.Metal)
@@ -139,7 +244,7 @@ local function buildTruss(folder, baseCF, tier)
                 baseCF * CFrame.new((i - 3) * 2.4, 8.13, -6.85),
                 Vector3.new(0.85, 0.15, 0.15),
                 i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
-                Enum.Material.Neon, 0.12)
+                Enum.Material.Neon, 0.12, nil, "forged")
         end
     end
 end
@@ -181,9 +286,8 @@ local function buildWaveguide(folder, baseCF, tier)
     end
 end
 
--- A faceted prismatic crown suspended over the DJ desk. Segmented rings
--- make a distinct 3D hero silhouette without any mesh upload or external IDs.
--- Segments are created once and only their CFrames are updated in a calm phase.
+-- A prismatic crown suspended over the DJ desk. Its segments keep a
+-- shared animation pivot when switching between native and forged geometry.
 local function buildPrismaticCrown(folder, baseCF, tier)
     local center = baseCF * CFrame.new(0, 6.8, -3.7)
     local ringCount = tier == "High" and 14 or (tier == "Medium" and 10 or 6)
@@ -261,8 +365,8 @@ function ShowtimeProps.build(parent, baseCF, tier, themeOverride)
         local x = (i - (count + 1) / 2) * (tier == "High" and 0.48 or 0.62)
         local height = 0.42
         local part = primitive(holder, "ShowtimeEqualizer" .. i,
-            baseCF * CFrame.new(x, 3.03, -5.40),
-            Vector3.new(0.26, height, 0.18),
+            baseCF * CFrame.new(x, EQUALIZER_BASE + height * 0.5, -5.40),
+            Vector3.new(EQUALIZER_WIDTH, height, EQUALIZER_DEPTH),
             i % 2 == 0 and UITheme.Colors.Cyan or UITheme.Colors.Magenta,
             Enum.Material.Neon, 0.22)
         table.insert(equalizer, {part = part, x = x, offset = i * 0.77})
@@ -302,10 +406,11 @@ function ShowtimeProps.update(asset, now, enabled, reduceMotion, audience)
         local height = reduceMotion and 0.38 or
             (0.35 + 1.10 * (0.5 + 0.5 * math.sin(now * 3.3 + bar.offset)))
                 * (0.85 + math.min(4, audience or 0) * 0.08)
-        bar.part.Size = Vector3.new(0.26, height, 0.18)
-        bar.part.CFrame = asset.baseCF * CFrame.new(
-            bar.x, 2.8 + height * 0.5, -5.40
-        )
+        local size = bar.part.Size
+        bar.part.Size = Vector3.new(size.X, height, size.Z)
+        bar.part:PivotTo(asset.baseCF * CFrame.new(
+            bar.x, EQUALIZER_BASE + height * 0.5, -5.40
+        ))
     end
 
     local crown = asset.crown
@@ -326,7 +431,7 @@ function ShowtimeProps.update(asset, now, enabled, reduceMotion, audience)
                 0,
                 layerSpin
             )
-            ring.part.CFrame = crown.center * ringAttitude * ring.localCF
+            ring.part:PivotTo(crown.center * ringAttitude * ring.localCF)
         end
         -- A restrained highlight makes group emotes feel responsive without
         -- any extra particle emitters, dynamic lights or surface scans.

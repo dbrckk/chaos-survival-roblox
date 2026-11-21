@@ -11,6 +11,7 @@ local GridCircuitRules = require("../../src/shared/GridCircuitRules")
 local SkyrailSlipstream = require("../../src/server/SkyrailSlipstream")
 local SkybridgePressure = require("../../src/server/SkybridgePressure")
 local SkybridgeShutters = require("../../src/server/SkybridgeShutters")
+local ForgedBridge = require("../../src/client/ApprovedTowersSignatureBridgeMeshKit")
 local HarborCargoSweep = require("../../src/server/HarborCargoSweep")
 local GridCircuitService = require("../../src/server/GridCircuitService")
 local ClassicGridSweep = require("../../src/server/ClassicGridSweep")
@@ -443,6 +444,8 @@ describe("Arena mechanics", function()
         local folder = Instance.new("Folder")
         folder.Name = "ShutterSpecFolder"
         folder.Parent = arena
+        local profile = Instance.new("MeshPart")
+        profile.Size = Vector3.new(40.64, 3.1108, 5.96)
         local states = {}
         for _, bridge in ipairs(SkybridgePressure.bridges(platforms)) do
             local state = SkybridgeShutters.gateFor(bridge, folder)
@@ -455,6 +458,16 @@ describe("Arena mechanics", function()
             expect(gate.CanCollide).toBe(false)
             expect(gate.Transparency).toBe(1)
             expect(gate.Material).toBe(Enum.Material.Metal)
+            local colliderSize = gate.Size
+            gate.LocalTransparencyModifier = 0.12
+            local skin, release = ForgedBridge.bindShutterSkin(gate, profile)
+            assert(skin and release)
+            local lateral = gate.Size.X > gate.Size.Z and gate.CFrame.RightVector or gate.CFrame.LookVector
+            expect(math.abs(skin.CFrame.RightVector:Dot(lateral)) > 0.999).toBe(true)
+            expect(math.abs(skin.Size.X - math.max(colliderSize.X, colliderSize.Z)) < .001).toBe(true)
+            expect(math.abs(skin.Size.Z - 0.85) < .001).toBe(true)
+            expect(skin.CanCollide or skin.CanTouch or skin.CanQuery).toBe(false)
+            expect(gate.LocalTransparencyModifier).toBe(1)
             -- BasePart.Size has float32 storage, 2.05 studs serializes
             -- as approximately 2.04999995; test geometry, not bit equality.
             expect(math.abs(gate.Size.Y - SkybridgeShutters.Height) < 0.001)
@@ -467,6 +480,41 @@ describe("Arena mechanics", function()
             expect(width > 4 and width < 4.5).toBe(true)
             expect(bridge.CanCollide).toBe(true)
             expect(bridge:GetAttribute("ChaosSkybridge")).toBe(true)
+            expect(#state.rails).toBe(2)
+            local stripeTop = state.stripe.Position.Y + state.stripe.Size.Y * 0.5
+            local index = bridge.Name:match("^Skybridge(%d+)$")
+            local deckPanel = arena.Decor:FindFirstChild("PlatformPanel" .. index)
+            expect(stripeTop > deckPanel.Position.Y + deckPanel.Size.Y * 0.5).toBe(true)
+            local alongX = bridge.Size.X > bridge.Size.Z
+            local direction = alongX and Vector3.xAxis or Vector3.zAxis
+            local across = alongX and Vector3.zAxis or Vector3.xAxis
+            local positiveTips = 0
+            expect(#state.chevrons).toBe(4)
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Parent).toBe(state.stripe)
+                expect(arm.CanCollide or arm.CanTouch or arm.CanQuery).toBe(false)
+                expect(arm.Transparency).toBe(1)
+                local pose = state.stripe.CFrame:ToObjectSpace(arm.CFrame)
+                local alongLocalX = arm.Size.X > arm.Size.Z
+                local armForward = alongLocalX and pose.RightVector or pose.LookVector
+                local halfLength = math.max(arm.Size.X, arm.Size.Z) * 0.5
+                local halfWidth = math.min(arm.Size.X, arm.Size.Z) * 0.5
+                local tip = pose.Position + armForward * halfLength
+                local tail = pose.Position - armForward * halfLength
+                expect(pose.Position.Y - arm.Size.Y * 0.5 > 0).toBe(true)
+                expect(math.abs(tip:Dot(across)) < 0.01).toBe(true)
+                expect(math.abs(math.abs(tip:Dot(direction)) - 2.25) < 0.01).toBe(true)
+                expect(tip:Dot(direction) * tail:Dot(direction) > 0).toBe(true)
+                expect(math.abs(tail:Dot(direction)) > state.stripe.Size:Dot(direction) * 0.5).toBe(true)
+                expect(math.abs(tail:Dot(across)) + halfWidth < width * 0.5).toBe(true)
+                if tip:Dot(direction) > 0 then positiveTips += 1 end
+            end
+            expect(positiveTips).toBe(2)
+            for _, entry in ipairs(state.rails) do
+                local rail = entry.part
+                expect(rail:GetAttribute("ChaosWayfinding")).toBe(true)
+                expect(rail.Position.Y + rail.Size.Y * 0.5 < stripeTop).toBe(true)
+            end
 
             expect(SkybridgeShutters.setPhase(state, "Warning", 100))
                 .toBe(true)
@@ -475,26 +523,81 @@ describe("Arena mechanics", function()
             expect(gate.CanCollide).toBe(false)
             expect(state.stripe.Transparency < 0.4).toBe(true)
             expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Warning")
+            local RouteRules = require("../../src/shared/JumpRouteCueRules")
+            local rootPoint = bridge.Position + Vector3.yAxis * 2.9
+            local approach, exit = rootPoint - direction * 6, rootPoint + direction * 6
+            expect(RouteRules.safeGuidedPath(approach, exit, {gate})).toBe(false)
+            expect(RouteRules.safeGuidedPath(approach, approach - direction * 3, {gate})).toBe(true)
+            expect(RouteRules.safeGuidedPath(approach - Vector3.yAxis * 8,
+                exit - Vector3.yAxis * 8, {gate})).toBe(true)
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Transparency).toBe(state.stripe.Transparency)
+            end
+            for _, entry in ipairs(state.rails) do
+                expect(math.abs(entry.part.Transparency - 0.46) < 0.001).toBe(true)
+            end
+            expect(SkybridgeShutters.setPhase(state, "Idle", 101)).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt") == nil).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Warning", 110)).toBe(true)
             expect(SkybridgeShutters.setPhase(state, "Raising")).toBe(true)
             expect(gate.CanCollide).toBe(false)
+            gate.CFrame = state.lowered:Lerp(state.raised, 0.5)
+            task.wait()
+            expect((skin.Position - gate.Position).Magnitude < 0.01).toBe(true)
+            expect(skin.Color).toBe(gate.Color)
+            expect(skin.Transparency).toBe(gate.Transparency)
             expect(SkybridgeShutters.setPhase(state, "Raised")).toBe(true)
             expect(gate.CanCollide).toBe(true)
             expect(gate.CanQuery).toBe(true)
             expect(gate.Material).toBe(Enum.Material.Metal)
+            expect(gate.Size).toBe(colliderSize)
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Transparency > 0.60 and arm.Transparency < 1).toBe(true)
+            end
+            local joint = skin:FindFirstChildOfClass("WeldConstraint")
+            assert(joint)
+            joint:Destroy()
+            task.wait()
+            expect(skin.Parent == nil).toBe(true)
+            expect(math.abs(gate.LocalTransparencyModifier - 0.12) < 0.001).toBe(true)
+            expect(gate.CanCollide).toBe(true)
+            release()
             -- The actual bridge remains solid; no lethal gap is created.
             expect(bridge.CanCollide).toBe(true)
-            expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Idle", 115)).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt")).toBe(115)
+            expect(RouteRules.safeGuidedPath(approach, exit, {gate})).toBe(true)
             expect(gate.CanCollide).toBe(false)
             expect(gate.CanQuery).toBe(false)
             expect(gate.Transparency).toBe(1)
             expect(state.stripe.Transparency).toBe(1)
+            for _, arm in ipairs(state.chevrons) do
+                expect(arm.Transparency).toBe(1)
+            end
             expect(state.stripe.CanCollide).toBe(false)
             expect(gate:GetAttribute("ShutterWarningAt") == nil)
                 .toBe(true)
             expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Idle")
+            for _, entry in ipairs(state.rails) do
+                expect(entry.part.Transparency).toBe(entry.transparency)
+            end
+            expect(SkybridgeShutters.setPhase(state, "Warning", 125)).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt") == nil).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Raised")).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
+            expect(gate:GetAttribute("ShutterReopenedAt") == nil).toBe(true)
+            expect(SkybridgeShutters.setPhase(state, "Warning", 130)).toBe(true)
+            gate:Destroy()
+            expect(SkybridgeShutters.setPhase(state, "Raising")).toBe(false)
+            expect(SkybridgeShutters.setPhase(state, "Idle")).toBe(true)
+            expect(bridge:GetAttribute("BridgeShutterPhase")).toBe("Idle")
+            for _, entry in ipairs(state.rails) do
+                expect(entry.part.Transparency).toBe(entry.transparency)
+            end
             states[#states + 1] = state
         end
         expect(#states).toBe(4)
+        profile:Destroy()
         folder:Destroy()
         map:Destroy()
     end)

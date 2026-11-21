@@ -14,6 +14,7 @@ local VfxQuality = require(ReplicatedStorage.Shared.VfxQuality)
 local FluxRelayRules = require(ReplicatedStorage.Shared.FluxRelayRules)
 local UIResponsive = require(ReplicatedStorage.Shared.UIResponsive)
 local MobileHudNotices = require(ReplicatedStorage.Shared.MobileHudNotices)
+local CelebrationMeshes = require(script.Parent.LobbyCelebrationMeshes)
 local PremiumJunctionHardware3DKit = require(
     script.Parent.PremiumJunctionHardware3DKit)
 
@@ -38,6 +39,10 @@ local source = nil
 local sourceToken = 0
 local activeRound = false
 local lastHudKey = ""
+local meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+local gateProfiles = {}
+local profileRoles = {"pylon", "casting", "runway", "fragment"}
+local nextProfileCheck = 0
 
 -- Reuse the existing local render cadence, without any extra polling.
 local hud = Instance.new("ScreenGui")
@@ -142,11 +147,34 @@ stateEvent.OnClientEvent:Connect(function(data)
 end)
 
 local function quality()
-    return VfxQuality.get(player:GetAttribute("VfxQualityTier")).Name
+    return VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), touchDevice).Name
 end
 
-local function newPart(name, size, cf, tint, material, transparency)
-    local p = Instance.new("Part")
+local function refreshGateProfiles()
+    local nextProfiles = {}
+    local changed = false
+    for _, role in ipairs(profileRoles) do
+        local profile = CelebrationMeshes.readyProfile(role, meshPressure)
+        local id = profile and profile.MeshId
+        nextProfiles[role] = profile
+        nextProfiles[role .. "Id"] = id
+        if profile ~= gateProfiles[role] or id ~= gateProfiles[role .. "Id"] then changed = true end
+    end
+    gateProfiles = nextProfiles
+    nextProfileCheck = os.clock() + 1
+    return changed
+end
+
+local function newPart(name, size, cf, tint, material, transparency, meshSource, alignProfile)
+    local mesh = CelebrationMeshes.cloneProfile(meshSource)
+    local p = mesh or Instance.new("Part")
+    if mesh then
+        p.MaterialVariant = ""
+        if alignProfile and (meshSource.Size.X > meshSource.Size.Z) ~= (size.X > size.Z) then
+            size = Vector3.new(size.Z, size.Y, size.X)
+            cf *= CFrame.Angles(0, math.pi * 0.5, 0)
+        end
+    end
     p.Name = name
     p.Size = size
     p.CFrame = cf
@@ -211,76 +239,62 @@ local function banner(trigger)
 end
 
 local function makeGate(trigger)
-    if gates[trigger] or not trigger:IsA("BasePart")
-        or trigger:GetAttribute("FluxRelayIndex") == nil then
-        return
-    end
+    if gates[trigger] or not trigger:IsA("BasePart") then return end
+    local index = trigger:GetAttribute("FluxRelayIndex")
+    local outward = FluxRelayRules.Offsets[index]
+    if not outward then return end
 
-    local isHorizontal = trigger.Size.Z > trigger.Size.X
-    local forward = isHorizontal and Vector3.new(1, 0, 0) or Vector3.new(0, 0, 1)
+    -- The live relay sends the runner toward the hub on all four lanes.
+    local forward = trigger.CFrame:VectorToWorldSpace(-outward.Unit)
     local basis = CFrame.lookAt(trigger.Position, trigger.Position + forward)
     local tier = quality()
     local detail = tier == "High" and 2 or (tier == "Medium" and 1 or 0)
-    local statusPieces = {}
-    -- Capture only parts of this gate, not earlier gates or one-shot VFX.
-    local existingParts = {}
-    for _, item in ipairs(folder:GetChildren()) do
-        existingParts[item] = true
+    local shaft, casting, swept = gateProfiles.pylon, gateProfiles.casting, gateProfiles.runway
+    local statusPieces, pieces = {}, {}
+    local triggerFrame = trigger.CFrame
+    local function fitting(name, size, cf, color, material, alpha, profile)
+        local part = newPart(name, size, cf, color, material, alpha, profile, true)
+        pieces[#pieces + 1] = {part = part, localCFrame = triggerFrame:ToObjectSpace(part.CFrame)}
+        return part
     end
 
-    -- Three-piece engineered arch, not a single neon box.
-    local left = newPart("FluxFrameLeft", Vector3.new(0.76, 6.1, 0.80),
-        basis * CFrame.new(-4, -0.1, 0), style.Frame, Enum.Material.DiamondPlate, 0)
-    local right = newPart("FluxFrameRight", Vector3.new(0.76, 6.1, 0.80),
-        basis * CFrame.new(4, -0.1, 0), style.Frame, Enum.Material.DiamondPlate, 0)
-    local header = newPart("FluxBridgeCap", Vector3.new(8.6, 0.66, 1.05),
-        basis * CFrame.new(0, 2.95, 0), style.Frame, Enum.Material.Metal, 0)
-
+    fitting("FluxBridgeCap", Vector3.new(9.12, 0.66, 1.05),
+        basis * CFrame.new(0, 2.95, 0), style.Frame, Enum.Material.Metal, 0, swept or casting)
     for side = -1, 1, 2 do
-        local inner = newPart("FluxVerticalSignal", Vector3.new(0.16, 4.9, 0.19),
-            basis * CFrame.new(side * 3.54, -0.17, -0.30),
-            style.Idle, Enum.Material.Neon, 0.48)
-        table.insert(statusPieces, inner)
+        local x = side * 4.24
+        fitting("FluxFooting", Vector3.new(1.36, 0.30, 1.38),
+            basis * CFrame.new(x, -1.97, 0), style.Edge, Enum.Material.DiamondPlate, 0.04, casting)
+        fitting(side < 0 and "FluxFrameLeft" or "FluxFrameRight", Vector3.new(0.76, 4.98, 0.80),
+            basis * CFrame.new(x, 0.46, 0), style.Frame, Enum.Material.DiamondPlate, 0, shaft)
+        statusPieces[#statusPieces + 1] = fitting("FluxVerticalSignal", Vector3.new(0.16, 4.30, 0.19),
+            basis * CFrame.new(side * 3.82, 0.39, -0.27),
+            style.Idle, Enum.Material.Neon, 0.48, shaft)
 
-        -- The near-ground chevrons point inward toward the safe central hub.
-        local chevron = newPart("FluxChevron", Vector3.new(1.10, 0.09, 0.22),
-            basis * CFrame.new(side * 1.52, -2.53, -1.24)
-                * CFrame.Angles(0, math.rad(side * 30), 0),
-            style.Idle, Enum.Material.Neon, 0.38)
-        table.insert(statusPieces, chevron)
-    end
-    local crest = newPart("FluxCrest", Vector3.new(4.3, 0.15, 0.22),
-        basis * CFrame.new(0, 2.5, -0.5), style.Idle, Enum.Material.Neon, 0.4)
-    table.insert(statusPieces, crest)
-
-    if detail >= 1 then
-        for side = -1, 1, 2 do
-            newPart("FluxArmorFin", Vector3.new(0.95, 0.45, 1.24),
-                basis * CFrame.new(side * 4, 1.9, 0),
-                style.Edge, Enum.Material.Metal, 0.08)
+        local tip = basis * Vector3.new(0, -1.93, -2.4)
+        local tail = basis * Vector3.new(side * 0.70, -1.93, -1.37)
+        statusPieces[#statusPieces + 1] = fitting("FluxChevron",
+            Vector3.new(0.23, 0.065, (tip - tail).Magnitude),
+            CFrame.lookAt((tip + tail) * 0.5, tip),
+            style.Idle, Enum.Material.Neon, 0.38, swept or casting)
+        if detail >= 1 then
+            fitting("FluxArmorFin", Vector3.new(0.95, 0.45, 1.24),
+                basis * CFrame.new(x, 1.9, 0), style.Edge, Enum.Material.Metal, 0.08, casting)
         end
     end
+    statusPieces[#statusPieces + 1] = fitting("FluxCrest", Vector3.new(4.3, 0.15, 0.22),
+        basis * CFrame.new(0, 2.5, -0.5), style.Idle, Enum.Material.Neon, 0.4, swept or casting)
+
     if detail == 2 then
         for segment = -1, 1 do
-            local offset = segment * 1.9
-            local prism = newPart("FluxCrownPrism", Vector3.new(0.72, 0.32, 0.50),
-                basis * CFrame.new(offset, 3.4, 0)
+            local prism = fitting("FluxCrownPrism", Vector3.new(0.72, 0.32, 0.50),
+                basis * CFrame.new(segment * 1.9, 3.4, 0)
                     * CFrame.Angles(0, 0, math.rad(segment * 26)),
-                style.Edge, Enum.Material.Glass, 0.08)
+                style.Edge, Enum.Material.Glass, 0.08, gateProfiles.fragment)
             prism.Reflectance = 0.12
         end
     end
 
     local label, stroke = banner(trigger)
-    local pieces = {}
-    for _, item in ipairs(folder:GetChildren()) do
-        if item:IsA("BasePart") and not existingParts[item] then
-            table.insert(pieces, {
-                part = item,
-                localCFrame = trigger.CFrame:ToObjectSpace(item.CFrame),
-            })
-        end
-    end
     local entry = {
         trigger = trigger,
         statusPieces = statusPieces,
@@ -323,9 +337,10 @@ local function makeGate(trigger)
         )
         local center = trigger.Position + Vector3.new(0, -2.75, 0)
         local color = rank == 3 and style.Signal or style.Charged
+        local burstSource = CelebrationMeshes.readyProfile("fragment", meshPressure)
         local flash = newPart("FluxCompletionGlyph",
             Vector3.new(2.5, 0.1, 0.18),
-            CFrame.new(center), color, Enum.Material.Neon, 0.08)
+            CFrame.new(center), color, Enum.Material.Neon, 0.08, burstSource)
         TweenService:Create(flash, TweenInfo.new(0.4), {
             Size = Vector3.new(rank == 3 and 8.4 or 6.8, 0.1, 0.12),
             Transparency = 1,
@@ -342,7 +357,7 @@ local function makeGate(trigger)
                 local finish = start + radial * 3.2 + Vector3.new(0, 1.4, 0)
                 local facet = newPart("FluxWeaveFacet",
                     Vector3.new(0.18, 0.11, 0.75),
-                    CFrame.lookAt(start, finish), color, Enum.Material.Neon, 0.14)
+                    CFrame.lookAt(start, finish), color, Enum.Material.Neon, 0.14, burstSource)
                 TweenService:Create(facet, TweenInfo.new(0.42), {
                     CFrame = CFrame.lookAt(finish, finish + radial),
                     Transparency = 1,
@@ -465,12 +480,11 @@ local function renderHUD(serverTime)
     return nextParity
 end
 
--- The real JunctionSwitchyard already owns its four golden chevrons
--- and server-managed BillboardGuis. Repaint those SAME objects locally,
--- only while the authoritative server has an active pair and this player
--- has an earned one-use master cut. No fake new destination, 3D geometry,
--- extra render loop, RemoteEvent or server-wide cosmetic side effect.
-local function renderJunctions()
+local junctionDirections = {A = 1, AOuter = 1, B = -1, BOuter = -1}
+
+-- Repaint the server-owned arrows and signs using the actual charged
+-- pair, personal mastery and the direction of the latest accepted cut.
+local function renderJunctions(serverTime, reduced)
     local arena = source and source:FindFirstChild("Arena")
     local mechanics = arena and arena:FindFirstChild("Mechanics")
     local yard = mechanics and mechanics:FindFirstChild("JunctionSwitchyard")
@@ -503,19 +517,21 @@ local function renderJunctions()
                 label.TextColor3 = desired
             end
         end
-        -- These two pieces belong to the REAL active switch. Preserve
-        -- the standard off-pair violet and on-pair amber. A player with
-        -- charge sees a brighter master-white pair only where usable.
+        -- A short direction cue confirms the cut without changing which
+        -- lane is charged or introducing a separate animation loop.
         local tint = personal and Color3.fromRGB(255, 245, 172)
             or (active and Color3.fromRGB(255, 203, 99)
                 or Color3.fromRGB(122, 104, 174))
-        for side = 1, 2 do
-            local suffix = side == 1 and "A" or "B"
-            local chevron = yard:FindFirstChild(
-                "JunctionChevron" .. index .. suffix)
-            if chevron and chevron:IsA("BasePart")
-                and chevron.Color ~= tint then
-                chevron.Color = tint
+        local triggered = active and not reduced and pad:GetAttribute("JunctionTriggeredAt")
+        local latest = if type(triggered) == "number"
+            and serverTime >= triggered and serverTime - triggered < 0.42
+            then pad:GetAttribute("JunctionTravelSign") else nil
+        for suffix, travelSign in pairs(junctionDirections) do
+            local chevron = yard:FindFirstChild("JunctionChevron" .. index .. suffix)
+            local usedDirection = latest == travelSign
+            local desired = usedDirection and Color3.fromRGB(255, 252, 214) or tint
+            if chevron and chevron:IsA("BasePart") and chevron.Color ~= desired then
+                chevron.Color = desired
             end
         end
     end
@@ -523,9 +539,9 @@ end
 
 local function render(now)
     local serverTime = workspace:GetServerTimeNow()
-    renderJunctions()
-    local nextParity = renderHUD(serverTime)
     local reduced = player:GetAttribute("ReduceMotion") == true
+    renderJunctions(serverTime, reduced)
+    local nextParity = renderHUD(serverTime)
     for trigger, entry in pairs(gates) do
         if not trigger.Parent then
             -- Source rebinding owns the lifetime of all visual components.
@@ -594,21 +610,42 @@ local function bind(generated)
         local relays = mechanics and mechanics:FindFirstChild("FluxRelays")
 
         if relays then
-            for _, obj in ipairs(relays:GetChildren()) do
-                makeGate(obj)
+            refreshGateProfiles()
+            local function trackRelay(obj)
+                if not obj:IsA("BasePart") then return end
+                if obj:GetAttribute("FluxRelayIndex") ~= nil then
+                    makeGate(obj)
+                else
+                    connect(obj:GetAttributeChangedSignal("FluxRelayIndex"), function()
+                        if obj.Parent == relays then makeGate(obj) end
+                    end)
+                end
             end
-            connect(relays.ChildAdded, makeGate)
+            for _, obj in ipairs(relays:GetChildren()) do trackRelay(obj) end
+            connect(relays.ChildAdded, trackRelay)
+            connect(relays.ChildRemoved, function(obj)
+                if gates[obj] then task.defer(install) end
+            end)
         end
         connect(generated.ChildAdded, function(obj)
             if obj.Name == "Arena" then task.defer(install) end
+        end)
+        connect(generated.ChildRemoved, function(obj)
+            if obj == arena then task.defer(install) end
         end)
         if arena then
             connect(arena.ChildAdded, function(obj)
                 if obj.Name == "Mechanics" then task.defer(install) end
             end)
+            connect(arena.ChildRemoved, function(obj)
+                if obj == mechanics then task.defer(install) end
+            end)
             if mechanics then
                 connect(mechanics.ChildAdded, function(obj)
                     if obj.Name == "FluxRelays" then task.defer(install) end
+                end)
+                connect(mechanics.ChildRemoved, function(obj)
+                    if obj == relays then task.defer(install) end
                 end)
             end
         end
@@ -626,6 +663,13 @@ end)
 player:GetAttributeChangedSignal("VfxQualityTier"):Connect(function()
     bind(workspace:FindFirstChild("GeneratedMap"))
 end)
+player:GetAttributeChangedSignal("OptionalVfxPressure"):Connect(function()
+    local wasEligible = meshPressure < 1
+    meshPressure = tonumber(player:GetAttribute("OptionalVfxPressure")) or 0
+    if wasEligible ~= (meshPressure < 1) and next(gates) then
+        bind(workspace:FindFirstChild("GeneratedMap"))
+    end
+end)
 bind(workspace:FindFirstChild("GeneratedMap"))
 
 task.spawn(function()
@@ -635,7 +679,11 @@ task.spawn(function()
             -- No update work or time polling while the mechanic is absent.
             task.wait(0.60)
         else
-            render(os.clock())
+            local now = os.clock()
+            if now >= nextProfileCheck and refreshGateProfiles() then
+                bind(workspace:FindFirstChild("GeneratedMap"))
+            end
+            render(now)
             local tier = quality()
             task.wait(tier == "Low" and 0.28
                 or (UserInputService.TouchEnabled and 0.20 or 0.12))

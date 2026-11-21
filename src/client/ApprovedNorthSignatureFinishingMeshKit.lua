@@ -2,6 +2,7 @@
 -- assembly has its own native fallback and approved source. The existing
 -- dish, bridge, interchange, torus and crane sculpture owners are disjoint.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ExteriorDetailGeometry = require("./ExteriorDetailGeometry")
 
 local Kit = {}
 local bucket = Instance.new("Folder")
@@ -207,16 +208,13 @@ end
 local function matchingNative(owner,origin,spec)
     local part = owner:FindFirstChild(spec.name)
     local kind = spec.kind == "WedgePart" and "WedgePart" or "Part"
-    if not part or not part:IsA(kind) or not part.Anchored or part.CanCollide
-        or part.CanTouch or part.CanQuery or (part.Size-spec.size).Magnitude > .10 then return nil end
+    local shape = spec.kind == "Ball" and Enum.PartType.Ball or Enum.PartType.Block
+    local size, pose = ExteriorDetailGeometry.monumentFootprint(part, owner, kind, shape)
+    if not size or (size-spec.size).Magnitude > .10 then return nil end
     local expected = origin*spec.frame
-    if (part.Position-expected.Position).Magnitude > .15
-        or part.CFrame.LookVector:Dot(expected.LookVector) < .999
-        or part.CFrame.UpVector:Dot(expected.UpVector) < .999 then return nil end
-    if kind == "Part" then
-        local shape = spec.kind == "Ball" and Enum.PartType.Ball or Enum.PartType.Block
-        if part.Shape ~= shape then return nil end
-    end
+    if (pose.Position-expected.Position).Magnitude > .15
+        or pose.LookVector:Dot(expected.LookVector) < .999
+        or pose.UpVector:Dot(expected.UpVector) < .999 then return nil end
     return part
 end
 
@@ -355,7 +353,13 @@ local function mount(state,spec,asset)
         watch(links,part.AncestryChanged,revoke)
         watchProperties(links,part,MESH_GEOMETRY,revoke)
         watchProperties(links,part,{"Color","Transparency"},revoke)
-        if part:IsA("Part") then watchProperties(links,part,{"Shape"},revoke) end
+        if part:IsA("Part") then
+            watchProperties(links,part,{"Shape"},revoke)
+        elseif part:IsA("MeshPart") then
+            watchProperties(links,part,{"MeshId"},revoke)
+            watchAttributes(links,part,
+                {"OriginalExteriorDetail3D","Original3DAssetId","ExteriorDetailAxisSwap"},revoke)
+        end
     end
     watch(links,model.AncestryChanged,revoke)
     watch(links,model.ChildRemoved,revoke)

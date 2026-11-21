@@ -1672,6 +1672,10 @@ resultCard.BorderSizePixel = 0
 resultCard.Visible = false
 resultCard.ZIndex = 21
 resultCard.Parent = root
+-- Include both the personalized receipt and the fallback, plus the exit fade.
+resultCard:GetPropertyChangedSignal("Visible"):Connect(function()
+    player:SetAttribute("RoundResultCardVisible", resultCard.Visible)
+end)
 UITheme.addCorner(resultCard, UDim.new(0, 22))
 local resultStroke = UITheme.addStroke(resultCard, UITheme.Colors.Blue, 1.6, 0.24)
 local resultGradient = UITheme.addGradient(resultCard, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)
@@ -2318,14 +2322,6 @@ local function showRoundFeedback(feedback)
     if soleSurvivor then
         table.insert(tags, CoreLocalization.text(localeId, "RESULT_SOLE_SURVIVOR"))
     end
-    if feedback.doubleChaos then
-        table.insert(
-            tags,
-            feedback.fusionName
-                and (CoreLocalization.text(localeId, "CHAOS_FUSION") .. ": " .. tostring(feedback.fusionName))
-                or CoreLocalization.text(localeId, "CHAOS_FUSION")
-        )
-    end
     if feedback.soloMode then table.insert(tags, CoreLocalization.text(localeId, "RESULT_RUSH_BONUS")) end
     if feedback.criticalSurvival then
         table.insert(tags, CoreLocalization.text(localeId, "RESULT_CLUTCH_TAG"))
@@ -2485,11 +2481,10 @@ local function showRoundFeedback(feedback)
         resultTip.Text = CoreLocalization.text(localeId, "RESULT_FIRST_CHAOS")
     elseif masterRound then
         resultTip.Text = CoreLocalization.text(localeId, "RESULT_MASTER", momentumBest)
-    elseif fusionBonusCoins > 0 and feedback.fusionName then
+    elseif fusionBonusCoins > 0 then
         resultTip.Text = CoreLocalization.text(
             localeId,
             "RESULT_FUSION_SURVIVED",
-            tostring(feedback.fusionName),
             fusionBonusCoins
         )
     elseif flowCoins > 0 and feedback.challengeCompleted then

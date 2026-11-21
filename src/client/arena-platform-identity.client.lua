@@ -13,6 +13,7 @@ local PlatformIdentityLodRules = require(ReplicatedStorage.Shared.PlatformIdenti
 local PlatformFinishKit = require(script.Parent.PlatformFinishKit)
 local PremiumLargeDeckHullMeshKit = require(script.Parent.PremiumLargeDeckHullMeshKit)
 local ApprovedPlatformRimMeshKit = require(script.Parent.ApprovedPlatformRimMeshKit)
+local ForgedBridge = require(script.Parent.ApprovedTowersSignatureBridgeMeshKit)
 local PlatformNativeTrimReplacementKit = require(
     script.Parent.PlatformNativeTrimReplacementKit)
 local PremiumLargeStructureMeshKit = require(
@@ -21,6 +22,7 @@ local PremiumPlatformSideMeshKit = require(
     script.Parent.PremiumPlatformSideMeshKit)
 local PremiumFloorHardwareMeshKit = require(script.Parent.PremiumFloorHardwareMeshKit)
 local HarborOutpostKit = require(script.Parent.HarborOutpostKit)
+local OrbitalNode = require(script.Parent.ApprovedOrbitalReactorLandmarkMeshKit)
 
 local player = Players.LocalPlayer
 local roundEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RoundState")
@@ -111,7 +113,7 @@ local function refreshOutpostMotion(platform)
         state.joint,
         TweenInfo.new(duration, Enum.EasingStyle.Sine,
             Enum.EasingDirection.InOut, -1, true),
-        {C0 = goal}
+        {C0 = HarborOutpostKit.instrumentMotionGoal(state.instrument,goal)}
     )
     state.tween = tween
     tween:Play()
@@ -264,12 +266,13 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
     if anchorPart and anchorPart:IsA("BasePart") then
         registerVisual(anchorPart, part)
         part.Massless = true
-        local compactRoute = tonumber(anchorPart:GetAttribute("RouteTier")) ~= nil
-        local weld = Instance.new(compactRoute and "Weld" or "WeldConstraint")
+        local adjustable = anchorPart:GetAttribute("ChaosSkybridge") == true
+            or tonumber(anchorPart:GetAttribute("RouteTier")) ~= nil
+        local weld = Instance.new(adjustable and "Weld" or "WeldConstraint")
         weld.Name = "PlatformIdentityWeld"
         weld.Part0 = part
         weld.Part1 = anchorPart
-        if compactRoute then
+        if adjustable then
             weld.C0 = CFrame.identity
             weld.C1 = anchorPart.CFrame:ToObjectSpace(part.CFrame)
         end
@@ -279,7 +282,15 @@ local function makePart(name, size, cframe, color, material, transparency, ancho
     return part
 end
 
-local function decorateClassic(platform, index, theme, tier)
+local function makeFittedPart(name, size, frame, color, material, transparency,
+    platform, profiles, region)
+    local mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(
+        profiles and profiles[region], frame, size, size.X >= size.Z,
+        profiles and ((region == "hatch" and profiles.hatchAssetId) or profiles.assetId))
+    return makePart(name, dimensions, pose, color, material, transparency, platform, mesh)
+end
+
+local function decorateClassic(platform, index, theme, tier, profiles)
     local top = platform.CFrame * CFrame.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     local length = math.max(2.6, math.min(platform.Size.X, platform.Size.Z) * 0.56)
     -- Quiet calibration engraving: it shows deck construction, not a
@@ -287,70 +298,80 @@ local function decorateClassic(platform, index, theme, tier)
     -- exclusively for geometry-verified parkour takeoffs.
     local transparency = tier.Name == "Low" and 0.48 or 0.29
 
-    makePart(
+    makeFittedPart(
         "ClassicPlatformAxisA" .. index,
         Vector3.new(length, 0.045, 0.16),
         top,
         theme.Detail:Lerp(theme.Structure, index % 2 == 0 and 0.38 or 0.28),
         Enum.Material.Metal,
         transparency,
-        platform
+        platform, profiles, "detail"
     )
 
     if tier.Name == "High" then
-        makePart(
+        makeFittedPart(
             "ClassicPlatformAxisB" .. index,
             Vector3.new(0.16, 0.045, length),
-            top,
+            top * CFrame.new(0, .004, 0),
             theme.Detail,
             Enum.Material.Metal,
             0.28,
-            platform
+            platform, profiles, "detail"
         )
     end
 end
 
-local function decorateTowers(platform, index, theme, tier, genuineUnderdeck)
+local function decorateTowers(platform, index, theme, tier, genuineUnderdeck, profiles)
     -- A complete, already mounted approved carapace/hull owns this
     -- deck's underside. Do not overlay it with a primitive cylinder and
     -- rectangular brace; retain both as genuine fallback otherwise.
     -- Rims/bridge girders alone do not cover the central underside.
     if genuineUnderdeck then return end
-    local bottom = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.18, 0)
-    local radius = math.max(2.0, math.min(platform.Size.X, platform.Size.Z) * 0.28)
+    local bottom = platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - .11, 0)
+    local diameter = math.max(2.0, math.min(platform.Size.X, platform.Size.Z) * 0.28)
+    local head = profiles and profiles.lens
+    local upright = Vector3.new(diameter, .24, diameter)
+    local mesh, pose, dimensions = PlatformFinishKit.fitTrimProfile(
+        head and head.part, bottom, upright, false, head and head.assetId)
+    if not mesh then
+        -- Roblox cylinders have local X as their axis. Put the thickness
+        -- on X before rolling the cylinder flat into the deck underside.
+        pose = bottom * CFrame.Angles(0, 0, math.pi * .5)
+        dimensions = Vector3.new(upright.Y, upright.X, upright.Z)
+    end
 
     local core = makePart(
         "TowerPlatformLiftCore" .. index,
-        Vector3.new(radius, 0.24, radius),
-        -- Establish the final cylinder orientation BEFORE welding it
-        -- to the authoritative platform. Rotating an already-welded
-        -- Part can fight the constraint and move/snaps its assembly.
-        bottom * CFrame.Angles(0, 0, math.rad(90)),
+        dimensions,
+        pose,
         index % 2 == 0 and theme.Secondary or theme.Accent,
         tier.Name == "High" and index % 3 == 1 and Enum.Material.Neon or Enum.Material.Metal,
         tier.Name == "High" and index % 3 == 1 and 0.48 or (tier.Name == "Low" and 0.36 or 0.22),
-        platform
+        platform, mesh
     )
-    core.Shape = Enum.PartType.Cylinder
+    if not mesh then
+        core.Shape = Enum.PartType.Cylinder
+        core:SetAttribute("TowerLiftCoreCylinder", true)
+    end
 
     if tier.Name == "High" and platform.Position.Y >= 10 then
-        makePart(
+        makeFittedPart(
             "TowerPlatformBrace" .. index,
             Vector3.new(
                 math.max(3.2, platform.Size.X * 0.58),
                 0.32,
                 math.max(0.7, platform.Size.Z * 0.12)
             ),
-            platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - 0.42, 0),
+            platform.CFrame * CFrame.new(0, -platform.Size.Y * 0.5 - .37, 0),
             theme.Structure:Lerp(theme.Detail, 0.20),
             Enum.Material.DiamondPlate,
             0.18,
-            platform
+            platform, profiles, "hatch"
         )
     end
 end
 
-local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
+local function decorateCrossroads(platform, index, theme, tier, arenaCenter, profiles)
     local center = platform.CFrame * CFrame.new(0, PlatformFinishKit.surfacePaintOffset(platform, 0.05), 0)
     local arenaDelta = Vector3.new(
         platform.Position.X - arenaCenter.X,
@@ -363,14 +384,14 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
         and Vector3.new(math.max(2.5, length * 0.64), 0.05, 0.24)
         or Vector3.new(0.24, 0.05, math.max(2.5, length * 0.64))
 
-    makePart(
+    makeFittedPart(
         "CrossroadPlatformLane" .. index,
         size,
         center,
         theme.Detail:Lerp(theme.Structure, 0.35),
         Enum.Material.Metal,
         tier.Name == "Low" and 0.48 or 0.30,
-        platform
+        platform, profiles, "hatch"
     )
 
     if tier.Name == "High" then
@@ -382,7 +403,7 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
             or Vector3.new(0.13, 0.045, math.max(2.0, platform.Size.Z * 0.34))
 
         for side = -1, 1, 2 do
-            makePart(
+            makeFittedPart(
                 "CrossroadPlatformBranch" .. index .. "_" .. tostring(side),
                 capSize,
                 center * CFrame.new(
@@ -393,13 +414,13 @@ local function decorateCrossroads(platform, index, theme, tier, arenaCenter)
                 theme.Detail,
                 Enum.Material.Metal,
                 0.30,
-                platform
+                platform, profiles, "collar"
             )
         end
     end
 end
 
-local function decorateOrbital(platform, index, theme, tier, arenaCenter)
+local function decorateOrbital(platform, index, theme, tier, arenaCenter, profiles)
     local radial = Vector3.new(
         platform.Position.X - arenaCenter.X,
         0,
@@ -418,7 +439,7 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
     ) * CFrame.Angles(0, yaw, 0)
 
     local length = math.max(2.6, math.min(platform.Size.X, platform.Size.Z) * 0.70)
-    makePart(
+    local tangentMark = makeFittedPart(
         "OrbitalPlatformTangent" .. index,
         Vector3.new(length, 0.05, 0.22),
         center,
@@ -427,20 +448,22 @@ local function decorateOrbital(platform, index, theme, tier, arenaCenter)
         theme.Detail:Lerp(theme.Structure, index % 2 == 0 and 0.32 or 0.46),
         Enum.Material.Metal,
         tier.Name == "Low" and 0.43 or 0.25,
-        platform
+        platform, profiles, "detail"
     )
+    tangentMark:SetAttribute("PlatformFinishDiagonal", true)
 
     if tier.Name ~= "Low" then
         local innerOffset = radial * -math.min(platform.Size.X, platform.Size.Z) * 0.22
-        makePart(
+        local innerRail = makeFittedPart(
             "OrbitalPlatformInnerRail" .. index,
             Vector3.new(length * 0.56, 0.045, 0.12),
             center + innerOffset,
             theme.Detail,
             Enum.Material.Glass,
             tier.Name == "High" and 0.40 or 0.52,
-            platform
+            platform, profiles, "collar"
         )
+        innerRail:SetAttribute("PlatformFinishDiagonal", true)
     end
 end
 
@@ -450,7 +473,7 @@ end
 -- pieces, takeoff chevrons and physical panels still display normally.
 -- All pieces are inside the real deck, linked to its shrink footprint
 -- and inherit collapse visibility from the existing single owner.
-local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
+local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck, profiles)
     if tier.Name == "Low" then return end
     local width = math.min(platform.Size.X, platform.Size.Z)
     local nominal = PlatformIdentityLodRules.harborLandingWidth(platform)
@@ -462,18 +485,18 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
     -- crossbar, NOT a fake bridge or hazard arrow.
     if not nominal then
         local top = PlatformFinishKit.surfacePaintOffset(platform, 0.045)
-        makePart(
+        makeFittedPart(
             "HarborCargoLashing" .. index,
             Vector3.new(math.min(platform.Size.X * 0.55, 6.8), 0.045, 0.24),
             platform.CFrame * CFrame.new(0, top, platform.Size.Z * 0.26),
-            hardware, Enum.Material.CorrodedMetal, 0.26, platform
+            hardware, Enum.Material.CorrodedMetal, 0.26, platform, profiles, "detail"
         )
     end
     -- The approved seven-MeshPart underside replaces this flat native
     -- keel block, but NOT Harbor's useful top-surface cargo lashing.
     local keelMount
     if tier.Name == "High" and not genuineUnderdeck then
-        keelMount = makePart(
+        keelMount = makeFittedPart(
             "HarborKeelMount" .. index,
             PlatformFinishKit.harborKeelMountSize(platform),
             platform.CFrame * CFrame.new(
@@ -482,7 +505,7 @@ local function decorateHarbor(platform, index, theme, tier, genuineUnderdeck)
             theme.Detail:Lerp(hardware, 0.58),
             Enum.Material.WoodPlanks,
             0.13,
-            platform
+            platform, profiles, "hatch"
         )
     end
     return keelMount
@@ -497,26 +520,37 @@ local function takeoffGeometry(platform,target)
     )
 end
 
-local function decorateTakeoff(platform, target, index, theme, quality)
+local function decorateTakeoff(platform, target, index, theme, quality, profiles, crossingProfile)
     local left,right,size = takeoffGeometry(platform,target)
     if not left then return end
     local strokes = {}
     -- The verified safe route is restrained cool-white across all arenas;
     -- collapse/hazard warnings remain the more urgent amber/orange cue.
-    -- Enlarge only these TWO existing strokes, not their part count.
+    -- Fit the approved chamfered casting to each existing stroke.
     local opacity = quality.Name == "Low" and 0.34 or 0.43
     local color = Color3.fromRGB(185, 236, 239):Lerp(theme.Accent, 0.24)
     for side = -1, 1, 2 do
+        local mesh, frame, dimensions
+        local pose = side == -1 and left or right
+        if crossingProfile then
+            mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
+                crossingProfile, pose, size, false, 126298311664881)
+        else
+            mesh, frame, dimensions = PlatformFinishKit.fitTrimProfile(
+                profiles and profiles.hatch, pose, size, false,
+                profiles and (profiles.hatchAssetId or profiles.assetId))
+        end
         local piece = makePart(
             "ParkourTakeoffChevron" .. index .. "_" .. tostring(side),
-            size,
-            side == -1 and left or right,
+            dimensions,
+            frame,
             color,
             Enum.Material.Neon,
             opacity,
-            platform
+            platform, mesh
         )
         piece:SetAttribute("SkipRouteFootprint",true)
+        piece:SetAttribute("ParkourTakeoffCue", true)
         strokes[#strokes + 1] = piece
     end
     return strokes
@@ -526,19 +560,24 @@ local function refitTakeoff(platform,target,strokes)
     local left,right,size
     if target then left,right,size = takeoffGeometry(platform,target) end
     for index, stroke in ipairs(strokes) do
-        if stroke.Parent then
-            local joint = stroke:FindFirstChild("PlatformIdentityWeld")
-            local frame = if index == 1 then left else right
-            if frame and joint and joint:IsA("Weld")
-                and joint.Part0 == stroke and joint.Part1 == platform then
-                stroke.Size = size
-                joint.C1 = platform.CFrame:ToObjectSpace(frame)
-                stroke.Transparency = stroke:GetAttribute("ChaosBaseTransparency")
-            else
-                stroke.Transparency = 1
-            end
+        local joint = stroke:FindFirstChild("PlatformIdentityWeld")
+        if stroke.Parent ~= folder or not joint or not joint:IsA("Weld")
+            or joint.Part0 ~= stroke or joint.Part1 ~= platform then
+            for _, arm in ipairs(strokes) do arm:Destroy() end
+            return false
+        end
+        local frame = if index == 1 then left else right
+        if frame then
+            local pose, dimensions = PlatformFinishKit.trimProfilePose(
+                frame, size, stroke:GetAttribute("PlatformTrimAxisSwap") == true)
+            stroke.Size = dimensions
+            joint.C1 = platform.CFrame:ToObjectSpace(pose)
+            stroke.Transparency = stroke:GetAttribute("ChaosBaseTransparency")
+        else
+            stroke.Transparency = 1
         end
     end
+    return true
 end
 
 local ROUTE_DECK_PROPERTIES = {
@@ -562,6 +601,10 @@ local function rebuild()
     local variant = tostring(arena:GetAttribute("VariantId") or "Classic")
     local theme = VisualTheme.arena(variant)
     local tier = VfxQuality.deviceTier(player:GetAttribute("VfxQualityTier"), UserInputService.TouchEnabled)
+    local allowMeshTrim = (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+    local platformArtProfiles = allowMeshTrim
+        and PlatformFinishKit.artProfiles(variant, tier.Name ~= "Low") or nil
+    local crossingProfile = allowMeshTrim and ForgedBridge.sweptProfile() or nil
     local index = 0
     local replacements = {}
     local actualSupportParts = {}
@@ -580,8 +623,7 @@ local function rebuild()
     local decor = arena:FindFirstChild("Decor")
     local ordered = PlatformFinishKit.orderedPlatforms(platforms)
     local isClear = variant == "Harbor" and JumpRouteClearance.forArena(arena) or nil
-    local warnings, lava
-    if variant ~= "Orbital" then warnings, lava = JumpRouteHazards.read(arena) end
+    local warnings, lava = JumpRouteHazards.read(arena)
     -- Share deck subscriptions among every cue that uses the same target.
     -- Revisit waiting cues once per geometry/availability change batch.
     local targetUsers,pendingCues = {},{}
@@ -596,10 +638,12 @@ local function rebuild()
         if not refit and cue.hazardBlocked == blocked then return end
         cue.hazardBlocked = blocked
         if blocked then target = nil end
-        if cue.strokes then
-            refitTakeoff(platform, target, cue.strokes)
-        elseif target then
-            cue.strokes = decorateTakeoff(platform, target, cue.index, theme, tier)
+        if cue.strokes and not refitTakeoff(platform, target, cue.strokes) then
+            cue.strokes = nil
+        end
+        if not cue.strokes and target then
+            cue.strokes = decorateTakeoff(platform, target, cue.index, theme, tier,
+                platformArtProfiles, cue.crossing and crossingProfile or nil)
         end
     end
     local function syncRoute(platform)
@@ -877,6 +921,26 @@ local function rebuild()
     local mountedRouteCradles = 0
     local mountedShortSkySpineCradles = 0
     local mountedCloseSupports = 0
+    local column, columnSize
+    local armorProfile = (PlatformFinishKit.armorCount(tier.Name) > 0
+        or (variant == "Towers" and platformArtProfiles ~= nil))
+        and PremiumFloorHardwareMeshKit.platformCornerProfile() or nil
+    local outpostArt
+    if variant == "Harbor" and tier.Name ~= "Low" and platformArtProfiles then
+        column, columnSize = PremiumLargeStructureMeshKit.harborColumnSource()
+        local shaft = column and column:FindFirstChild("BeaconShaft")
+        if shaft and not shaft:IsA("MeshPart") then shaft = nil end
+        local cast = {part = platformArtProfiles.hatch,
+            assetId = platformArtProfiles.hatchAssetId or platformArtProfiles.assetId}
+        outpostArt = {
+            cast = cast,
+            beam = if crossingProfile then {part = crossingProfile, assetId = ForgedBridge.AssetId} else cast,
+            shaft = if shaft then {part = shaft, assetId = column:GetAttribute("Original3DAssetId")} else cast,
+            roller = {part = platformArtProfiles.detail, assetId = platformArtProfiles.assetId},
+            lens = {part = OrbitalNode.coreProfile(), assetId = OrbitalNode.NodeAssetId},
+            instrumentHead = armorProfile,
+        }
+    end
     local outpostInstruments = {}
     local outpostSculptures = {}
     local outpostFinishNatives = {}
@@ -889,19 +953,19 @@ local function rebuild()
         local truss,trussSize
         if #candidates > 0 then
             truss,trussSize = PremiumPlatformSideMeshKit.bridgeTrussSource()
-            local column, columnSize = PremiumLargeStructureMeshKit.harborColumnSource()
             if column and truss then
                 local sources = {column=column,columnSize=columnSize,truss=truss,trussSize=trussSize}
                 for _,candidate in ipairs(candidates) do
                     if forgedOutposts >= limit or supportBudget < HarborOutpostKit.frameModules then break end
                     local platform = candidate.deck
-                    local _, instrument, disconnect, finishing = HarborOutpostKit.build(
+                    local _, instrument, disconnect, finishing, fitted = HarborOutpostKit.build(
                         makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name,sources,
                         function()
                             forgedOutposts -= 1
                             player:SetAttribute("LocalOriginalHarborOutpostFrameCount",forgedOutposts)
                             scheduleRebuild()
-                        end)
+                        end, outpostArt)
+                    originalLargeCount += fitted or 0
                     outpostInstruments[platform] = instrument
                     outpostFinishNatives[platform] = finishing
                     if disconnect then
@@ -918,8 +982,10 @@ local function rebuild()
             local platform = candidate.deck
             local pivot = outpostInstruments[platform]
             if not pivot then
-                local _, fallback, _disconnect, finishing = HarborOutpostKit.build(
-                    makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name)
+                local _, fallback, _disconnect, finishing, fitted = HarborOutpostKit.build(
+                    makePart,platform,PlatformFinishKit.visualIndex(platform,1),theme,tier.Name,
+                    nil,nil,outpostArt)
+                originalLargeCount += fitted or 0
                 pivot = fallback
                 outpostInstruments[platform] = pivot
                 outpostFinishNatives[platform] = finishing
@@ -980,7 +1046,16 @@ local function rebuild()
     -- Side rails and braces cost one module each in Medium, two in High.
     -- Preserve rail coverage and leave room for the existing columns.
     local railTargets,braceTargets,keelTargets,cornerTargets = {},{},{},{}
-    local girderSource,cornerSource
+    local girderSource
+    local cornerSource = platformArtProfiles and PremiumFloorHardwareMeshKit.harborCornerSource() or nil
+    local forgedTrimProfile = tier.Name ~= "Low"
+        and (tonumber(player:GetAttribute("OptionalVfxPressure")) or 0) == 0
+        and ForgedBridge.sweptProfile() or nil
+    if platformArtProfiles then
+        platformArtProfiles.lens = armorProfile
+        platformArtProfiles.skirt = cornerSource
+        platformArtProfiles.spar = forgedTrimProfile
+    end
     local girderCost = tier.Name == "High" and 2 or 1
     if variant == "Harbor" and tier.Name ~= "Low"
         and supportBudget >= girderCost and cameraPoint
@@ -1028,12 +1103,9 @@ local function rebuild()
                 supportBudget -= 1
             end
             -- At most one corner set, funded after rails, braces and keels.
-            if railCount > 0 and supportBudget >= girderCost+1 then
-                cornerSource = PremiumFloorHardwareMeshKit.harborCornerSource()
-                if cornerSource then
-                    cornerTargets[candidates[1].deck] = true
-                    supportBudget -= girderCost
-                end
+            if cornerSource and railCount > 0 and supportBudget >= girderCost+1 then
+                cornerTargets[candidates[1].deck] = true
+                supportBudget -= girderCost
             end
         end
     end
@@ -1122,9 +1194,9 @@ local function rebuild()
             if authenticRim then mountedRimDecks += 1 end
             local carapacePieces = largeHullPieces
                 or (staged and staged.kind == "carapace" and staged.parts)
-                or (not authenticRim and PlatformFinishKit.buildCarapace(
-                    folder, platform, variant, tier.Name, theme, visualIndex,
-                    nearCameraCarapaces[platform] == true)) or {}
+                or (not authenticRim and nearCameraCarapaces[platform] == true
+                    and PremiumPlatformSideMeshKit.carapace(
+                        folder, platform, variant, tier.Name, visualIndex, true)) or {}
             if carapacePieces[1] and carapacePieces[1]:GetAttribute(
                 "NearCameraCarapace3D") == true then
                 mountedCameraCarapaces += 1
@@ -1160,6 +1232,11 @@ local function rebuild()
                     end
                 end
             end
+            if not authenticCarapace and not authenticRim and not authenticLongCradle then
+                carapacePieces = PlatformFinishKit.buildCarapace(
+                    folder, platform, variant, tier.Name, theme, visualIndex, false,
+                    platformArtProfiles)
+            end
             local authenticUnderdeck = authenticCarapace
                 or authenticLongCradle
             -- Source ownership is known only after actual 3D mounting.
@@ -1170,7 +1247,7 @@ local function rebuild()
             if tier.Name ~= "Low" or visualIndex % 2 ~= 0 then
                 for _, piece in ipairs(PlatformFinishKit.build(
                     folder, platform, variant, tier.Name, theme,
-                    authenticUnderdeck
+                    authenticUnderdeck, platformArtProfiles
                 )) do
                     registerVisual(platform, piece)
                     if keelTargets[platform] and piece.Name == "HarborUndersideKeel" then
@@ -1187,7 +1264,8 @@ local function rebuild()
                 else
                     sidePieces,harborRails,railFallback = PlatformFinishKit.buildSideRails(
                         folder, platform, tier.Name, theme, variant, visualIndex,
-                        nearBridgeGirders[platform] == true, railTargets[platform] and girderSource)
+                        nearBridgeGirders[platform] == true, railTargets[platform] and girderSource,
+                        forgedTrimProfile)
                 end
             end
             if harborRails then
@@ -1214,7 +1292,7 @@ local function rebuild()
             if not authenticCarapace and not authenticBridge
                 and not authenticRim then
                 local armor = PlatformFinishKit.buildArmor(
-                    folder, platform, variant, tier.Name, theme
+                    folder, platform, variant, tier.Name, theme, armorProfile
                 )
                 for _,piece in ipairs(armor) do
                     registerVisual(platform, piece)
@@ -1241,7 +1319,8 @@ local function rebuild()
             if not authenticCarapace and not authenticBridge
                 and not authenticRim and not authenticLongCradle then
                 local pieces,meshes,braceFallback = PlatformFinishKit.buildLoadBraces(
-                    folder, platform, variant, tier.Name, theme, braceTargets[platform] and girderSource)
+                    folder, platform, variant, tier.Name, theme,
+                    braceTargets[platform] and girderSource, forgedTrimProfile)
                 braceMeshes = meshes
                 for _, piece in ipairs(pieces) do
                     registerVisual(platform, piece)
@@ -1255,15 +1334,14 @@ local function rebuild()
             if braceTargets[platform] and not braceMeshes then
                 supportBudget += girderCost
             end
-            -- Textured-looking three-layer native hardware on a strictly
-            -- bounded subset of actual jump decks. Shares this existing
+            -- The complete model and fitted three-piece finish share the
             -- platform's weld, collapse visibility and shrinking footprint.
             local hatchPieces = (staged and staged.kind == "hatch"
                 and staged.parts) or PlatformFinishKit.buildServiceHatch(
                 folder, platform, variant, tier.Name, theme, visualIndex,
-                nearServiceHatches[platform] == true)
+                nearServiceHatches[platform] == true, platformArtProfiles)
             -- Only count a COMPLETE, actually mounted verified 3D source;
-            -- three-piece native fallback does not count as imported art.
+            -- individually fitted regions do not spend a full-model slot.
             if hatchPieces[1] and hatchPieces[1]:IsA("MeshPart")
                 and hatchPieces[1]:GetAttribute("OriginalServiceHatch3D")
                     == true then
@@ -1314,15 +1392,15 @@ local function rebuild()
             -- an edge-only rim must preserve the native accents.
             if variant == "Towers" then
                 decorateTowers(platform, visualIndex, theme, tier,
-                    authenticUnderdeck)
+                    authenticUnderdeck, platformArtProfiles)
             elseif variant == "Crossroads" then
-                decorateCrossroads(platform, visualIndex, theme, tier, base.Position)
+                decorateCrossroads(platform, visualIndex, theme, tier, base.Position, platformArtProfiles)
             elseif variant == "Orbital" then
-                decorateOrbital(platform, visualIndex, theme, tier, base.Position)
+                decorateOrbital(platform, visualIndex, theme, tier, base.Position, platformArtProfiles)
             elseif variant == "Harbor" then
                 local tieDown = hatchPieces[1] and hatchPieces[1]:GetAttribute("OriginalHarborCargoTieDown3D") == true
                 local keelMount = decorateHarbor(platform, visualIndex, theme, tier,
-                    authenticUnderdeck)
+                    authenticUnderdeck, platformArtProfiles)
                 if platformKeel and not authenticRim and not authenticUnderdeck then
                     local keelMeshes,keelFallback = PlatformFinishKit.mountHarborLandingKeel(
                         folder,platform,platformKeel,keelMount,girderSource)
@@ -1355,9 +1433,10 @@ local function rebuild()
                 -- No new scene loop, world physics or touch occlusion.
                 local instrument = outpostInstruments[platform]
                 if not instrument then
-                    local _, fallback = HarborOutpostKit.build(
-                        makePart, platform, visualIndex, theme, tier.Name
+                    local _, fallback, _disconnect, _finishing, fitted = HarborOutpostKit.build(
+                        makePart, platform, visualIndex, theme, tier.Name, nil, nil, outpostArt
                     )
+                    originalLargeCount += fitted or 0
                     instrument = fallback
                 end
                 if instrument then
@@ -1392,16 +1471,24 @@ local function rebuild()
                     end
                 end
             elseif variant == "Classic" then
-                decorateClassic(platform, visualIndex, theme, tier)
+                decorateClassic(platform, visualIndex, theme, tier, platformArtProfiles)
             end
             end
 
-            -- Orbital uses continuous physical Helix ramps instead of
-            -- jumping between these deck tiers; no false route arrows.
-            local routeTier = variant ~= "Orbital" and JumpRouteCueRules.deckTier(platform)
+            -- Orbital's central route uses continuous Helix ramps.
+            -- Its outer rescue crossing still jumps to branch step 2.
+            local crossing = platform:GetAttribute("CrosslinkRoute") ~= nil
+            local exitLanding = platform:GetAttribute("BranchStep") == 2
+            local routeTier = (variant ~= "Orbital" or crossing or exitLanding)
+                and JumpRouteCueRules.deckTier(platform)
             if routeTier then
-                if routeTier < 4 then
-                    routeCueStates[platform] = {index=visualIndex,targetTier=routeTier+1}
+                -- Adventure routes with authored, live paint already own
+                -- their departure markers, including the rescue crossing.
+                if platform:GetAttribute("PerimeterGuidePainted") ~= true
+                    and (crossing or (variant ~= "Orbital" and routeTier < 4)) then
+                    routeCueStates[platform] = {
+                        index=visualIndex, targetTier=crossing and 3 or routeTier+1, crossing=crossing,
+                    }
                 end
                 routeDeckConnections[platform] = {
                     platform.Changed:Connect(function(property)
@@ -1412,6 +1499,10 @@ local function rebuild()
                         scheduleRebuild()
                     end),
                 }
+                if crossing or platform:GetAttribute("BranchStep") ~= nil then
+                    table.insert(routeDeckConnections[platform],
+                        platform:GetAttributeChangedSignal("PerimeterGuidePainted"):Connect(scheduleRebuild))
+                end
             end
 
             -- Permanent Tower skybridges shorten during Shrinking Arena.
@@ -1461,7 +1552,13 @@ local function rebuild()
                         end
                     end
                 end
-                if routeTier and not initial then queueRouteUpdate(platform,routeTier) end
+                if routeTier and not initial then
+                    local cue = routeCueStates[platform]
+                    for _, stroke in ipairs(cue and cue.strokes or {}) do
+                        if stroke.Parent then stroke.Transparency = 1 end
+                    end
+                    queueRouteUpdate(platform,routeTier)
+                end
                 refreshOutpostMotion(platform)
             end
             collapseConnections[platform] =
@@ -1756,8 +1853,7 @@ local function watchDecor(generated)
             local variant = activeArena and tostring(
                 activeArena:GetAttribute("VariantId") or "Classic")
             if not templates or not variant
-                or not templates:FindFirstChild(variant)
-                or (promenadeIndex and variant == "Harbor") then return end
+                or not templates:FindFirstChild(variant) then return end
             local quality = VfxQuality.deviceTier(
                 player:GetAttribute("VfxQualityTier"),
                 UserInputService.TouchEnabled).Name
@@ -1908,28 +2004,43 @@ local approvedTemplateNames = {
     Classic = true, Towers = true, Crossroads = true,
     Orbital = true, Harbor = true, Bridge = true,
     LongCradle = true, ShortCradle = true, LargeDeckHull = true,
-    Rect = true, Long = true, CornerGuard = true,
+    Rect = true, Long = true, CornerGuard = true, AnchorBolt = true,
+    HarborTie = true, ForgedBridge = true,
 }
+local function relevantPlatformRelief(name)
+    local generated = workspace:FindFirstChild("GeneratedMap")
+    local arena = generated and generated:FindFirstChild("Arena")
+    if not arena then return false end
+    local variant = arena:GetAttribute("VariantId") or "Classic"
+    return name == variant or (variant == "Harbor" and name == "Classic")
+        or name == "AnchorBolt" or name == "HarborTie"
+        or name == "CornerGuard"
+end
+
 local function watchVerifiedTemplateReadiness(holder, connections, marker)
     if not holder or not holder:IsA("Folder") then return end
     connections[#connections + 1] = holder:GetAttributeChangedSignal(
         "OwnerVerified"):Connect(scheduleRebuild)
     local observed = {}
+    local relief = marker == "OriginalFloorRelief3D"
     local function attach(model)
         if not model:IsA("Model") or not approvedTemplateNames[model.Name]
             or observed[model] then return end
         observed[model] = true
+        local function changed()
+            if model.Parent == holder and (not relief or relevantPlatformRelief(model.Name)) then
+                scheduleRebuild()
+            end
+        end
         for _, attribute in ipairs({
             "OwnerVerified", "Original3DAssetId", "CosmeticOnly", marker,
         }) do
             connections[#connections + 1] =
-                model:GetAttributeChangedSignal(attribute):Connect(function()
-                    if model.Parent == holder then scheduleRebuild() end
-                end)
+                model:GetAttributeChangedSignal(attribute):Connect(changed)
         end
-        if model.Name == "Bridge" or model.Name == "CornerGuard" then
+        if relief or model.Name == "Bridge" or model.Name == "ForgedBridge" then
             local function meshChanged(child)
-                if child:IsA("BasePart") and model.Parent == holder then scheduleRebuild() end
+                if child:IsA("BasePart") then changed() end
             end
             connections[#connections+1] = model.ChildAdded:Connect(meshChanged)
             connections[#connections+1] = model.ChildRemoved:Connect(meshChanged)
@@ -1939,11 +2050,31 @@ local function watchVerifiedTemplateReadiness(holder, connections, marker)
     connections[#connections + 1] = holder.ChildAdded:Connect(attach)
 end
 
+-- The same late-arriving bridge profile fits trim in any arena.
+local forgedBridgeTemplateConnections = {}
+local function watchForgedBridgeTemplates(holder)
+    for _, connection in ipairs(forgedBridgeTemplateConnections) do
+        connection:Disconnect()
+    end
+    table.clear(forgedBridgeTemplateConnections)
+    if holder and holder:IsA("Folder") then
+        watchVerifiedTemplateReadiness(holder,
+            forgedBridgeTemplateConnections, "OriginalTowersSignatureBridge3D")
+        local function changed(child)
+            if child.Name == "ForgedBridge" then scheduleRebuild() end
+        end
+        forgedBridgeTemplateConnections[#forgedBridgeTemplateConnections + 1] =
+            holder.ChildAdded:Connect(changed)
+        forgedBridgeTemplateConnections[#forgedBridgeTemplateConnections + 1] =
+            holder.ChildRemoved:Connect(changed)
+    end
+    scheduleRebuild()
+end
+
 -- Original service hatches are loaded in a late server asset lane.
 -- Rebuild the existing platform visual owner once the current arena's
 -- approved model becomes available; otherwise first-join players would
--- retain native three-Part hatches until the next map transition.
--- Only model arrivals/removals matter; no polling or extra render loop.
+-- retain the basic three-piece finish until the next map transition.
 local platformReliefTemplateConnections = {}
 local currentPlatformReliefTemplates = nil
 local function watchPlatformReliefTemplates(holder)
@@ -1957,13 +2088,7 @@ local function watchPlatformReliefTemplates(holder)
         watchVerifiedTemplateReadiness(holder,
             platformReliefTemplateConnections, "OriginalFloorRelief3D")
         local function changed(child)
-            local generated = workspace:FindFirstChild("GeneratedMap")
-            local arena = generated and generated:FindFirstChild("Arena")
-            local variant = arena and tostring(
-                arena:GetAttribute("VariantId") or "Classic")
-            if variant == child.Name or (variant == "Harbor" and child.Name == "CornerGuard") then
-                scheduleRebuild()
-            end
+            if relevantPlatformRelief(child.Name) then scheduleRebuild() end
         end
         platformReliefTemplateConnections[#platformReliefTemplateConnections + 1] =
             holder.ChildAdded:Connect(changed)
@@ -2149,7 +2274,9 @@ for _,holder in ipairs(ReplicatedStorage:GetChildren()) do watchOutpostTemplates
 ReplicatedStorage.ChildAdded:Connect(watchOutpostTemplates)
 
 ReplicatedStorage.ChildAdded:Connect(function(child)
-    if child.Name == "ApprovedFloorReliefTemplates" then
+    if child.Name == "ApprovedTowersSignatureBridgeTemplates" then
+        watchForgedBridgeTemplates(child)
+    elseif child.Name == "ApprovedFloorReliefTemplates" then
         watchPlatformReliefTemplates(child)
     elseif child.Name == "ApprovedPlatformSideTemplates" then
         watchSideTemplates(child)
@@ -2162,7 +2289,9 @@ ReplicatedStorage.ChildAdded:Connect(function(child)
     end
 end)
 ReplicatedStorage.ChildRemoved:Connect(function(child)
-    if child == currentPlatformReliefTemplates then
+    if child.Name == "ApprovedTowersSignatureBridgeTemplates" then
+        watchForgedBridgeTemplates(ReplicatedStorage:FindFirstChild(child.Name))
+    elseif child == currentPlatformReliefTemplates then
         watchPlatformReliefTemplates(nil)
         scheduleRebuild()
     elseif child == watchedSideTemplates then
@@ -2179,6 +2308,8 @@ ReplicatedStorage.ChildRemoved:Connect(function(child)
         scheduleRebuild()
     end
 end)
+watchForgedBridgeTemplates(
+    ReplicatedStorage:FindFirstChild("ApprovedTowersSignatureBridgeTemplates"))
 watchPlatformReliefTemplates(
     ReplicatedStorage:FindFirstChild("ApprovedFloorReliefTemplates"))
 watchSideTemplates(

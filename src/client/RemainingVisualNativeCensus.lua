@@ -51,6 +51,9 @@ local function groupFor(part, decor, circuit, owners)
     if owners.corners and part:IsDescendantOf(owners.corners) then
         return "CornerLandmarks"
     end
+    if owners.hero and part:IsDescendantOf(owners.hero) then
+        return "HeroMonuments"
+    end
     if owners.exterior and part:IsDescendantOf(owners.exterior) then
         return "ExteriorRetrofits"
     end
@@ -77,7 +80,7 @@ local KEYS = {
     -- Additional P4 breakdowns are independent counters, NOT extra Parts.
     -- Prevent neon/wayfinding cues from inflating a "needs 3D" backlog.
     "AscensionStructure", "AscensionSignal",
-    "HelixStructure", "HelixSignal",
+    "HelixStructure", "HelixSignal", "HelixAccessChassis",
     -- Separate real architectural backlog from navigational Neon so the
     -- next mesh batch targets visible blockout rather than route guidance.
     "DistrictStructure", "DistrictSignal",
@@ -85,7 +88,12 @@ local KEYS = {
     "SkySpineStructure", "SkySpineSignal",
     "PromenadeStructure", "PromenadeSignal",
     "PlatformPanel", "GroundFinish", "CornerLandmarks",
-    "ExteriorRetrofits", "HarborFleet", "PerimeterStations",
+    "ExteriorRetrofits", "HarborFleet", "PerimeterStations", "HeroMonuments",
+    "DistrictTransit", "DistrictTransitStructure", "DistrictTransitSignal",
+    "SkyShields", "SkyShieldsStructure", "SkyShieldsSignal",
+    "SkySwitchyard", "SkySwitchyardStructure", "SkySwitchyardSignal",
+    "TeamDashRelays",
+    "Unclassified", "UnclassifiedLarge",
 }
 local function set(player, key, value)
     local attr = "LocalP4VisibleNative" .. key
@@ -94,45 +102,160 @@ local function set(player, key, value)
     end
 end
 
-function Census.sample(player, arena, quality)
+local nearRadiusSquared = 36 * 36
+local nativeRouteGroups = {
+    "Ascension", "Helix", "PlatformBevel", "PlatformSupport", "PlatformUnderFrame",
+    "PlatformPanel", "PlatformSignals", "Promenade", "SkySpine", "SkySwitchyard", "DistrictTransit",
+}
+local nativeRouteSet = {}
+for _, key in ipairs(nativeRouteGroups) do nativeRouteSet[key] = true end
+
+local localRouteOwners = {
+    Classic = {folder = "GridCircuitLocal", key = "GridStations", prefix = "^GridStation"},
+    Crossroads = {folder = "FluxRelayLocal", key = "FluxGates", parts = {
+        FluxFrameLeft = true, FluxFrameRight = true, FluxBridgeCap = true, FluxFooting = true,
+        FluxVerticalSignal = true, FluxChevron = true, FluxCrest = true,
+        FluxArmorFin = true, FluxCrownPrism = true,
+    }},
+    Towers = {folder = "TowerSkyrailLocal", key = "Skyrail", prefix = "^Skyrail", exclude = "SkyrailImpulseFacet"},
+}
+
+local harborNearKeys = {
+    "HarborLandingStructure", "HarborLandingSignals", "HarborTerraceExits", "HarborLandingSupports",
+    "HarborGroundMaintenance", "HarborGroundWayfinding", "HarborCoast", "HarborOffshoreStation",
+}
+local harborStructureSlots = {
+    PlatformBevel = true, PlatformSupport = true, PlatformUnderFrame = true, PlatformPanel = true,
+}
+local harborLocalArt = {
+    {folder = "ArenaMidgroundMassLocal", key = "HarborCoast", prefix = "^Harbor"},
+    {folder = "ArenaEdgeProfileLocal", key = "HarborCoast", prefix = "^Harbor"},
+    {folder = "ArenaHeroSceneryLocal", key = "HarborOffshoreStation", prefix = "^HarborHero"},
+}
+
+local function harborLandingIndices(arena)
+    local indices = {}
+    local platforms = arena:FindFirstChild("Platforms")
+    if not platforms or not platforms:IsA("Folder") then return indices end
+    for _, deck in ipairs(platforms:GetChildren()) do
+        if deck:IsA("BasePart") and (deck:GetAttribute("HarborRoute") ~= nil
+            or deck:GetAttribute("HarborSpokeRoute") ~= nil
+            or deck:GetAttribute("HarborSkywayLane") ~= nil) then
+            local index = deck.Name:match("^Platform(%d+)$")
+            if index then indices[index] = true end
+        end
+    end
+    return indices
+end
+
+local function harborNearGroup(part, key, indices, decor)
+    local name = part.Name
+    if key == "PlatformSignals" or harborStructureSlots[key] then
+        local index = name:match("^Platform%a+(%d+)")
+        if index and indices[index] then
+            return key == "PlatformSignals" and "HarborLandingSignals" or "HarborLandingStructure"
+        end
+    elseif part.Parent == decor then
+        if name:match("^PerimeterExitRib%d+_%-?1$") or name:match("^PerimeterExitCrown%d+$")
+            or name:match("^PerimeterExitLens%d+$") then return "HarborTerraceExits" end
+        if name:match("^FloorMaintenancePanel%d+$") then return "HarborGroundMaintenance" end
+        if name:match("^HarborAccessChevron%d+_%d+_%-?1$") or name:match("^HarborQuayInlay%d+$") then
+            return "HarborGroundWayfinding"
+        end
+    end
+    return nil
+end
+
+local function nearEnough(part, cameraPoint)
+    if (1 - part.Transparency) * (1 - part.LocalTransparencyModifier) <= 0.05 then return false end
+    local point = part.CFrame:PointToObjectSpace(cameraPoint)
+    local half = part.Size * 0.5
+    local dx = math.max(0, math.abs(point.X) - half.X)
+    local dy = math.max(0, math.abs(point.Y) - half.Y)
+    local dz = math.max(0, math.abs(point.Z) - half.Z)
+    return dx * dx + dy * dy + dz * dz <= nearRadiusSquared
+end
+
+function Census.sample(player, arena, quality, cameraPoint)
     local counts = {}
     for _,key in ipairs(KEYS) do counts[key] = 0 end
-    local scanned = 0
+    local scanned, decorScanned = 0, 0
+    local nearCounts, nearNative = {}, 0
+    local nearReady = false
     local streamed = false
     if arena and arena.Name == "Arena"
         and arena.Parent == workspace:FindFirstChild("GeneratedMap") then
         local decor = arena:FindFirstChild("Decor")
         local circuit = arena:FindFirstChild("HelixCircuit")
         if decor and decor:IsA("Folder") then
+            nearReady = typeof(cameraPoint) == "Vector3"
+            local variant = arena:GetAttribute("VariantId")
+            local harborIndices = nearReady and variant == "Harbor" and harborLandingIndices(arena) or nil
             local owners = {
                 casing = decor:FindFirstChild("OriginalPremiumColumnCladding"),
                 district = decor:FindFirstChild("ArenaDistrictArchitecture3D"),
                 corners = decor:FindFirstChild("ArenaCornerLandmarks3D"),
                 exterior = decor:FindFirstChild("OriginalExteriorRetrofits"),
+                hero = decor:FindFirstChild("ArenaHeroArchitecture3D"),
                 harbor = decor:FindFirstChild("StormHarborGantryFleet"),
             }
             -- GetDescendants includes streamed-in SERVER native fallback
             -- only. Client replacement folders live under Workspace and
             -- are intentionally excluded from this diagnostic.
-            local function scan(root)
+            local function scan(root, rootGroup)
                 for _,part in ipairs(root:GetDescendants()) do
                     if visible(part) then
                         scanned += 1
-                        local key = groupFor(part, decor, circuit, owners)
+                        local key = rootGroup or groupFor(part, decor, circuit, owners)
+                        if harborIndices and root == decor then
+                            local group = harborNearGroup(part, key, harborIndices, decor)
+                            if group and nearEnough(part, cameraPoint) then
+                                nearCounts[group] = (nearCounts[group] or 0) + 1
+                                if key == "PlatformSupport" then
+                                    nearCounts.HarborLandingSupports = (nearCounts.HarborLandingSupports or 0) + 1
+                                end
+                            end
+                        end
                         if key then
                             counts[key] += 1
+                            if nearReady and nativeRouteSet[key] and nearEnough(part, cameraPoint) then
+                                nearCounts[key] = (nearCounts[key] or 0) + 1
+                                nearNative += 1
+                            end
                             if key=="Ascension" or key=="Helix"
                                 or key=="District" or key=="PlatformSupport"
-                                or key=="SkySpine" or key=="Promenade" then
+                                or key=="SkySpine" or key=="Promenade" or key=="DistrictTransit"
+                                or key=="SkyShields" or key=="SkySwitchyard" then
                                 local lower=string.lower(part.Name)
                                 local signal = part.Material==Enum.Material.Neon
                                     or part:GetAttribute("ChaosWayfinding")==true
+                                    or (key == "Helix" and lower:match("^helixcentergrain%d+$") ~= nil)
                                     or lower:find("signal",1,true)~=nil
                                     or lower:find("beacon",1,true)~=nil
                                     or lower:find("guide",1,true)~=nil
                                     or lower:find("glow",1,true)~=nil
+                                if key == "DistrictTransit" then
+                                    -- The Harbor hoist supports the terminal; it is not a route cue.
+                                    signal = part.Material == Enum.Material.Neon
+                                        or lower:match("^switchyardsignal%-?1$") ~= nil
+                                elseif key == "SkyShields" then
+                                    signal = part.Material == Enum.Material.Neon
+                                        or part.Name == "ActiveProtectiveField"
+                                        or part.Name == "ActiveFieldCrown"
+                                elseif key == "SkySwitchyard" then
+                                    signal = part.Material == Enum.Material.Neon or part.Name == "CommandCore"
+                                end
                                 local suffix=signal and "Signal" or "Structure"
                                 counts[key..suffix] += 1
+                                if key == "Helix" and (lower:match("^entrychassis%d+$")
+                                    or lower:match("^corechassis%d+$")) then
+                                    counts.HelixAccessChassis += 1
+                                end
+                            end
+                        else
+                            counts.Unclassified += 1
+                            if math.max(part.Size.X, part.Size.Y, part.Size.Z) >= 12 then
+                                counts.UnclassifiedLarge += 1
                             end
                         end
                     end
@@ -140,12 +263,74 @@ function Census.sample(player, arena, quality)
             end
             scan(decor)
             if circuit and circuit:IsA("Folder") then scan(circuit) end
+            decorScanned = scanned
+            local transit = arena:FindFirstChild("DistrictTransit")
+            if transit and transit:IsA("Folder") and transit:GetAttribute("ServerAuthoritative") == true then
+                scan(transit, "DistrictTransit")
+            end
+            local shields = arena:FindFirstChild("EmergencySkyShields")
+            if shields and shields:IsA("Folder") and shields:GetAttribute("ServerAuthoritative") == true then
+                scan(shields, "SkyShields")
+            end
+            local switchyard = arena:FindFirstChild("SkySpineSwitchyard")
+            if switchyard and switchyard:IsA("Folder") and switchyard:GetAttribute("ServerAuthoritative") == true then
+                scan(switchyard, "SkySwitchyard")
+            end
+            local relays = arena:FindFirstChild("TeamDashRelays")
+            if relays and relays:IsA("Folder") and relays:GetAttribute("ServerAuthoritative") == true then
+                scan(relays, "TeamDashRelays")
+            end
+            if harborIndices then
+                for _, owner in ipairs(harborLocalArt) do
+                    local folder = workspace:FindFirstChild(owner.folder)
+                    if folder and folder:IsA("Folder") then
+                        for _, part in ipairs(folder:GetChildren()) do
+                            local name = part.Name
+                            if name:match(owner.prefix) and visible(part)
+                                and nearEnough(part, cameraPoint) then
+                                nearCounts[owner.key] = (nearCounts[owner.key] or 0) + 1
+                            end
+                        end
+                    end
+                end
+            end
+            local routeOwner = nearReady and localRouteOwners[variant]
+            local localArt = routeOwner and workspace:FindFirstChild(routeOwner.folder)
+            if localArt and localArt:IsA("Folder") then
+                local count = 0
+                for _, part in ipairs(localArt:GetChildren()) do
+                    local name = part.Name
+                    local isFitting = if routeOwner.parts then routeOwner.parts[name]
+                        else name ~= routeOwner.exclude and name:match(routeOwner.prefix)
+                    if isFitting and visible(part) and nearEnough(part, cameraPoint) then
+                        count += 1
+                    end
+                end
+                nearCounts[routeOwner.key] = count
+            end
             streamed = true
         end
     end
     for _,key in ipairs(KEYS) do set(player, key, counts[key]) end
-    -- Backward compatible name; this count includes the Orbital circuit.
-    set(player, "AllDecor", scanned)
+    for _, key in ipairs(nativeRouteGroups) do
+        set(player, "Near" .. key, nearCounts[key] or 0)
+    end
+    for _, key in ipairs(harborNearKeys) do
+        set(player, "Near" .. key, nearCounts[key] or 0)
+    end
+    local nearLocal = 0
+    for _, owner in pairs(localRouteOwners) do
+        local count = nearCounts[owner.key] or 0
+        set(player, "Near" .. owner.key, count)
+        nearLocal += count
+    end
+    set(player, "NearRouteNativeTotal", nearNative)
+    set(player, "NearRouteLocalTotal", nearLocal)
+    if player:GetAttribute("LocalP4NativeNearRouteReady") ~= nearReady then
+        player:SetAttribute("LocalP4NativeNearRouteReady", nearReady)
+    end
+    -- Preserve the original Decor + Helix baseline alongside the expanded total.
+    set(player, "AllDecor", decorScanned)
     set(player, "AllScanned", scanned)
     if player:GetAttribute("LocalP4NativeCensusReady") ~= streamed then
         player:SetAttribute("LocalP4NativeCensusReady", streamed)

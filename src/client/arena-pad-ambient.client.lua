@@ -162,6 +162,8 @@ local function refreshRates()
             local chargeKind = masteryState(pad)
             local mastered = chargeKind ~= nil
             local personalColor = Color3.fromRGB(255, 227, 145)
+            state.hardwareColor = overdriveActive and Color3.fromRGB(255, 217, 126)
+                or (mastered and personalColor or pad.Color)
             -- A private, subtle cyan-gold edge makes the charged *real*
             -- pads stand out. Overdrive and hazard orange always win.
             state.emitter.Rate = currentRate
@@ -370,7 +372,7 @@ local function bindMechanics(mechanics)
     watchedMechanics = mechanics
     if mechanics then
         disconnectPadAttributes = MapVisualReadiness.watchChildrenAttributes(
-            mechanics, {"ArenaMobilityPad"}, scheduleReconcile
+            mechanics, {"ArenaMobilityPad", "ArenaMobilityPadIndex"}, scheduleReconcile
         )
     end
     scheduleReconcile()
@@ -447,44 +449,7 @@ for _, attribute in ipairs({
     player:GetAttributeChangedSignal(attribute):Connect(refreshRates)
 end
 
--- The approved 3D kit arrives after the server's serialized low-priority
--- import (about 34 seconds); do not lock visual quality to a startup
--- timeout. A late genuine template can fill existing pads immediately.
-local watchedSourceHolder = nil
-local sourceConnections = {}
-local function bindSourceHolder(parent)
-    if watchedSourceHolder == parent then return end
-    for _, connection in ipairs(sourceConnections) do
-        connection:Disconnect()
-    end
-    table.clear(sourceConnections)
-    watchedSourceHolder = parent
-    if parent and parent:IsA("Folder") then
-        table.insert(sourceConnections, parent.ChildAdded:Connect(function(child)
-            if child.Name == "CornerGuard" then scheduleReconcile() end
-        end))
-        table.insert(sourceConnections, parent.ChildRemoved:Connect(function(child)
-            if child.Name == "CornerGuard" then scheduleReconcile() end
-        end))
-        table.insert(sourceConnections, parent:GetAttributeChangedSignal(
-            "OwnerVerified"):Connect(scheduleReconcile))
-    end
-    scheduleReconcile()
-end
-
-ReplicatedStorage.ChildAdded:Connect(function(child)
-    if child.Name == "ApprovedFloorReliefTemplates" then
-        bindSourceHolder(child)
-    end
-end)
-ReplicatedStorage.ChildRemoved:Connect(function(child)
-    if child == watchedSourceHolder then
-        bindSourceHolder(ReplicatedStorage:FindFirstChild(
-            "ApprovedFloorReliefTemplates"))
-    end
-end)
-bindSourceHolder(ReplicatedStorage:FindFirstChild(
-    "ApprovedFloorReliefTemplates"))
+PremiumMobilityPad3DKit.watchSource(scheduleReconcile)
 
 stateEvent.OnClientEvent:Connect(function(state)
     if type(state) ~= "table" then return end

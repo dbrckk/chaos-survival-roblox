@@ -26,15 +26,17 @@ function ArenaEdgeFinishKit.count(tier)
     return count(tier)
 end
 
-local function create(parent, frame, sideName, name, size, offset, rotation, color, material, alpha, shape)
-    local part = Instance.new("Part")
+local function create(parent, sideName, name, size, pose, color, material, alpha, shape, mesh)
+    local part = mesh or Instance.new("Part")
     part.Name = name .. sideName
-    part.Size = size
-    part.CFrame = frame * CFrame.new(offset) * (rotation or CFrame.identity)
+    if not mesh then
+        part.Size = size
+        part.CFrame = pose
+        if shape then part.Shape = shape end
+    end
     part.Color = color
     part.Material = material
     part.Transparency = alpha or 0
-    if shape then part.Shape = shape end
     part.Anchored = true
     part.CanCollide = false
     part.CanTouch = false
@@ -45,7 +47,7 @@ local function create(parent, frame, sideName, name, size, offset, rotation, col
     return part
 end
 
-function ArenaEdgeFinishKit.build(parent, base, variant, tier, theme)
+function ArenaEdgeFinishKit.build(parent, base, variant, tier, theme, fitHarbor)
     local motifs = MOTIFS[variant]
     if not parent or not base or not base:IsA("BasePart")
         or not motifs or not theme
@@ -70,8 +72,10 @@ function ArenaEdgeFinishKit.build(parent, base, variant, tier, theme)
 
         local function add(index, size, offset, rotation, color, material, alpha, shape)
             if index > budget then return end
-            table.insert(built, create(parent, frame, side.Name,
-                motifs[index], size, offset, rotation, color, material, alpha, shape))
+            local pose = frame * CFrame.new(offset) * (rotation or CFrame.identity)
+            local mesh = variant == "Harbor" and fitHarbor and fitHarbor(index, size, pose)
+            table.insert(built, create(parent, side.Name,
+                motifs[index], size, pose, color, material, alpha, shape, mesh))
         end
 
         if variant == "Classic" then

@@ -3,10 +3,10 @@
 local ShowtimeHologramDetails = {}
 local COUNTS = {Low = 0, Medium = 2, High = 4}
 local PARTS = {
-    {"Visor", Vector3.new(0.71, 0.19, 0.12), Enum.Material.Glass, 0.16},
-    {"ChestCore", Vector3.new(0.48, 0.57, 0.11), Enum.Material.Metal, 0.24},
-    {"WristL", Vector3.new(0.38, 0.19, 0.43), Enum.Material.Glass, 0.24},
-    {"WristR", Vector3.new(0.38, 0.19, 0.43), Enum.Material.Glass, 0.24},
+    {"Visor", Vector3.new(0.71, 0.19, 0.12), Enum.Material.Glass, 0.16, "forged"},
+    {"ChestCore", Vector3.new(0.48, 0.57, 0.11), Enum.Material.Metal, 0.24, "casting"},
+    {"WristL", Vector3.new(0.38, 0.19, 0.43), Enum.Material.Glass, 0.24, "casting"},
+    {"WristR", Vector3.new(0.38, 0.19, 0.43), Enum.Material.Glass, 0.24, "casting"},
 }
 
 function ShowtimeHologramDetails.count(tier)
@@ -35,6 +35,7 @@ function ShowtimeHologramDetails.build(parent, tier, index, color)
         part.CastShadow = false
         part:SetAttribute("ChaosHologramDetail", true)
         part:SetAttribute("ShowtimeDefaultTransparency", definition[4])
+        part:SetAttribute("ShowtimeMeshProfile", definition[5])
         part.Parent = parent
         table.insert(result, part)
     end
@@ -51,7 +52,7 @@ function ShowtimeHologramDetails.pose(parts, torso, head, left, right, enabled)
     }
     for i, part in ipairs(parts) do
         if part.Parent then
-            part.CFrame = frames[i]
+            part:PivotTo(frames[i])
             part.Transparency = enabled
                 and (part:GetAttribute("ShowtimeDefaultTransparency") or 0.20)
                 or 1
