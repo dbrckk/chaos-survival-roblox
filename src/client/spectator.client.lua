@@ -162,6 +162,7 @@ local targets = {}
 local targetIndex = 0
 local selectedCharacter = nil
 local targetHealthConnection = nil
+local targetHealthTween = nil
 local observedHumanoid = nil
 local shownPrimaryId = nil
 local shownSecondaryId = nil
@@ -169,6 +170,10 @@ local targetDiedConnection = nil
 local spectateIndex
 local viewportConnection = nil
 local applyResponsive
+
+local function roundOpenForSpectating()
+    return roundActive and player:GetAttribute("RoundResultCardVisible") ~= true
+end
 
 local function renderSpectatorGlyph(container, hazardId, color, transparency)
     for _, child in ipairs(container:GetChildren()) do
@@ -282,10 +287,11 @@ applyResponsive = function()
             leftInset = 18 + glyphSize
         end
 
-        local rightReserve = profile.tinyHeight and 112 or 122
+        local hasActions = nextButton.Visible or practiceButton.Visible
+        local rightReserve = hasActions and (profile.tinyHeight and 112 or 122) or 12
         label.Position = UDim2.new(0, leftInset, 0, 7)
         label.Size = UDim2.new(1, -(leftInset + rightReserve), 0.64, -4)
-        healthTrack.Size = UDim2.new(1, -(profile.tinyHeight and 124 or 136), 0.10, 0)
+        healthTrack.Size = UDim2.new(0.96, -rightReserve, 0.10, 0)
     else
         hazardGlyphSecondary.Visible = shownSecondaryId ~= nil
             and HazardGlyphs.get(shownSecondaryId) ~= nil
@@ -311,8 +317,9 @@ applyResponsive = function()
         label.Position = leftScale > 0
             and UDim2.new(leftScale, 0, 0, 7)
             or UDim2.fromOffset(12, 7)
+        local textWidth = (nextButton.Visible or practiceButton.Visible) and 0.68 or 0.96
         label.Size = UDim2.new(
-            0.68 - leftScale,
+            textWidth - leftScale,
             leftScale > 0 and -6 or -14,
             0.64,
             -4
@@ -320,6 +327,8 @@ applyResponsive = function()
         healthTrack.Size = UDim2.fromScale(0.62, 0.10)
     end
 end
+
+nextButton:GetPropertyChangedSignal("Visible"):Connect(applyResponsive)
 
 local function bindCamera()
     if viewportConnection then
@@ -335,10 +344,10 @@ local function bindCamera()
     -- Roblox may replace CurrentCamera during streaming or a respawn.
     -- Restore the selected spectator target immediately instead of waiting
     -- for the next one-second RoundState update.
-    if roundActive and card.Visible then
+    if roundOpenForSpectating() and card.Visible then
         task.defer(function()
             if workspace.CurrentCamera == camera
-                and roundActive and card.Visible then
+                and roundOpenForSpectating() and card.Visible then
                 if practiceMode then
                     if restoreCamera then restoreCamera() end
                 elseif spectateIndex then
@@ -353,6 +362,10 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
 bindCamera()
 
 local function clearTargetHealth()
+    if targetHealthTween then
+        targetHealthTween:Cancel()
+        targetHealthTween = nil
+    end
     if targetHealthConnection then
         targetHealthConnection:Disconnect()
         targetHealthConnection = nil
@@ -375,27 +388,40 @@ local function bindTargetHealth(humanoid)
     end
     observedHumanoid = humanoid
 
-    local function update()
+    local function update(animate)
+        if observedHumanoid ~= humanoid then return end
+        if targetHealthTween then
+            targetHealthTween:Cancel()
+            targetHealthTween = nil
+        end
         local ratio = humanoid.MaxHealth > 0
             and math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
             or 0
         healthFill.BackgroundColor3 = ratio > 0.55
             and UITheme.Colors.Green
             or (ratio > 0.25 and UITheme.Colors.Gold or UITheme.Colors.Red)
-        TweenService:Create(
+        local targetSize = UDim2.fromScale(ratio, 1)
+        if not animate or player:GetAttribute("ReduceMotion") == true then
+            healthFill.Size = targetSize
+            return
+        end
+        targetHealthTween = TweenService:Create(
             healthFill,
             TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {Size = UDim2.fromScale(ratio, 1)}
-        ):Play()
+            {Size = targetSize}
+        )
+        targetHealthTween:Play()
     end
 
-    update()
-    targetHealthConnection = humanoid.HealthChanged:Connect(update)
+    update(false)
+    targetHealthConnection = humanoid.HealthChanged:Connect(function()
+        update(true)
+    end)
     targetDiedConnection = humanoid.Died:Connect(function()
         task.delay(0.08, function()
             -- An intervening RoundState may already have selected the successor.
             -- Never advance twice because a stale death callback ran afterward.
-            if roundActive
+            if roundOpenForSpectating()
                 and card.Visible
                 and observedHumanoid == humanoid
                 and spectateIndex
@@ -476,14 +502,17 @@ restoreCamera = function()
     local controlled = camera ~= nil and camera == ownedCamera
         and camera.CameraType == Enum.CameraType.Custom
         and camera.CameraSubject == ownedSubject
-    ownedCamera, ownedSubject = nil, nil
-    if not controlled then return end
+    if not controlled then
+        ownedCamera, ownedSubject = nil, nil
+        return
+    end
     local hum = localHumanoid()
-    if hum and hum.Parent == player.Character then
-        -- Release ONLY our own spectator camera assignment. Native
-        -- Roblox controls the transition to the player's new character.
+    if hum and hum.Parent == player.Character and hum.Health > 0 then
+        ownedCamera, ownedSubject = nil, nil
         camera.CameraSubject = hum
     end
+    -- If the respawn is still pending, keep ownership long enough for
+    -- CharacterAdded to restore it, provided no other director took over.
 end
 
 -- Keep the first late-join explanation inside the existing spectator card.
@@ -538,6 +567,11 @@ local function roundSummary()
 end
 
 spectateIndex = function(advance)
+    if not card.Visible or practiceMode or not SpectatorTargetRules.isSpectating(
+        roundOpenForSpectating(),
+        player:GetAttribute("RoundParticipant"),
+        player:GetAttribute("RoundEliminated")
+    ) then return end
     rebuildTargets()
 
     if #targets == 0 then
@@ -605,11 +639,11 @@ local function refresh()
     local eliminated = player:GetAttribute("RoundEliminated") == true
     local participant = player:GetAttribute("RoundParticipant") == true
     local shouldSpectate = SpectatorTargetRules.isSpectating(
-        roundActive, participant, eliminated
+        roundOpenForSpectating(), participant, eliminated
     )
     local hum = localHumanoid()
     local canPractice = SpectatorTargetRules.canPractice(
-        roundActive,
+        roundOpenForSpectating(),
         player:GetAttribute("RoundParticipant"),
         player:GetAttribute("RoundEliminated")
     ) and hum ~= nil and hum.Health > 0
@@ -663,7 +697,7 @@ end
 
 practiceButton.Activated:Connect(function()
     if not SpectatorTargetRules.canPractice(
-        roundActive,
+        roundOpenForSpectating(),
         player:GetAttribute("RoundParticipant"),
         player:GetAttribute("RoundEliminated")
     ) then return end
@@ -674,12 +708,12 @@ practiceButton.Activated:Connect(function()
 end)
 
 nextButton.Activated:Connect(function()
-    if practiceMode then return end
     spectateIndex(true)
 end)
 
 player:GetAttributeChangedSignal("RoundEliminated"):Connect(refresh)
 player:GetAttributeChangedSignal("RoundParticipant"):Connect(refresh)
+player:GetAttributeChangedSignal("RoundResultCardVisible"):Connect(refresh)
 -- A delayed Humanoid from an older respawn must not restore its camera
 -- after the newest character has become active on a slow mobile client.
 local spawnVersion = 0
@@ -692,19 +726,6 @@ player.CharacterAdded:Connect(function(spawnedCharacter)
         return
     end
 
-    local eliminated = player:GetAttribute("RoundEliminated") == true
-    local participant = player:GetAttribute("RoundParticipant") == true
-    if practiceMode and SpectatorTargetRules.canPractice(
-        roundActive, participant, eliminated
-    ) then
-        restoreCamera()
-    elseif SpectatorTargetRules.isSpectating(
-        roundActive, participant, eliminated
-    ) then
-        spectateIndex(false)
-    else
-        restoreCamera()
-    end
     refresh()
 end)
 
