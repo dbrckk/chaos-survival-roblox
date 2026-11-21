@@ -1,3 +1,9 @@
+## Lisibilité mobile après la manche
+
+Sur le Port des tempêtes, le grand tablier et les 36 dalles décoratives utilisent une finition acier gris-bleu. Les tuiles sculptées reprennent le relief PBR brossé dans le budget existant. Le contraste de la lave et les marquages de danger gardent leur traitement dédié.
+
+La carte de résultat masque la notification d’entraînement jusqu’à la fin de son fondu. Un boost déclenché pendant ce délai conserve son effet dans le monde.
+
 ## P4 — Finitions 3D du lobby
 
 Le lobby applique jusqu’à 74 finitions sculptées après le chargement des maillages approuvés. L’allée, les huit panneaux d’accueil, les repères lumineux et le portail gardent leurs dimensions et leurs ancrages. La traverse reprend la couleur et le fondu du départ de manche. Les formes de secours restent visibles au démarrage et reprennent leur place pendant la manche, sous pression graphique ou si le maillage est indisponible.

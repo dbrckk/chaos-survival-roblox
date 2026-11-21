@@ -14,7 +14,7 @@ local MATERIAL = {
     Towers = "BrushedTitanium",
     Crossroads = "OxidizedSteel",
     Orbital = "ReactorCeramic",
-    Harbor = "OxidizedSteel",
+    Harbor = "BrushedTitanium",
 }
 local APPROVED = {
     BrushedTitanium = true,
@@ -23,10 +23,8 @@ local APPROVED = {
     ReactorCeramic = true,
 }
 
--- During a live RisingLava hazard, swap only already approved 2K
--- source material templates on the visible floor clones. Reusing the
--- cool BrushedTitanium atlas (rather than warm OxidizedSteel) prevents
--- the polished rusty floor from reading like the glowing lava volume.
+-- Harbor keeps the cool atlas across phases. During live RisingLava
+-- the other arenas also use it to distinguish the safe floor from lava.
 -- No new texture IDs, downloads, plugin-security writes or mesh clones.
 function Kit.family(variant)
     if variant == "LavaSafeSteel" then return "BrushedTitanium" end

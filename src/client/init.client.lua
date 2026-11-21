@@ -1672,6 +1672,10 @@ resultCard.BorderSizePixel = 0
 resultCard.Visible = false
 resultCard.ZIndex = 21
 resultCard.Parent = root
+-- Include both the personalized receipt and the fallback, plus the exit fade.
+resultCard:GetPropertyChangedSignal("Visible"):Connect(function()
+    player:SetAttribute("RoundResultCardVisible", resultCard.Visible)
+end)
 UITheme.addCorner(resultCard, UDim.new(0, 22))
 local resultStroke = UITheme.addStroke(resultCard, UITheme.Colors.Blue, 1.6, 0.24)
 local resultGradient = UITheme.addGradient(resultCard, UITheme.Colors.PanelRaised, UITheme.Colors.Panel, 90)

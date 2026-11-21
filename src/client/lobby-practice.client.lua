@@ -68,6 +68,14 @@ local function cancelTweens()
     table.clear(activeTweens)
 end
 
+player:GetAttributeChangedSignal("RoundResultCardVisible"):Connect(function()
+    if player:GetAttribute("RoundResultCardVisible") == true then
+        token += 1
+        cancelTweens()
+        label.Visible = false
+    end
+end)
+
 local function playTween(target, info, values)
     local tween = TweenService:Create(target, info, values)
     activeTweens[#activeTweens + 1] = tween
@@ -79,6 +87,7 @@ local function tier()
 end
 
 local function showFeedback(color)
+    if player:GetAttribute("RoundResultCardVisible") == true then return end
     token += 1
     local current = token
 

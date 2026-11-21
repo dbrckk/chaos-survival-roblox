@@ -35,7 +35,7 @@ local PROFILES = {
         tint = 0.57,
     },
     Harbor = {
-        panel = Enum.Material.CorrodedMetal,
+        panel = Enum.Material.Metal,
         detail = Enum.Material.DiamondPlate,
         tint = 0.55,
     },

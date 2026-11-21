@@ -1040,11 +1040,10 @@ local function addArenaFoundation(decor, config, variant, theme, sweptProfile, b
     -- A broad neutral midtone keeps the REAL floor readable on mobile;
     -- subdued route paint and red/orange disaster telegraphs stay distinct.
     deckInset.Transparency = 0.03
-    -- Existing Harbor timber remains on smaller route panels. The enormous
-    -- working port deck uses actual salt-worn steel, not a default wooden
-    -- slab pretending to be a seaport floor.
+    -- Keep the broad Harbor floor blue-grey at every graphics tier.
+    -- CorrodedMetal's orange patches read as lava even outside that disaster.
     if variant.Id == "Harbor" then
-        deckInset.Material = Enum.Material.CorrodedMetal
+        deckInset.Material = Enum.Material.Metal
     end
     deckInset:SetAttribute("PremiumArchitecturalSurface", true)
 

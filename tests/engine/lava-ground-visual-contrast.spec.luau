@@ -99,6 +99,13 @@ describe("Android lava versus physically safe deck materials", function()
             expect(Rules.nativeRole(inset, decor)).toBe("deck")
             expect(Rules.nativeRole(base, decor)).toBe(nil)
             expect(inset.CanCollide).toBe(false)
+            if id == "Harbor" then
+                expect(inset.Material).toBe(Enum.Material.Metal)
+                for index = 1, 36 do
+                    local bay = decor:FindFirstChild("PremiumGroundModule" .. index)
+                    expect(bay.Material).toBe(Enum.Material.Metal)
+                end
+            end
             local steel = Rules.tint(inset.Color, "deck", true)
             expect(steel ~= inset.Color).toBe(true)
             root:Destroy()
@@ -106,7 +113,7 @@ describe("Android lava versus physically safe deck materials", function()
     end)
 
     it("reuses approved 2K titanium and avoids warm disaster details", function()
-        expect(PBR.family("Harbor")).toBe("OxidizedSteel")
+        expect(PBR.family("Harbor")).toBe("BrushedTitanium")
         expect(PBR.family("Crossroads")).toBe("OxidizedSteel")
         expect(PBR.family("LavaSafeSteel")).toBe("BrushedTitanium")
         local profile = Crisis.profile(

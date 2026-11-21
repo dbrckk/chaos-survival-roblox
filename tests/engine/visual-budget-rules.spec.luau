@@ -437,13 +437,13 @@ describe("visual budget rules", function()
         expect(next(select(invalid, 6)) == nil).toBe(true)
     end)
 
-    it("uses five specific approved UV-ground PBR finishes without increasing mobile texture residency", function()
+    it("selects approved UV-ground PBR finishes without increasing mobile texture residency", function()
         local kit = PremiumGroundPbrKit
         expect(kit.family("Classic")).toBe("DiamondArmor")
         expect(kit.family("Towers")).toBe("BrushedTitanium")
         expect(kit.family("Crossroads")).toBe("OxidizedSteel")
         expect(kit.family("Orbital")).toBe("ReactorCeramic")
-        expect(kit.family("Harbor")).toBe("OxidizedSteel")
+        expect(kit.family("Harbor")).toBe("BrushedTitanium")
         expect(kit.family("Unknown")).toBe("DiamondArmor")
 
         local limit = kit.tileBudget
